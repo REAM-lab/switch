@@ -23,3 +23,5 @@ def post_process(_):
 
     # Now remove references to that project
     drop(["--silent", "--no-confirm", "--run", "--inputs-dir", "."])
+
+    return f"Removed {l1 - l2} projects"

@@ -28,7 +28,7 @@ def write_csv_from_query(cursor, fname: str, headers: List[str], query: str):
     cursor.execute(query)
     data = cursor.fetchall()
     write_csv(data, fname, headers, log=False)
-    print(len(data))
+    print(f"(num rows: {len(data)})")
     if not data:
         warnings.warn(f"File {fname} is empty.")
 

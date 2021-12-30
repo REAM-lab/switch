@@ -14,9 +14,11 @@ def post_process(_):
     period_start = first_period.period_start
     # Note the period_length could be (end - start + 1) or just (end - start).
     # This depends on how the period was specified.
-    # To be conservative we use the version with the +1 so that the cutoff is later
+    # To be conservative we use the version without the +1 so that the cutoff for the time
+    # to make it into the period is sooner. This means less plants are retired by the cutoffs
+    # and more plants make it into the period.
     # And like that we don't accidentally remove a non-retired plant.
-    period_length = first_period.period_end - first_period.period_start + 1
+    period_length = first_period.period_end - first_period.period_start
 
     # Get the last build year for each plant.
     build_yrs = pd.read_csv(
@@ -51,6 +53,8 @@ def post_process(_):
 
     # Now remove references to those projects
     drop(["--silent", "--no-confirm", "--run", "--inputs-dir", "."])
+
+    return f"Removed {l1 - l2} projects"
 
 
 
