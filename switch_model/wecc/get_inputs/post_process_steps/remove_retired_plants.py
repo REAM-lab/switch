@@ -17,7 +17,6 @@ def post_process(_):
     # To be conservative we use the version with the +1 so that the cutoff is later
     # And like that we don't accidentally remove a non-retired plant.
     period_length = first_period.period_end - first_period.period_start + 1
-    print(first_period)
 
     # Get the last build year for each plant.
     build_yrs = pd.read_csv(
@@ -45,10 +44,10 @@ def post_process(_):
     l1 = len(proj)
     proj = proj[~proj["is_retired"]]
     l2 = len(proj)
-    print(f"Dropped {l1 - l2} projects.")
+    # print(f"Dropped {l1 - l2} projects.")
 
     # Write csv
-    proj[columns].to_csv("generation_projects_info.csv", index=False)
+    proj[columns].to_csv("generation_projects_info.csv", index=False, na_rep=".")
 
     # Now remove references to those projects
     drop(["--silent", "--no-confirm", "--run", "--inputs-dir", "."])

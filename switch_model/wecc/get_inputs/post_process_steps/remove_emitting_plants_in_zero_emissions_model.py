@@ -19,7 +19,7 @@ def post_process(_):
     l1 = len(gen_proj)
     gen_proj = gen_proj[~gen_proj["gen_energy_source"].isin(fuels["fuel"])]
     l2 = len(gen_proj)
-    gen_proj.to_csv("generation_projects_info.csv", index=False)
+    gen_proj.to_csv("generation_projects_info.csv", index=False, na_rep=".")
 
     # Now remove references to that project
     drop(["--silent", "--no-confirm", "--run", "--inputs-dir", "."])
