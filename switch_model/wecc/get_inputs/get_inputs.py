@@ -275,7 +275,8 @@ def query_db(config, skip_cf):
         """
         SELECT
             name, reserves_area as balancing_area
-        FROM load_zone;""",
+        FROM load_zone
+        WHERE name != '_ALL_ZONES';""",
     )
 
     # Paty: in this version of switch this tables is named zone_coincident_peak_demand.csv

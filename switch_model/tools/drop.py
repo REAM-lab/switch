@@ -65,7 +65,8 @@ data_types = {
     "timeseries": (
         ('timeseries.csv', 'TIMESERIES'),
         [
-            ('hydro_timeseries.csv', 'timeseries'),
+            # We no longer include this line since now we can specify a hydro_timepoints.csv file
+            # ('hydro_timeseries.csv', 'timeseries'),
             ('timepoints.csv', 'timeseries')
         ]
     ),
@@ -176,7 +177,7 @@ def get_valid_ids(primary_file, args):
     path = os.path.join(args.inputs_dir, filename)
 
     if not os.path.exists(path):
-        print("\n Warning: {} was not found.".format(filename))
+        warnings.warn("\n {} was not found.".format(filename))
         return None
 
     valid_ids = pandas.read_csv(path, dtype=str)[primary_key]
@@ -203,7 +204,7 @@ def drop_from_file(filename, foreign_key, valid_ids, args):
             print("Removed {} rows {}.".format(rows_removed, filename))
         if rows_removed == count:
             if not args.silent:
-                print("WARNING: {} is now empty.".format(filename))
+                warnings.warn(" {} is now empty.".format(filename))
 
     return rows_removed
 

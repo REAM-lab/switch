@@ -53,6 +53,8 @@ post_process_steps: # The following post process steps will be run in order
   - fix_prebuild_conflict
 #  - only_california
 #  - reserve_technologies
+#  - remove_emitting_plants_in_zero_emissions_model
+#  - remove_retired_plants
 post_process_config:
   # add_storage was used by Martin when studying LDES you likely don't need to uncomment these parameters
   # add_storage:

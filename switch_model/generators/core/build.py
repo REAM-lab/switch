@@ -44,6 +44,20 @@ from switch_model.utilities.scaling import get_assign_default_value_rule
 dependencies = 'switch_model.timescales', 'switch_model.balancing.load_zones',\
     'switch_model.financials', 'switch_model.energy_sources.properties.properties'
 
+def period_cutoff_year(period_start, period_length):
+    """
+    Returns the year that is used to determine if a plant "makes it" into that period.
+    I.e. will a plant operate in that period based on when it comes online.
+    """
+    # Previously the code was just return period_start
+    # However using the midpoint of the period as the "cutoff" seems more correct so
+    # we've made the switch.
+    return period_start + 0.5 * period_length
+
+def is_plant_retired(year_comes_online, period_start, period_length, plant_lifetime):
+    """Returns True if the plant is retired at the given period."""
+    return year_comes_online + plant_lifetime <= period_cutoff_year(period_start, period_length)
+
 def define_components(mod):
     """
 
@@ -402,11 +416,9 @@ def define_components(mod):
             online = m.period_start[build_year]
         else:
             online = build_year
-        retirement = online + m.gen_max_age[g]
-        # Previously the code read return online <= m.period_start[period] < retirement
-        # However using the midpoint of the period as the "cutoff" seems more correct so
-        # we've made the switch.
-        return online <= m.period_start[period] + 0.5 * m.period_length_years[period] < retirement
+        period_start = m.period_start[period]
+        period_length = m.period_length_years[period]
+        return online <= period_cutoff_year(period_start, period_length) and not is_plant_retired(online, period_start, period_length, m.gen_max_age[g])
 
     # This verifies that a predetermined build year doesn't conflict with a period since if that's the case
     # gen_build_can_operate_in_period will mistaken the prebuild for an investment build
