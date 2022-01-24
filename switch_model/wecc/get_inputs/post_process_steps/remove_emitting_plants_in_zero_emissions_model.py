@@ -15,10 +15,11 @@ def post_process(_):
     fuels = fuels[fuels["co2_intensity"] != 0]
 
     # Now remove the projects that use that fuel.
-    gen_proj = pd.read_csv("generation_projects_info.csv", index_col=False, na_values=".", dtype={"GENERATION_PROJECT": str})
+    gen_proj = pd.read_csv("generation_projects_info.csv", index_col=False, na_values=".", dtype=str)
     l1 = len(gen_proj)
     gen_proj = gen_proj[~gen_proj["gen_energy_source"].isin(fuels["fuel"])]
     l2 = len(gen_proj)
+    # We've made sure to not cast the types of any inputs by using dtype=str
     gen_proj.to_csv("generation_projects_info.csv", index=False, na_rep=".")
 
     # Now remove references to that project

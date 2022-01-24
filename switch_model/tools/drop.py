@@ -190,6 +190,7 @@ def drop_from_file(filename, foreign_key, valid_ids, args):
     if not os.path.exists(path):
         return 0
 
+    # dtype=str is necessary to ensure we don't interpret the types and accidently manipulate the data
     df = pandas.read_csv(path, dtype=str)
     count = len(df)
     if foreign_key not in df.columns:

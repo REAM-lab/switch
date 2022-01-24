@@ -494,6 +494,7 @@ def query_db(config, skip_cf):
                 join generation_plant as t using(generation_plant_id)
                 JOIN temp_generation_plant_ids USING(generation_plant_id)
                 WHERE generation_plant_existing_and_planned_scenario_id={params.generation_plant_existing_and_planned_scenario_id}
+                ORDER BY 1, 2
                 ;
                 """,
     )
@@ -631,7 +632,7 @@ def query_db(config, skip_cf):
             JOIN switch.generation_plant USING(generation_plant_id)
             JOIN temp_generation_plant_ids USING(generation_plant_id)
         WHERE hydro_simple_scenario_id={params.hydro_simple_scenario_id}
-        ORDER BY 1;
+        ORDER BY 1, 2;
         """,
     )
 

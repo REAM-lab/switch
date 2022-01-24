@@ -31,12 +31,15 @@ def post_process(_):
 
     # Find if each project is retired
     def is_retired(row):
-        return is_plant_retired(row.build_year, period_start, period_length, row.gen_max_age)
+        return is_plant_retired(float(row.build_year), period_start, period_length, float(row.gen_max_age))
+    # We need to set dtype=str to ensure we don't start casting values to float types
+    # unexpectedly. This means that the is_retired() function above needs to cast the wanted
+    # values to floats.
     proj = pd.read_csv(
         "generation_projects_info.csv",
         index_col=False,
         na_values=".",
-        dtype={"GENERATION_PROJECT": str},
+        dtype=str,
     )
     columns = proj.columns
     proj = proj.merge(build_yrs, on="GENERATION_PROJECT")
