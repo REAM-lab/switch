@@ -223,7 +223,7 @@ Other than scaling, some techniques to resolve numerical issues are:
 
 - Avoiding unnecessarily large penalty terms
 
-- Changing the solver's method
+- Pick a slower but more robust solver's method
 
 - Loosening tolerances (at the risk of getting less accurate, or inaccurate results)
 
