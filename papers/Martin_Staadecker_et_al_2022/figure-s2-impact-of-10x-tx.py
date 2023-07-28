@@ -8,7 +8,8 @@ from matplotlib.ticker import PercentFormatter
 from switch_model.tools.graph.main import GraphTools
 from papers.Martin_Staadecker_et_al_2022.util import (
     get_scenario,
-    set_style, save_figure,
+    set_style,
+    save_figure,
 )
 
 scenarios_supplementary = [
@@ -25,9 +26,7 @@ zones_to_highlight = None
 
 n = len(scenarios_supplementary)
 
-
 # %%  GET DATA
-
 
 def get_data(scenario_index):
     dispatch = tools.get_dataframe("dispatch_zonal_annual_summary.csv")
@@ -56,7 +55,7 @@ def get_data(scenario_index):
     duration = duration[duration["period"] == 2050].drop(columns="period")
     duration = duration.groupby("gen_load_zone", as_index=False).sum()
     duration["value"] = (
-            duration["OnlineEnergyCapacityMWh"] / duration["OnlinePowerCapacityMW"]
+        duration["OnlineEnergyCapacityMWh"] / duration["OnlinePowerCapacityMW"]
     )
     duration = duration[["gen_load_zone", "value", "OnlinePowerCapacityMW"]]
     duration["OnlinePowerCapacityMW"] *= 1e-3
@@ -69,11 +68,10 @@ def get_data(scenario_index):
     duration = duration.join(demand)
     duration = duration.reset_index()
     duration["percent_power"] = (
-            duration["OnlinePowerCapacityMW"] / duration["zone_demand_mw"] * 100
+        duration["OnlinePowerCapacityMW"] / duration["zone_demand_mw"] * 100
     )
 
     return df, duration
-
 
 data = [get_data(i) for i in range(n)]
 
@@ -94,10 +92,8 @@ cmap = get_cmap("bwr")
 
 normalizer = TwoSlopeNorm(vmin=0, vcenter=100, vmax=Y_LIM)
 
-
 def percent_to_color(percent):
     return cmap(normalizer(percent))
-
 
 def plot(ax, data, legend):
     percent_gen, duration = data
@@ -148,7 +144,6 @@ def plot(ax, data, legend):
             labelspacing=1.5,
         )
 
-
 for i, ax in enumerate(axes):
     plot(ax, data[i], legend=(i == n - 1))
     ax.set_title(tools.scenarios[i].name)
@@ -162,7 +157,6 @@ fig.colorbar(
     location="right",
     label="Yearly Generation / Yearly Demand",
 )
-
 
 def highlight_zones(zones, ax):
     if zones is None:
@@ -180,7 +174,6 @@ def highlight_zones(zones, ax):
                 # alpha=0,
             )
 
-
 highlight_zones(zones_to_highlight, axes[0])
 
 # %% SAVE FIGURE
@@ -196,8 +189,8 @@ df = df_baseline.join(df_compare, lsuffix="_base", rsuffix="_compare")
 #     df["OnlineEnergyCapacityMWh_compare"] - df["OnlineEnergyCapacityMWh_base"]
 # ) * 1e-3
 df["change_in_cap"] = (
-                              df["OnlineEnergyCapacityMWh_compare"] / df["OnlineEnergyCapacityMWh_base"]
-                      ) * 100 - 100
+    df["OnlineEnergyCapacityMWh_compare"] / df["OnlineEnergyCapacityMWh_base"]
+) * 100 - 100
 df = df["change_in_cap"]
 # df = df[df > 0]
 # df.sum()
@@ -247,7 +240,7 @@ df_compare = df[df.scenario_index == 0]
 df_baseline = df[df.scenario_index == 1]
 df = df_baseline.join(df_compare, lsuffix="_base", rsuffix="_compare")
 df["change_in_cap"] = (
-        df["OnlineEnergyCapacityMWh_compare"] - df["OnlineEnergyCapacityMWh_base"]
+    df["OnlineEnergyCapacityMWh_compare"] - df["OnlineEnergyCapacityMWh_base"]
 )
 # df["change_in_cap"] = (df["OnlineEnergyCapacityMWh_compare"] / df["OnlineEnergyCapacityMWh_base"]) * 100
 df = df["change_in_cap"]

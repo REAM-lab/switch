@@ -8,7 +8,8 @@ from matplotlib.ticker import PercentFormatter
 from switch_model.tools.graph.main import GraphTools
 from papers.Martin_Staadecker_et_al_2022.util import (
     get_scenario,
-    set_style, save_figure,
+    set_style,
+    save_figure,
 )
 
 scenarios = [
@@ -42,9 +43,7 @@ zones_to_highlight = [
 
 n = len(scenarios)
 
-
 # %%  GET DATA
-
 
 def get_data(scenario_index):
     dispatch = tools.get_dataframe("dispatch_zonal_annual_summary.csv")
@@ -91,7 +90,6 @@ def get_data(scenario_index):
 
     return df, duration
 
-
 data = [get_data(i) for i in range(n)]
 
 # %% DEFINE FIGURE AND PLOTTING FUNCTIONS
@@ -111,10 +109,8 @@ cmap = get_cmap("bwr")
 
 normalizer = TwoSlopeNorm(vmin=0, vcenter=100, vmax=Y_LIM)
 
-
 def percent_to_color(percent):
     return cmap(normalizer(percent))
-
 
 def plot(ax, data, legend):
     percent_gen, duration = data
@@ -165,7 +161,6 @@ def plot(ax, data, legend):
             labelspacing=1.5,
         )
 
-
 for i, ax in enumerate(axes):
     plot(ax, data[i], legend=(i == n - 1))
     ax.set_title(tools.scenarios[i].name)
@@ -179,7 +174,6 @@ fig.colorbar(
     location="right",
     label="Yearly Generation / Yearly Demand",
 )
-
 
 def highlight_zones(zones, ax):
     if zones is None:
@@ -196,7 +190,6 @@ def highlight_zones(zones, ax):
                 # linestyle="--",
                 # alpha=0,
             )
-
 
 highlight_zones(zones_to_highlight, axes[0])
 

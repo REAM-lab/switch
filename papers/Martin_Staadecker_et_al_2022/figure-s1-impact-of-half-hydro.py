@@ -1,13 +1,21 @@
 # %% IMPORT + CREATE tools
 from matplotlib import pyplot as plt
 
-from papers.Martin_Staadecker_et_al_2022.util import set_style, get_scenario, save_figure
+from papers.Martin_Staadecker_et_al_2022.util import (
+    set_style,
+    get_scenario,
+    save_figure,
+)
 from switch_model.tools.graph.main import GraphTools
 
-tools_baseline = GraphTools([get_scenario("1342", "Baseline Scenario")], set_style=False)
+tools_baseline = GraphTools(
+    [get_scenario("1342", "Baseline Scenario")], set_style=False
+)
 tools_baseline.pre_graphing(multi_scenario=False)
 
-tools_hydro = GraphTools([get_scenario("H050", "50% Hydro Scenario (from Set B)")], set_style=False)
+tools_hydro = GraphTools(
+    [get_scenario("H050", "50% Hydro Scenario (from Set B)")], set_style=False
+)
 tools_hydro.pre_graphing(multi_scenario=False)
 
 ROLLING_AVERAGE_DAYS = 7
@@ -18,7 +26,6 @@ plt.close()
 fig = plt.figure()
 ax1 = fig.add_subplot(1, 2, 1, projection=tools_baseline.maps.get_projection())
 ax2 = fig.add_subplot(1, 2, 2, projection=tools_hydro.maps.get_projection())
-
 
 # %% CALC BOTTOM PANEL DATA
 def get_data(tools):
@@ -69,7 +76,6 @@ def get_data(tools):
     duration = duration[["gen_load_zone", "value"]]
     return transmission, newtx, capacity, duration
 
-
 def plot(tools, ax, data, legend=True):
     transmission, newtx, capacity, duration = data
     tools.maps.draw_base_map(ax)
@@ -94,7 +100,6 @@ def plot(tools, ax, data, legend=True):
         duration, ax=ax, legend=legend, bins=(0, 6, 10, 20, float("inf"))
     )
     ax.set_title(tools.scenarios[0].name)
-
 
 # %% PLOT BOTTOM PANEL
 plot(tools_hydro, ax2, get_data(tools_hydro))

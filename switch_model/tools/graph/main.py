@@ -642,7 +642,7 @@ class GraphTools(DataHandler):
         """
         try:
             tech_colors = self.get_dataframe(filename="graph_tech_colors.csv", from_inputs=True, force_one_scenario=True)
-        except:
+        except FileNotFoundError:
             return None
         filtered_tech_colors = tech_colors[tech_colors['map_name'] == map_name]
         if n is not None:

@@ -5,13 +5,18 @@ from switch_model.tools.graph.main import GraphTools
 
 from papers.Martin_Staadecker_et_al_2022.util import (
     set_style,
-    get_scenario, save_figure,
+    get_scenario,
+    save_figure,
 )
 
-tools_solar = GraphTools([get_scenario("WS10", "91% Solar to 9% Wind")], set_style=False)
+tools_solar = GraphTools(
+    [get_scenario("WS10", "91% Solar to 9% Wind")], set_style=False
+)
 tools_solar.pre_graphing(multi_scenario=False)
 
-tools_wind = GraphTools([get_scenario("WS066", "40% Solar to 60% Wind")], set_style=False)
+tools_wind = GraphTools(
+    [get_scenario("WS066", "40% Solar to 60% Wind")], set_style=False
+)
 tools_wind.pre_graphing(multi_scenario=False)
 
 ROLLING_AVERAGE_DAYS = 7
@@ -22,7 +27,6 @@ plt.close()
 fig = plt.figure()
 ax1 = fig.add_subplot(1, 2, 1, projection=tools_solar.maps.get_projection())
 ax2 = fig.add_subplot(1, 2, 2, projection=tools_wind.maps.get_projection())
-
 
 # %% CALC BOTTOM PANEL DATA
 def get_data(tools):
@@ -73,7 +77,6 @@ def get_data(tools):
     duration = duration[["gen_load_zone", "value"]]
     return transmission, newtx, capacity, duration
 
-
 def plot(tools, ax, data, legend=True):
     transmission, newtx, capacity, duration = data
     tools.maps.draw_base_map(ax)
@@ -98,7 +101,6 @@ def plot(tools, ax, data, legend=True):
         duration, ax=ax, legend=legend, bins=(0, 6, 10, 20, float("inf"))
     )
     ax.set_title(tools.scenarios[0].name)
-
 
 # %% PLOT BOTTOM PANEL
 plot(tools_wind, ax2, get_data(tools_wind))
