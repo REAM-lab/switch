@@ -1,0 +1,155 @@
+logging output to logs/2023-09-08_23-55-17.log
+WARNING: DEPRECATED: the 'sorted_robust' function has been moved to
+    'pyomo.common.sorting.sorted_robust'.  Please update your import.
+    (deprecated in 6.1) (called from <frozen importlib._bootstrap>:219)
+
+=======================================================================
+Switch 2.0.6, http://switch-model.org
+=======================================================================
+Arguments:
+log_run_to_file=True, logs_dir='logs', debug=True, inputs_dir='inputs', recommended=True, solver='gurobi', suffixes=['rc', 'dual', 'slack'], solver_manager='serial', solver_options_string='BarHomogeneous=1 FeasibilityTol=1e-5', solver_method='barrier', tee=True, outputs_dir='outputs', verbose=True, interact=True, sig_figs_output=5, zero_cutoff_output=1e-05, sorted_output=True, graph=True
+Modules:
+switch_model, switch_model.timescales, switch_model.financials, switch_model.balancing.load_zones, switch_model.energy_sources.properties, switch_model.generators.core.build, switch_model.generators.core.dispatch, switch_model.reporting, switch_model.transmission.local_td, switch_model.generators.core.no_commit, switch_model.energy_sources.fuel_costs.markets, switch_model.transmission.transport.build, switch_model.transmission.transport.dispatch, switch_model.policies.tx_cap_in_zone, switch_model.solve
+=======================================================================
+
+Model created in 0.16 s.
+Reading data...
+Data read in 0.02 s.
+
+Creating instance...
+Instance created from data in 0.05 s.
+
+Total time spent constructing model: 0.06 s.
+
+Solving model...
+Set parameter Username
+Academic license - for non-commercial use only - expires 2023-11-09
+Read LP format model from file /tmp/tmp0vn0qf7n.pyomo.lp
+Reading time = 0.00 seconds
+x510: 562 rows, 507 columns, 1437 nonzeros
+Set parameter QCPDual to value 1
+Set parameter BarHomogeneous to value 1
+Set parameter FeasibilityTol to value 1e-05
+Set parameter Method to value 2
+Gurobi Optimizer version 9.5.0 build v9.5.0rc5 (linux64)
+Thread count: 32 physical cores, 64 logical processors, using up to 32 threads
+Optimize a model with 562 rows, 507 columns and 1437 nonzeros
+Model fingerprint: 0x7effaeeb
+Variable types: 505 continuous, 2 integer (2 binary)
+Coefficient statistics:
+  Matrix range     [1e-01, 1e+05]
+  Objective range  [2e+01, 2e+04]
+  Bounds range     [4e-01, 2e+05]
+  RHS range        [4e-02, 1e+01]
+Presolve removed 379 rows and 279 columns
+Presolve time: 0.00s
+Presolved: 183 rows, 228 columns, 623 nonzeros
+Variable types: 226 continuous, 2 integer (2 binary)
+Found heuristic solution: objective 126857.94359
+Root barrier log...
+
+Ordering time: 0.00s
+
+Barrier statistics:
+ AA' NZ     : 7.700e+02
+ Factor NZ  : 2.125e+03
+ Factor Ops : 3.067e+04 (less than 1 second per iteration)
+ Threads    : 1
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   4.56861307e+08 -1.24861505e+10  6.81e+03 3.07e+03  1.53e+08     0s
+   1   1.85967428e+08 -4.41636482e+09  3.79e+03 3.09e-11  4.75e+07     0s
+   2   1.16803750e+07 -1.48419081e+09  2.08e+02 1.09e-10  4.61e+06     0s
+   3   1.69523352e+06 -2.26856043e+08  1.03e+01 1.01e-10  4.47e+05     0s
+   4   1.38213844e+06 -2.16111363e+07  2.79e+00 4.68e-11  4.76e+04     0s
+   5   7.68254596e+05 -1.24775516e+06  4.50e-02 2.30e-11  3.48e+03     0s
+   6   3.45581468e+05 -1.84260615e+05  1.19e-03 2.81e-12  9.08e+02     0s
+   7   2.09117886e+05  3.83840517e+04  3.74e-04 2.63e-12  2.92e+02     0s
+   8   1.66008496e+05  6.87576041e+04  1.70e-04 2.58e-12  1.67e+02     0s
+   9   1.45643333e+05  9.04102176e+04  7.14e-05 2.54e-12  9.46e+01     0s
+  10   1.42052008e+05  9.59356975e+04  5.28e-05 4.40e-12  7.90e+01     0s
+  11   1.35372168e+05  1.11840703e+05  2.72e-05 3.52e-12  4.03e+01     0s
+  12   1.32847280e+05  1.22651931e+05  1.89e-05 1.35e-11  1.75e+01     0s
+  13   1.29179019e+05  1.24035433e+05  6.20e-06 1.20e-11  8.81e+00     0s
+  14   1.27251962e+05  1.25906714e+05  8.12e-07 4.22e-11  2.30e+00     0s
+  15   1.26874664e+05  1.26818000e+05  2.19e-08 9.26e-11  9.71e-02     0s
+  16   1.26858602e+05  1.26857697e+05  8.45e-10 2.77e-11  1.55e-03     0s
+  17   1.26857944e+05  1.26857944e+05  3.32e-09 6.53e-09  5.90e-09     0s
+
+Barrier solved model in 17 iterations and 0.02 seconds (0.01 work units)
+Optimal objective 1.26857944e+05
+
+
+Root relaxation: cutoff, 115 iterations, 0.00 seconds (0.00 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0     cutoff    0      126857.944 126857.944  0.00%     -    0s
+
+Explored 1 nodes (115 simplex iterations) in 0.02 seconds (0.01 work units)
+Thread count was 32 (of 64 available processors)
+
+Solution count 1: 126858 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 1.268579435894e+05, best bound 1.268579435894e+05, gap 0.0000%
+Solved model. Total time spent in solver: 0.22 s.
+
+Optimization termination condition was optimal.
+Solver message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
+
+Executing post solve functions...
+Post solve processing completed in 0.05 s.
+Graphing modules:
+costs, energy_balance_duals, daily_demand, /data/home/psernatorre/switch/.switch/lib/python3.8/site-packages/plotnine/geoms/geom_path.py:75: PlotnineWarning: geom_path: Removed 4 rows containing missing values.
+/data/home/psernatorre/switch/.switch/lib/python3.8/site-packages/plotnine/geoms/geom_path.py:81: PlotnineWarning: geom_path: Each group consist of only one observation. Do you need to adjust the group aesthetic?
+demand, generation_capacity_per_period, buildout_gen_per_period, gen_buildout_per_tech_period, online_capacity_map, /data/home/psernatorre/switch/switch_model/tools/graph/maps.py:30: UserWarning: Packages geopandas, shapely or cartopy are missing, no maps will be created. If on Windows make sure you install them through conda.
+dispatch, curtailment, dispatch_per_scenario, curtailment_compare_scenarios, total_dispatch, energy_balance, /data/home/psernatorre/switch/switch_model/utilities/__init__.py:755: UserWarning: Failed to run a graphing function.
+Detailed error log: Traceback (most recent call last):
+  File "/data/home/psernatorre/switch/.switch/lib/python3.8/site-packages/pandas/core/indexes/base.py", line 3361, in get_loc
+    return self._engine.get_loc(casted_key)
+  File "pandas/_libs/index.pyx", line 76, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas/_libs/index.pyx", line 108, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas/_libs/hashtable_class_helper.pxi", line 5198, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas/_libs/hashtable_class_helper.pxi", line 5206, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'StorageNetCharge'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/data/home/psernatorre/switch/switch_model/utilities/__init__.py", line 751, in wrapper
+    return func(*args, **kwargs)
+  File "/data/home/psernatorre/switch/switch_model/tools/graph/main.py", line 68, in wrapper
+    func(tools)
+  File "/data/home/psernatorre/switch/switch_model/generators/core/dispatch.py", line 695, in energy_balance
+    load["StorageNetCharge"] += load["discharge"]
+  File "/data/home/psernatorre/switch/.switch/lib/python3.8/site-packages/pandas/core/frame.py", line 3458, in __getitem__
+    indexer = self.columns.get_loc(key)
+  File "/data/home/psernatorre/switch/.switch/lib/python3.8/site-packages/pandas/core/indexes/base.py", line 3363, in get_loc
+    raise KeyError(key) from err
+KeyError: 'StorageNetCharge'
+
+curtailment_per_period, energy_balance_2, /data/home/psernatorre/switch/switch_model/utilities/__init__.py:755: UserWarning: Failed to run a graphing function.
+Detailed error log: Traceback (most recent call last):
+  File "/data/home/psernatorre/switch/switch_model/utilities/__init__.py", line 751, in wrapper
+    return func(*args, **kwargs)
+  File "/data/home/psernatorre/switch/switch_model/tools/graph/main.py", line 68, in wrapper
+    func(tools)
+  File "/data/home/psernatorre/switch/switch_model/generators/core/dispatch.py", line 834, in graph_energy_balance_2
+    load = tools.get_dataframe("load_balance.csv", usecols=[
+  File "/data/home/psernatorre/switch/switch_model/tools/graph/main.py", line 457, in get_dataframe
+    df = df[usecols]
+  File "/data/home/psernatorre/switch/.switch/lib/python3.8/site-packages/pandas/core/frame.py", line 3464, in __getitem__
+    indexer = self.loc._get_listlike_indexer(key, axis=1)[1]
+  File "/data/home/psernatorre/switch/.switch/lib/python3.8/site-packages/pandas/core/indexing.py", line 1314, in _get_listlike_indexer
+    self._validate_read_indexer(keyarr, indexer, axis)
+  File "/data/home/psernatorre/switch/.switch/lib/python3.8/site-packages/pandas/core/indexing.py", line 1377, in _validate_read_indexer
+    raise KeyError(f"{not_found} not in index")
+KeyError: "['zone_demand_mw'] not in index"
+
+dispatch_map, /data/home/psernatorre/switch/switch_model/tools/graph/maps.py:30: UserWarning: Packages geopandas, shapely or cartopy are missing, no maps will be created. If on Windows make sure you install them through conda.
+transmission_capacity, transmission_map, transmission_buildout, transmission_limit_duals, transmission_dispatch, 
+Took 2.92 s to generate all graphs.
+Total time spent running SWITCH: 3.61 s.

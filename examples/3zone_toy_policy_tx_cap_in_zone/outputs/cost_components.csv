@@ -1,0 +1,6 @@
+component,npv_cost
+FuelCostsPerPeriod,4.1241e+07
+GenVariableOMCostsInTP,1.3124e+07
+LocalTDFixedCosts,2.5309e+07
+TotalGenFixedCosts,4.6258e+07
+TxFixedCosts,9.2591e+05
