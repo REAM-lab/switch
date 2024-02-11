@@ -21,7 +21,7 @@
 
 2. Navigate to the repository: `cd switch`.
 
-3. Create a Python virtual environment from where you'll run Switch: `conda create --name switch`.
+3. Create a Python virtual environment from where you'll run Switch: `conda create --name switch python=3.7`.
 
 4. Activate the newly created environment: `conda activate switch`.
 
