@@ -76,6 +76,12 @@ data_types = {
             ('hydro_timepoints.csv', 'timepoint_id')
         ]
     ),
+    "hydro_timeseries": (
+        ('hydro_timepoints.csv', 'tp_to_hts'),
+        [
+            ('hydro_timeseries.csv', 'timeseries')
+        ]
+    ),
     "projects": (
         ('generation_projects_info.csv', "GENERATION_PROJECT"),
         [
