@@ -20,7 +20,9 @@ from __future__ import division
 
 import os, collections
 
-from pyomo.core.base.misc import sorted_robust
+# from pyomo.core.base.misc import sorted_robust
+from pyomo.common.sorting import sorted_robust
+
 from pyomo.environ import *
 import pandas as pd
 

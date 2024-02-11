@@ -19,7 +19,7 @@ dependency on load_zones.
 
 """
 from __future__ import print_function
-from pyomo.core.base.misc import sorted_robust
+from pyomo.common.sorting import sorted_robust
 from switch_model.utilities import string_types
 from switch_model.utilities.results_info import add_info
 from switch_model.utilities.scaling import get_unscaled_var

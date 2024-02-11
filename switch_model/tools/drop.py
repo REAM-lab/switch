@@ -65,8 +65,6 @@ data_types = {
     "timeseries": (
         ('timeseries.csv', 'TIMESERIES'),
         [
-            # We no longer include this line since now we can specify a hydro_timepoints.csv file
-            # ('hydro_timeseries.csv', 'timeseries'),
             ('timepoints.csv', 'timeseries')
         ]
     ),

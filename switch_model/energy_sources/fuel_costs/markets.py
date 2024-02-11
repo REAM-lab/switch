@@ -366,6 +366,7 @@ def define_components(mod):
         rule=Enforce_Fuel_Consumption_rule)
 
     mod.GEN_TP_FUELS_UNAVAILABLE = Set(
+        dimen=3,
         initialize=mod.GEN_TP_FUELS,
         filter=lambda m, g, t, f: \
             (m.gen_load_zone[g], f) not in m.ZONE_FUELS)
