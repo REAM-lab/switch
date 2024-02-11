@@ -743,10 +743,10 @@ def solve(model):
         if model.options.gurobi_find_iis:
             # Add to the solver options 'ResultFile=iis.ilp'
             # https://stackoverflow.com/a/51994135/5864903
-            model.options.solver_options_string += " ResultFile=iis.ilp"
+            options_string += " ResultFile=iis.ilp"
         if model.options.gurobi_make_mps:
             # Output the input file and set time limit to zero to ensure it doesn't actually solve
-            model.options.solver_options_string += f" ResultFile=problem.mps TimeLimit=0"
+            options_string += f" ResultFile=problem.mps TimeLimit=0"
 
     if model.options.no_crossover:
         if solver_type in gurobi_types:
