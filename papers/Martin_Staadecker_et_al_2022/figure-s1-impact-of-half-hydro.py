@@ -104,4 +104,4 @@ plot(tools_baseline, ax1, get_data(tools_baseline), legend=False)
 plt.tight_layout()
 plt.tight_layout()  # Twice to ensure it works properly, it's a bit weird at times'
 # %% SAVE FIGURE
-save_figure("figure-s1-impact-of-half-hydro.png")
+save_figure("figure-s1-impact-of-half-hydro.svg")

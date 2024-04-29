@@ -294,7 +294,7 @@ ax.text(baseline_energy_cost - 4, 125, "Baseline", rotation=90, color="dimgrey")
 plt.subplots_adjust(left=0.275, right=0.97, top=0.95, wspace=0.05)
 
 # %% SAVE FIGURE
-save_figure("figure-s4-analysis-of-4-factors.png")
+save_figure("figure-s4-analysis-of-4-factors.svg")
 # %% MAX POWER DURATION
 df = tools_ws_ratio.get_dataframe("storage_capacity.csv")
 df = df[df.scenario_name == 0.833]

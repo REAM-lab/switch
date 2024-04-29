@@ -62,4 +62,4 @@ ax.set_yticklabels(["10", "100", "1000"])
 plt.tight_layout()
 
 # %%
-save_figure("figure-s5-duration-cdf-cost-scenarios.png")
+save_figure("figure-s5-duration-cdf-cost-scenarios.svg")

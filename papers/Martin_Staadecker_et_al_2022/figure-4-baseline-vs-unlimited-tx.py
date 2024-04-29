@@ -201,7 +201,7 @@ def highlight_zones(zones, ax):
 highlight_zones(zones_to_highlight, axes[0])
 
 # %% SAVE FIGURE
-save_figure("figure-4-baseline-vs-unlimited-tx.png")
+save_figure("figure-4-baseline-vs-unlimited-tx.svg")
 
 # %%
 df = tools_supplementary.get_dataframe("storage_capacity.csv")

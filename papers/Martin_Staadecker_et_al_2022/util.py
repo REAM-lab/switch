@@ -4,8 +4,8 @@ from matplotlib import pyplot as plt
 
 from switch_model.tools.graph.main import Scenario
 
-rel_path_base = "../switch_runs/ldes_runs"
-output_path_base = "../ldes_paper_plots"
+rel_path_base = "../Staadecker_et_al_2024_archive"
+output_path_base = "./papers/Martin_Staadecker_et_al_2022/figures/"
 
 def save_figure(filename):
     plt.savefig(os.path.join(output_path_base, filename))
@@ -37,7 +37,8 @@ def set_style(interactive=True):
         "ytick.minor.width": 0.8,
         "ytick.minor.size": 2,
         "legend.labelspacing": 0.25,
-        "legend.columnspacing": 1
+        "legend.columnspacing": 1,
+        "svg.fonttype": "none"
     })
 
 

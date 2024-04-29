@@ -109,4 +109,4 @@ plt.tight_layout()
 plt.tight_layout()  # Twice to ensure it works properly, it's a bit weird at times'
 
 # %%
-save_figure("figure-3-wind-vs-solar.png")
+save_figure("figure-3-wind-vs-solar.svg")

@@ -184,7 +184,7 @@ def highlight_zones(zones, ax):
 highlight_zones(zones_to_highlight, axes[0])
 
 # %% SAVE FIGURE
-save_figure("figure-s2-impact-of-10x-tx.png")
+save_figure("figure-s2-impact-of-10x-tx.svg")
 
 # %%
 df = tools_supplementary.get_dataframe("storage_capacity.csv")

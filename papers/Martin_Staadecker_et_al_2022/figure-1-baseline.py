@@ -1,4 +1,4 @@
-# %% IMPORT + CREATE tools
+# %% IMPORT
 from matplotlib import pyplot as plt
 from matplotlib import dates as mdates
 
@@ -9,6 +9,7 @@ from papers.Martin_Staadecker_et_al_2022.util import (
     get_scenario, save_figure,
 )
 
+# %% CREATE tools
 tools = GraphTools([get_scenario("1342")], set_style=False)
 tools.pre_graphing(multi_scenario=False)
 
@@ -150,7 +151,7 @@ for (columnName, columnData) in curtailment.items():
     )
 ax_right.plot(duals, label="Marginal Price", color="red")
 lines += ax.plot(load, color="orange", label="Demand")
-ax.set_title("A. Seasonal Profiles in the Baseline")
+ax.set_title("a", fontweight="bold", loc="left")
 ax.set_ylabel("Dispatch (TWh/day)")
 ax_right.set_ylabel(u"Marginal Price of Electricity ($/MWh)")
 locator = mdates.MonthLocator()
@@ -201,12 +202,14 @@ tools.maps.graph_transmission_capacity(newtx, ax=ax, legend=True, color="red", b
                                        title="New Tx Capacity (GW)")
 tools.maps.graph_pie_chart(capacity, ax=ax)
 tools.maps.graph_duration(duration, ax=ax)
-ax.set_title("B. Geographical Distributions in the Baseline")
-plt.tight_layout()
-plt.tight_layout()  # Twice to ensure it works properly, it's a bit weird at times
+ax.set_title("b", fontweight="bold", loc="left")
+plt.subplot_tool()
+# plt.margins(x=0.2)
+# plt.tight_layout()
+# plt.tight_layout()  # Twice to ensure it works properly, it's a bit weird at times
 
 # %%
-save_figure("figure-1-baseline.png")
+save_figure("figure-1-baseline.svg")
 # %% CALCULATIONS
 
 # Panel A analysis
