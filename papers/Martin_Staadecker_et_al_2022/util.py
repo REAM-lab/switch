@@ -4,8 +4,8 @@ import matplotlib
 
 from switch_model.tools.graph.main import Scenario
 
-rel_path_base = "../switch_runs/ldes_runs"
-output_path_base = "./papers/Martin_Staadecker_et_al_2022/ldes_paper_plots"
+rel_path_base = "../../../switch_runs/ldes_runs"
+output_path_base = "./ldes_paper_plots"
 
 def save_figure(filename):
     plt.savefig(os.path.join(output_path_base, filename))

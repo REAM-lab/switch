@@ -45,16 +45,18 @@ def get_data(tools):
         "transmission.csv", convert_dot_to_na=True
     ).fillna(0)
     transmission = transmission[transmission["PERIOD"] == 2050]
-    newtx = transmission.copy()
     transmission = transmission.rename(
-        {"trans_lz1": "from", "trans_lz2": "to", "TxCapacityNameplate": "value"}, axis=1
+        {"trans_lz1": "from", "trans_lz2": "to"}, axis=1
     )
+    newtx = transmission.copy()
+    transmission["value"] = transmission["TxCapacityNameplate"] - transmission["BuildTx"]
+
     transmission = transmission[["from", "to", "value"]]
     transmission = transmission[transmission.value != 0]
     transmission.value *= 1e-3  # Convert to GW
 
     newtx = newtx.rename(
-        {"trans_lz1": "from", "trans_lz2": "to", "BuildTx": "value"}, axis=1
+        { "BuildTx": "value"}, axis=1
     )
     newtx = newtx[["from", "to", "value"]]
     newtx = newtx[newtx.value != 0]
@@ -80,22 +82,35 @@ def get_data(tools):
 def plot(tools, ax, data, legend=True):
     transmission, newtx, capacity, duration = data
     tools.maps.draw_base_map(ax)
-    tools.maps.graph_transmission_capacity(
-        transmission,
-        ax=ax,
-        legend=legend,
-        color="green",
-        bbox_to_anchor=(1, 0.65),
-        title="Total Tx Capacity (GW)",
-    )
-    tools.maps.graph_transmission_capacity(
-        newtx,
-        ax=ax,
-        legend=legend,
-        color="red",
-        bbox_to_anchor=(1, 0.44),
-        title="New Tx Capacity (GW)",
-    )
+    # tools.maps.graph_transmission_capacity(
+    #     transmission,
+    #     ax=ax,
+    #     legend=legend,
+    #     color="green",
+    #     bbox_to_anchor=(1, 0.65),
+    #     title="Existing Tx Capacity (GW)",
+    # )
+    # tools.maps.graph_transmission_capacity(
+    #     newtx,
+    #     ax=ax,
+    #     legend=legend,
+    #     color="red",
+    #     bbox_to_anchor=(1, 0.44),
+    #     title="New Tx Capacity (GW)",
+    # )
+
+    skew_factor = 0.15
+    transmission["from_to"] = transmission["from"] + transmission["to"]
+    newtx["from_to"] = newtx["from"] + newtx["to"]
+    transmission_no_skew = transmission[~transmission.from_to.isin(newtx.from_to)]
+    transmission_with_skew = transmission[transmission.from_to.isin(newtx.from_to)]
+
+    tools.maps.graph_transmission_capacity(transmission_with_skew, ax=ax, legend=True, color="green",
+                                           bbox_to_anchor=(1, 0.61),
+                                           title="Total Tx Capacity (GW)", skew_factor=-skew_factor)
+    tools.maps.graph_transmission_capacity(transmission_no_skew, ax=ax, legend=False, color="green", skew_factor=0)
+    tools.maps.graph_transmission_capacity(newtx, ax=ax, legend=True, color="red", bbox_to_anchor=(1, 0.44),
+                                           title="New Tx Capacity (GW)", skew_factor=skew_factor)
     tools.maps.graph_pie_chart(capacity, ax=ax, legend=legend)
     tools.maps.graph_duration(
         duration, ax=ax, legend=legend, bins=(0, 6, 10, 20, float("inf"))

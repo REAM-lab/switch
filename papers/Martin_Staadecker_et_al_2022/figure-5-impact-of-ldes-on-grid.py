@@ -95,7 +95,7 @@ colors["Built Generation"] = "r"
 df.plot(ax=ax, marker=".", color=colors)
 ax.set_ylabel("Change in capacity compared to baseline")
 ax.yaxis.set_major_formatter(PercentFormatter())
-ax.set_xlabel("WECC-wide storage capacity (TWh)")
+ax.set_xlabel("WECC-wide storage energy capacity (TWh)")
 ax.set_title("B. Impact of LDES on transmission and generation capacity")
 ax.set_ylim(-100, None)
 # %% CURTAILMENT
@@ -132,7 +132,7 @@ curtailment /= 1000
 curtailment = curtailment.rename_axis("Technology", axis=1)
 curtailment.plot(ax=ax, color=tools.get_colors(), marker=".")
 ax.set_ylabel("Yearly curtailment (GWh)")
-ax.set_xlabel("WECC-wide storage capacity (TWh)")
+ax.set_xlabel("WECC-wide storage energy capacity (TWh)")
 ax.set_title("A. Impact of LDES on curtailment")
 ax.tick_params(top=False, bottom=False, right=False, left=False)
 # %% State of charge
@@ -155,7 +155,7 @@ state_of_charge = tools.transform.timestamp(state_of_charge, use_timepoint=True)
 state_of_charge = state_of_charge.set_index("datetime")
 state_of_charge = state_of_charge.groupby("scenario_name").resample(freq).value.mean()
 state_of_charge = state_of_charge.unstack("scenario_name").rename_axis(
-    "Storage Capacity (TWh)", axis=1
+    "Storage Energy Capacity (TWh)", axis=1
 )
 
 demand = tools.get_dataframe("loads.csv", from_inputs=True).rename(
@@ -218,7 +218,7 @@ plt.tight_layout()
 plt.colorbar(
     cm.ScalarMappable(norm=Normalize(1.94, 64), cmap="viridis"),
     ax=ax,
-    label="Storage Capacity (TWh)",
+    label="Storage Energy Capacity (TWh)",
     fraction=0.1,
     pad=0.1,
 )

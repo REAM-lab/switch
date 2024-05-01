@@ -44,10 +44,11 @@ def get_data(tools):
         "transmission.csv", convert_dot_to_na=True
     ).fillna(0)
     transmission = transmission[transmission["PERIOD"] == 2050]
-    newtx = transmission.copy()
     transmission = transmission.rename(
-        {"trans_lz1": "from", "trans_lz2": "to", "TxCapacityNameplate": "value"}, axis=1
+        {"trans_lz1": "from", "trans_lz2": "to"}, axis=1
     )
+    newtx = transmission.copy()
+    transmission["value"] = transmission["TxCapacityNameplate"] - transmission["BuildTx"]
     transmission = transmission[["from", "to", "value"]]
     transmission = transmission[transmission.value != 0]
     transmission.value *= 1e-3  # Convert to GW
@@ -85,7 +86,7 @@ def plot(tools, ax, data, legend=True):
         legend=legend,
         color="green",
         bbox_to_anchor=(1, 0.65),
-        title="Total Tx Capacity (GW)",
+        title="Existing Tx Capacity (GW)",
     )
     tools.maps.graph_transmission_capacity(
         newtx,
