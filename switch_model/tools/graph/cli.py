@@ -8,7 +8,7 @@ def add_arguments(parser):
                         help="Name of the folder where the graphs should be saved")
     parser.add_argument("--overwrite", default=False, action="store_true",
                         help="Don't prompt before overwriting the existing output folder")
-    parser.add_argument("--skip-long", default=False, action="store_true",
+    parser.add_argument("--skip-long", default=True, action="store_true",
                         help="Skips plots that take a long time to generate and have specified is_long=True.")
     parser.add_argument("--modules", default=None, nargs='+',
                         help="Modules to load the graphing functions for. "
