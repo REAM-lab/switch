@@ -1,3 +1,4 @@
+# %% Start
 from matplotlib import pyplot as plt
 from matplotlib.cm import get_cmap, ScalarMappable
 from matplotlib.colors import (
@@ -10,10 +11,11 @@ from papers.Martin_Staadecker_et_al_2022.util import (
     get_scenario,
     set_style,
     save_figure,
+    save_df
 )
 
 scenarios = [
-    get_scenario("T4", "No Tx Congestion\n(No Tx Build Costs)"),
+    get_scenario("T4", "Baseline Without Transmission Congestion"),
     get_scenario("1342", "Baseline"),
 ]
 scenarios_supplementary = [
@@ -112,13 +114,15 @@ normalizer = TwoSlopeNorm(vmin=0, vcenter=100, vmax=Y_LIM)
 def percent_to_color(percent):
     return cmap(normalizer(percent))
 
-def plot(ax, data, legend):
+def plot(ax, data, legend, hint):
     percent_gen, duration = data
 
     max_size = 400
     max = 50
     duration["size"] = duration["OnlinePowerCapacityMW"] / max * max_size
     tools.maps.draw_base_map(ax)
+    save_df(percent_gen, f"figure-4-{hint}-percent-gen.csv")
+    save_df(duration, f"figure-4-{hint}-duration.csv")
     percent_gen = percent_gen.apply(percent_to_color)
     tools.maps.graph_load_zone_colors(percent_gen, ax)
     legend_handles = tools.maps.graph_duration(
@@ -161,8 +165,8 @@ def plot(ax, data, legend):
             labelspacing=1.5,
         )
 
-for i, ax in enumerate(axes):
-    plot(ax, data[i], legend=(i == n - 1))
+for (i, ax), hint in zip(enumerate(axes), ["left", "right"]):
+    plot(ax, data[i], legend=(i == n - 1), hint=hint)
     ax.set_title(tools.scenarios[i].name)
 
 fig.colorbar(
@@ -172,7 +176,7 @@ fig.colorbar(
     extend="max",
     ax=axes,
     location="right",
-    label="Yearly Generation / Yearly Demand",
+    label="Yearly Generation ÷ Yearly Demand",
 )
 
 def highlight_zones(zones, ax):
@@ -193,8 +197,8 @@ def highlight_zones(zones, ax):
 
 highlight_zones(zones_to_highlight, axes[0])
 
-# %% SAVE FIGURE
-save_figure("figure-4-baseline-vs-unlimited-tx.png")
+# SAVE FIGURE
+save_figure("figure-4-baseline-vs-unlimited-tx.svg")
 
 # %%
 df = tools_supplementary.get_dataframe("storage_capacity.csv")

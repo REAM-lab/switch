@@ -2,21 +2,33 @@ import os
 from matplotlib import pyplot as plt
 import matplotlib
 
+from pathlib import Path
+
+
 from switch_model.tools.graph.main import Scenario
 
+# rel_path_base = "../switch_runs/ldes_runs"
+# working_dir = Path("./papers/Martin_Staadecker_et_al_2022")
+
 rel_path_base = "../../../switch_runs/ldes_runs"
-output_path_base = "./ldes_paper_plots"
+working_dir = Path("./../../papers/Martin_Staadecker_et_al_2022")
+
 
 def save_figure(filename):
-    plt.savefig(os.path.join(output_path_base, filename))
+    plt.savefig(working_dir / "figures" / filename)
+
+
+def save_df(df, csv_name):
+    df.to_csv(working_dir / "figure_data" / csv_name)
+
 
 def get_scenario(rel_path, name=None):
     return Scenario(os.path.join(rel_path_base, rel_path), name=name)
 
+
 def set_style():
-    matplotlib.font_manager.fontManager.addfont(
-        "/usr/local/share/fonts/Avenir Regular.ttf"
-    )
+    # import matplotlib.font_manager as fm
+    # fm.fontManager.addfont(str(working_dir / "fonts" / "Mona-Sans.ttf"))
 
     plt.interactive(True)
 
@@ -31,13 +43,13 @@ def set_style():
             "xtick.minor.width": 0.5,
             "ytick.minor.width": 0.5,
             # Fonts that are slightly smaller than normal since it's a paper. Follow guidelines.
-            "font.size": 7.5,
-            "axes.labelsize": 7.5,
-            "axes.titlesize": 7.5,
-            "xtick.labelsize": 6.5,
-            "ytick.labelsize": 6.5,
-            "legend.fontsize": 6.5,
-            "legend.title_fontsize": 6.5,
+            "font.size": 7,
+            "axes.labelsize": 7,
+            "axes.titlesize": 7,
+            "xtick.labelsize": 6,
+            "ytick.labelsize": 6,
+            "legend.fontsize": 6,
+            "legend.title_fontsize": 6,
             # Other values inspired by seaborn
             "figure.facecolor": "white",
             "axes.labelcolor": ".15",
@@ -48,8 +60,8 @@ def set_style():
             "axes.axisbelow": True,
             "grid.linestyle": "-",
             "text.color": ".15",
-            "font.family": "sans-serif",
-            "font.sans-serif": ["Avenir"],
+            "font.family": "arial",
+            # "font.sans-serif": ["FreeSans"],
             "lines.solid_capstyle": "round",
             "patch.edgecolor": "none",
             "patch.force_edgecolor": True,
@@ -69,7 +81,7 @@ def set_style():
             # Custom set values
             "figure.dpi": 1000,
             "savefig.dpi": 1000,
-            "figure.figsize": (6.850394, 6.850394 / 2),
+            "figure.figsize": (7.086614, 7.086614 / 2),
             # Width according to Joule guidelines https://www.cell.com/figureguidelines
             "lines.linewidth": 1,
             "lines.markersize": 3,
@@ -81,8 +93,11 @@ def set_style():
             "ytick.minor.size": 2,
             "legend.labelspacing": 0.25,
             "legend.columnspacing": 1,
+            "svg.fonttype": 'none',
+            # "text.antialiased": False,
         }
     )
+
 
 def get_set_e_scenarios():
     return [

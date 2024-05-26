@@ -27,7 +27,7 @@ fig = plt.figure()
 ax1 = fig.add_subplot(1, 2, 1, projection=tools_baseline.maps.get_projection())
 ax2 = fig.add_subplot(1, 2, 2, projection=tools_hydro.maps.get_projection())
 
-# %% CALC BOTTOM PANEL DATA
+#  CALC BOTTOM PANEL DATA
 def get_data(tools):
     # Get data for mapping code
     capacity = tools.get_dataframe("gen_cap.csv").rename(
@@ -102,12 +102,12 @@ def plot(tools, ax, data, legend=True):
     )
     ax.set_title(tools.scenarios[0].name)
 
-# %% PLOT BOTTOM PANEL
+#  PLOT BOTTOM PANEL
 plot(tools_hydro, ax2, get_data(tools_hydro))
 
-# %% PLOT LEFT PANEL
+#  PLOT LEFT PANEL
 plot(tools_baseline, ax1, get_data(tools_baseline), legend=False)
 plt.tight_layout()
 plt.tight_layout()  # Twice to ensure it works properly, it's a bit weird at times'
-# %% SAVE FIGURE
+#  SAVE FIGURE
 save_figure("figure-s1-impact-of-half-hydro.png")

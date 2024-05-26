@@ -188,6 +188,8 @@ class GraphMapTools:
         title="Power Capacity (GW)",
         legend=True,
         colors=None,
+        bbox_to_anchor=(1, 0),
+        labelspacing=1
     ):
         """
         Graphs the data from the dataframe to a map pie chart.
@@ -227,13 +229,13 @@ class GraphMapTools:
             legend_points = []
             for size, label in zip(sizes, self._tools.create_bin_labels(bins)):
                 legend_points.append(
-                    ax.scatter([], [], c="k", alpha=0.5, s=size, label=str(label))
+                    ax.scatter([], [], c="k", alpha=0.5, s=size, label=f" {label}")
                 )
             legend = ax.legend(
                 handles=legend_points,
                 title=title,
-                labelspacing=0.75,
-                bbox_to_anchor=(1, 0),
+                labelspacing=labelspacing,
+                bbox_to_anchor=bbox_to_anchor,
                 framealpha=0,
                 loc="lower left",
                 fontsize="small",
@@ -274,7 +276,7 @@ class GraphMapTools:
         return self.graph_points(df, bins=bins, ax=ax, title=title, **kwargs)
 
     def graph_points(
-        self, df, bins, cmap="RdPu", ax=None, size=30, title=None, legend=True
+        self, df, bins, cmap="RdPu", ax=None, size=30, title=None, legend=True, bbox_to_anchor=(1, 1)
     ):
         """
         Graphs the data from the dataframe to a points on each cell.
@@ -302,7 +304,7 @@ class GraphMapTools:
                 color=row["color"],
                 transform=self._projection,
                 zorder=10,
-                linewidth=0.5,
+                linewidth=0.25,
                 edgecolor="dimgray",
             )
         legend_handles = [
@@ -323,7 +325,7 @@ class GraphMapTools:
             legend = ax.legend(
                 title=title,
                 handles=legend_handles,
-                bbox_to_anchor=(1, 1),
+                bbox_to_anchor=bbox_to_anchor,
                 loc="upper left",
                 framealpha=0,
                 fontsize="small",

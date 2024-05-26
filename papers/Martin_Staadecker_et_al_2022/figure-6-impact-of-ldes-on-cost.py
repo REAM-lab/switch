@@ -4,12 +4,14 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib import gridspec
+import numpy as np
 import labellines
 
 from papers.Martin_Staadecker_et_al_2022.util import (
     set_style,
     get_set_e_scenarios,
     save_figure,
+    save_df
 )
 from switch_model.tools.graph.main import GraphTools
 
@@ -42,7 +44,7 @@ ax4 = fig.add_subplot(gs[1, 1])
 y_label = u"Marginal Price of Electricity ($/MWh)"
 x_label = "WECC-wide storage capacity (TWh)"
 
-# %% Variability
+#  Variability
 
 ax = ax1
 ax.clear()
@@ -75,22 +77,22 @@ ax.fill_between(
     label="25th-75th quantile",
 )
 ax.plot(
-    variability.index,
-    variability[0.01],
+    np.array(variability.index),
+    np.array(variability[0.01]),
     marker=".",
     color="dimgray",
     label="1st & 99th quantile",
 )
-ax.plot(variability.index, variability[0.99], marker=".", color="dimgray")
-ax.plot(variability.index, variability[0.5], marker=".", color="red", label="Median")
-
+ax.plot(np.array(variability.index), np.array(variability[0.99]), marker=".", color="dimgray")
+ax.plot(np.array(variability.index), np.array(variability[0.5]), marker=".", color="red", label="Median")
+save_df(variability, "figure-6-a.csv")
 ax.set_xlabel(x_label)
 
 ax.set_ylabel(y_label)
 ax.legend()
-ax.set_title("A. Distribution of marginal prices")
+ax.set_title("a", fontweight="bold", loc="left")
 
-# %% Daily LMP
+#  Daily LMP
 
 ax = ax3
 ax.clear()
@@ -120,9 +122,9 @@ for col in daily_lmp:
 ax.legend(lines, [l.get_label() for l in lines])
 ax.set_xlabel(x_label)
 ax.set_ylabel(y_label)
-
-ax.set_title("C. Marginal price by time of day")
-# %% YEARLY LMP
+save_df(daily_lmp, "figure-6-c.csv")
+ax.set_title("c", fontweight="bold", loc="left")
+# YEARLY LMP
 ax = ax4
 ax.clear()
 months_map = {
@@ -171,9 +173,9 @@ for col in cap:
 ax.legend(lines, [l.get_label() for l in lines])
 ax.set_xlabel(x_label)
 ax.set_ylabel(y_label)
-
-ax.set_title("D. Marginal price by time of year")
-# %% GEOGRAPHICAL LMP
+save_df(cap, "figure-6-d.csv")
+ax.set_title("d", fontweight="bold", loc="left")
+#  GEOGRAPHICAL LMP
 ax = ax2
 ax.clear()
 
@@ -205,6 +207,7 @@ geo.plot(
     ylabel=y_label,
     # cmap="tab10"
 )
+save_df(geo, "figure-6-b.csv")
 
 lines = []
 
@@ -237,10 +240,10 @@ ax.legend(lines, [l.get_label() for l in lines])
 ax.set_xlabel(x_label)
 ax.set_ylabel(y_label)
 
-ax.set_title("B. Marginal price by region")
-# %%
+ax.set_title("b", fontweight="bold", loc="left")
+
 fig.tight_layout()
-save_figure("figure-6-impact-of-LDES-on-COST.png")
+save_figure("figure-6-impact-of-LDES-on-COST.svg")
 
 # %% night time vs day time
 df = daily_lmp.divide(daily_lmp["Noon"], axis=0) * 100 - 100

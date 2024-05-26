@@ -7,6 +7,7 @@ from papers.Martin_Staadecker_et_al_2022.util import (
     set_style,
     get_scenario,
     save_figure,
+    save_df
 )
 
 tools_solar = GraphTools(
@@ -28,7 +29,7 @@ fig = plt.figure()
 ax1 = fig.add_subplot(1, 2, 1, projection=tools_solar.maps.get_projection())
 ax2 = fig.add_subplot(1, 2, 2, projection=tools_wind.maps.get_projection())
 
-# %% CALC BOTTOM PANEL DATA
+# CALC BOTTOM PANEL DATA
 def get_data(tools):
     # Get data for mapping code
     capacity = tools.get_dataframe("gen_cap.csv").rename(
@@ -79,7 +80,7 @@ def get_data(tools):
     duration = duration[["gen_load_zone", "value"]]
     return transmission, newtx, capacity, duration
 
-def plot(tools, ax, data, legend=True):
+def plot(tools, ax, data, legend=True, hint=""):
     transmission, newtx, capacity, duration = data
     tools.maps.draw_base_map(ax)
     # tools.maps.graph_transmission_capacity(
@@ -105,25 +106,28 @@ def plot(tools, ax, data, legend=True):
     transmission_no_skew = transmission[~transmission.from_to.isin(newtx.from_to)]
     transmission_with_skew = transmission[transmission.from_to.isin(newtx.from_to)]
 
-    tools.maps.graph_transmission_capacity(transmission_with_skew, ax=ax, legend=True, color="green",
-                                           bbox_to_anchor=(1, 0.61),
-                                           title="Total Tx Capacity (GW)", skew_factor=-skew_factor)
+    tools.maps.graph_transmission_capacity(transmission_with_skew, ax=ax, legend=legend, color="green",
+                                           bbox_to_anchor=(1, 0.65),
+                                           title="Existing Tx Capacity (GW)", skew_factor=-skew_factor)
     tools.maps.graph_transmission_capacity(transmission_no_skew, ax=ax, legend=False, color="green", skew_factor=0)
-    tools.maps.graph_transmission_capacity(newtx, ax=ax, legend=True, color="red", bbox_to_anchor=(1, 0.44),
+    tools.maps.graph_transmission_capacity(newtx, ax=ax, legend=legend, color="red", bbox_to_anchor=(1, 0.44),
                                            title="New Tx Capacity (GW)", skew_factor=skew_factor)
-    tools.maps.graph_pie_chart(capacity, ax=ax, legend=legend)
+    save_df(transmission, f"figure-3-{hint}-existing_tx.csv")
+    save_df(newtx, f"figure-3-{hint}-new_tx.csv")
+    tools.maps.graph_pie_chart(capacity, ax=ax, legend=legend, labelspacing=1)
+    save_df(capacity, f"figure-3-{hint}-gen-capacity.csv")
     tools.maps.graph_duration(
         duration, ax=ax, legend=legend, bins=(0, 6, 10, 20, float("inf"))
     )
+    save_df(duration, f"figure-3-{hint}-storage-duration.csv")
     ax.set_title(tools.scenarios[0].name)
 
-# %% PLOT BOTTOM PANEL
-plot(tools_wind, ax2, get_data(tools_wind))
+# PLOT BOTTOM PANEL
+plot(tools_wind, ax2, get_data(tools_wind), hint="wind-dominant")
 
-# %% PLOT LEFT PANEL
-plot(tools_solar, ax1, get_data(tools_solar), legend=False)
+# PLOT LEFT PANEL
+plot(tools_solar, ax1, get_data(tools_solar), legend=False, hint="solar-dominant")
 plt.tight_layout()
 plt.tight_layout()  # Twice to ensure it works properly, it's a bit weird at times'
-
-# %%
-save_figure("figure-3-wind-vs-solar.png")
+# 
+save_figure("figure-3-wind-vs-solar.svg")

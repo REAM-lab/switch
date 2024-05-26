@@ -13,6 +13,7 @@ from papers.Martin_Staadecker_et_al_2022.util import (
     set_style,
     get_set_e_scenarios,
     save_figure,
+    save_df
 )
 from switch_model.tools.graph.main import GraphTools
 
@@ -30,7 +31,7 @@ ax1 = fig.add_subplot(gs[0, 0])
 ax2 = fig.add_subplot(gs[0, 1])
 ax3 = fig.add_subplot(gs[1, :])
 
-# %% IMPACT ON TX AND GEN
+# IMPACT ON TX AND GEN
 
 ax = ax2
 ax.clear()
@@ -92,13 +93,14 @@ colors = tools.get_colors()
 colors["Built Transmission"] = "y"
 colors["Built Generation"] = "r"
 # dotted_tx.plot(ax=ax, linestyle="dashed", color="y", alpha=0.8)
+save_df(df, "figure-5-b.csv")
 df.plot(ax=ax, marker=".", color=colors)
 ax.set_ylabel("Change in capacity compared to baseline")
 ax.yaxis.set_major_formatter(PercentFormatter())
 ax.set_xlabel("WECC-wide storage energy capacity (TWh)")
-ax.set_title("B. Impact of LDES on transmission and generation capacity")
+ax.set_title("b", fontweight="bold", loc="left")
 ax.set_ylim(-100, None)
-# %% CURTAILMENT
+# CURTAILMENT
 
 # Read dispatch.csv
 ax = ax1
@@ -131,11 +133,12 @@ curtailment = curtailment.pivot(
 curtailment /= 1000
 curtailment = curtailment.rename_axis("Technology", axis=1)
 curtailment.plot(ax=ax, color=tools.get_colors(), marker=".")
+save_df(curtailment, "figure-5-a.csv")
 ax.set_ylabel("Yearly curtailment (GWh)")
 ax.set_xlabel("WECC-wide storage energy capacity (TWh)")
-ax.set_title("A. Impact of LDES on curtailment")
+ax.set_title("a", fontweight="bold", loc="left")
 ax.tick_params(top=False, bottom=False, right=False, left=False)
-# %% State of charge
+# State of charge
 ax = ax3
 ax.clear()
 axr = ax.twinx()
@@ -170,6 +173,7 @@ total_demand = demand.sum()
 print(total_demand)
 demand = demand.resample(freq).sum()
 
+save_df(state_of_charge, "figure-5-c-charge.csv")
 state_of_charge.plot(
     ax=ax,
     cmap="viridis",
@@ -205,13 +209,14 @@ for line in lines:
 
 demand = demand.iloc[1:-1]
 demand_lines = axr.plot(demand, c="dimgray", linestyle="--", alpha=0.5)
+save_df(demand, "figure-5-c-demand.csv")
 axr.legend(demand_lines, [f"Demand ({total_demand:.0f} TWh/year)"])
 
 ax.set_ylim(0, 65)
 axr.set_ylim(0, 65 / 10)
 axr.set_ylabel("Demand (TWh/day)")
 
-ax.set_title("C. State of charge throughout the year")
+ax.set_title("c", fontweight="bold", loc="left")
 
 plt.tight_layout()
 
@@ -222,8 +227,8 @@ plt.colorbar(
     fraction=0.1,
     pad=0.1,
 )
-# %% SAVE FIGURE
-save_figure("figure-5-impact-of-ldes-on-grid.png")
+# SAVE FIGURE
+save_figure("figure-5-impact-of-ldes-on-grid.svg")
 
 # %% CALCULATIONS
 cap_total = cap["Solar"] + cap["Wind"]
