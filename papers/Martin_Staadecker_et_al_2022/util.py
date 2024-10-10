@@ -26,16 +26,20 @@ def get_scenario(rel_path, name=None):
     return Scenario(os.path.join(rel_path_base, rel_path), name=name)
 
 
-def set_style():
+def set_style(show_axes=False):
     # import matplotlib.font_manager as fm
     # fm.fontManager.addfont(str(working_dir / "fonts" / "Mona-Sans.ttf"))
 
     plt.interactive(True)
 
+    if not show_axes:
+        plt.rcParams.update({
+            "axes.linewidth": 0,
+        })
+
     plt.rcParams.update(
         {
             # Values that are slightly smaller than normal since it's a paper. Inspired from seaborn.
-            "axes.linewidth": 0,
             "grid.linewidth": 0.8,
             "patch.linewidth": 0.8,
             "xtick.major.width": 0.5,

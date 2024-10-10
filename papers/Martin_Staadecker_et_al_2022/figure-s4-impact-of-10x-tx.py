@@ -11,7 +11,7 @@ from papers.Martin_Staadecker_et_al_2022.util import (
     set_style,
     save_figure,
 )
-
+print("running")
 scenarios_supplementary = [
     get_scenario("1342", "Baseline"),
     get_scenario("T5", "10x Tx Build Costs"),
@@ -147,6 +147,8 @@ def plot(ax, data, legend):
 for i, ax in enumerate(axes):
     plot(ax, data[i], legend=(i == n - 1))
     ax.set_title(tools.scenarios[i].name)
+    ax.text(0, 1.025, chr(i+ord('a')), weight="bold", transform=ax.transAxes, horizontalalignment='left',
+             verticalalignment='bottom')
 
 fig.colorbar(
     ScalarMappable(norm=normalizer, cmap=cmap),
@@ -177,73 +179,4 @@ def highlight_zones(zones, ax):
 highlight_zones(zones_to_highlight, axes[0])
 
 # %% SAVE FIGURE
-save_figure("figure-s2-impact-of-10x-tx.png")
-
-# %%
-df = tools_supplementary.get_dataframe("storage_capacity.csv")
-df = df.set_index("load_zone")
-df_baseline = df[df.scenario_index == 0]
-df_compare = df[df.scenario_index == 1]
-df = df_baseline.join(df_compare, lsuffix="_base", rsuffix="_compare")
-# df["change_in_cap"] = (
-#     df["OnlineEnergyCapacityMWh_compare"] - df["OnlineEnergyCapacityMWh_base"]
-# ) * 1e-3
-df["change_in_cap"] = (
-    df["OnlineEnergyCapacityMWh_compare"] / df["OnlineEnergyCapacityMWh_base"]
-) * 100 - 100
-df = df["change_in_cap"]
-# df = df[df > 0]
-# df.sum()
-# df_compare["OnlineEnergyCapacityMWh"].sum() / df_baseline[
-#     "OnlineEnergyCapacityMWh"
-# ].sum() * 100 - 100
-# df_compare["OnlineEnergyCapacityMWh"].sum() - df_baseline[
-#     "OnlineEnergyCapacityMWh"
-# ].sum()
-df
-
-# %% Num of load zones generating less than 25% of demand
-scenario_index = 0
-# scenario_index = 1 # For baseline
-df = data[scenario_index][0].copy()
-df = df[df < 50]
-len(df)
-
-# %% Contribution of zones to highlight
-
-scenario_index = 0
-# scenario_index = 1 # For baseline
-dispatch = tools.get_dataframe("dispatch_zonal_annual_summary.csv")
-dispatch = dispatch[dispatch.scenario_index == scenario_index]
-dispatch = tools.transform.gen_type(dispatch)
-dispatch = dispatch[dispatch.gen_type != "Storage"]
-dispatch = dispatch.groupby("gen_load_zone")[["Energy_GWh_typical_yr"]].sum()
-dispatch.columns = ["generation_gwh"]
-dispatch = dispatch.reset_index()
-dispatch.sort_values("generation_gwh")
-total = dispatch.generation_gwh.sum()
-total_for_zone = dispatch[
-    dispatch.gen_load_zone.isin(zones_to_highlight)
-].generation_gwh.sum()
-total_for_zone / total
-
-# %% Num zones to highlight
-len(zones_to_highlight)
-
-# %% Power contribution for load zones
-df = tools.get_dataframe("storage_capacity.csv")
-df = df.set_index("load_zone")
-cities = ["CA_LADWP", "WA_SEATAC", "CA_PGE_BAY", "CA_SCE_S", "AZ_PHX"]
-# df = df.loc[cities]
-df["OnlineEnergyCapacityMWh"] *= 1e-3
-df_compare = df[df.scenario_index == 0]
-df_baseline = df[df.scenario_index == 1]
-df = df_baseline.join(df_compare, lsuffix="_base", rsuffix="_compare")
-df["change_in_cap"] = (
-    df["OnlineEnergyCapacityMWh_compare"] - df["OnlineEnergyCapacityMWh_base"]
-)
-# df["change_in_cap"] = (df["OnlineEnergyCapacityMWh_compare"] / df["OnlineEnergyCapacityMWh_base"]) * 100
-df = df["change_in_cap"]
-df.sort_values()
-# df.sum()
-# df_compare["OnlineEnergyCapacityMWh"].sum() / df_baseline["OnlineEnergyCapacityMWh"].sum() * 100
+save_figure("figure-s4-impact-of-10x-tx.png")

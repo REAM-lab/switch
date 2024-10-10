@@ -228,7 +228,7 @@ plt.colorbar(
     pad=0.1,
 )
 # SAVE FIGURE
-save_figure("figure-5-impact-of-ldes-on-grid.svg")
+save_figure("figure-5-impact-of-ldes-on-grid.pdf")
 
 # %% CALCULATIONS
 cap_total = cap["Solar"] + cap["Wind"]

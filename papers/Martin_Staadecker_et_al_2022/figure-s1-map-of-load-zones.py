@@ -52,4 +52,4 @@ for lz, center in centers.items():
 
 plt.tight_layout()
 # %%
-save_figure("figure-s5-map-of-load-zones.png")
+save_figure("figure-s1-map-of-load-zones.png")

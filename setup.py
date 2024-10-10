@@ -76,7 +76,7 @@ setup(
         "gurobipy",  # used to provided python bindings for Gurobi for faster solving
         "pyyaml",  # used to read configurations for switch
         # Following libraries used for graphing
-        "matplotlib==3.5.1",
+        "matplotlib>=3.5.3",  # Below 3.5.3 we get the following issue https://github.com/mwaskom/seaborn/issues/3312
         "seaborn",
         "plotnine==0.8.0",
         "scipy",

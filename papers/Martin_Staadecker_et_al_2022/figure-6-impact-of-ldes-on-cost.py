@@ -243,7 +243,7 @@ ax.set_ylabel(y_label)
 ax.set_title("b", fontweight="bold", loc="left")
 
 fig.tight_layout()
-save_figure("figure-6-impact-of-LDES-on-COST.svg")
+save_figure("figure-6-impact-of-LDES-on-COST.pdf")
 
 # %% night time vs day time
 df = daily_lmp.divide(daily_lmp["Noon"], axis=0) * 100 - 100

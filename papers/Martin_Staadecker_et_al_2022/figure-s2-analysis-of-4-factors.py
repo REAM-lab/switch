@@ -142,7 +142,7 @@ def get_data(tools):
     return duration, tx, cap, storage
 
 # %% DEFINE FIGURE AND PLOTTING FUNCTIONS
-set_style()
+set_style(show_axes=True)
 plt.close()
 fig = plt.figure()
 fig.set_size_inches(6.850394, 6.850394)
@@ -323,8 +323,21 @@ ax.text(baseline_energy_cost - 4, 125, "Baseline", rotation=90, color="dimgrey")
 
 plt.subplots_adjust(left=0.275, right=0.97, top=0.95, wspace=0.05)
 
+ax_tl.text(0, 1.025, "a", weight="bold", transform=ax_tl.transAxes, horizontalalignment='left',
+        verticalalignment='bottom')
+ax_tr.text(0, 1.025, "b", weight="bold", transform=ax_tr.transAxes, horizontalalignment='left',
+        verticalalignment='bottom')
+ax_bl.text(0, 1.025, "c", weight="bold", transform=ax_bl.transAxes, horizontalalignment='left',
+        verticalalignment='bottom')
+ax_br.text(0, 1.025, "d", weight="bold", transform=ax_br.transAxes, horizontalalignment='left',
+        verticalalignment='bottom')
+
 # %% SAVE FIGURE
-save_figure("figure-s4-analysis-of-4-factors.png")
+
+
+save_figure("figure-s2-analysis-of-4-factors.png")
+
+
 # %% MAX POWER DURATION
 df = tools_ws_ratio.get_dataframe("storage_capacity.csv")
 df = df[df.scenario_name == 0.833]

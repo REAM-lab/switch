@@ -114,4 +114,4 @@ plt.colorbar(
     fraction=0.05,
 )
 # %% SAVE FIGURE
-save_figure("figure-s3-state-of-charge-under-different-costs.png")
+save_figure("figure-s5-state-of-charge-under-different-costs.png")

@@ -122,12 +122,20 @@ def plot(tools, ax, data, legend=True, hint=""):
     save_df(duration, f"figure-3-{hint}-storage-duration.csv")
     ax.set_title(tools.scenarios[0].name)
 
+
 # PLOT BOTTOM PANEL
 plot(tools_wind, ax2, get_data(tools_wind), hint="wind-dominant")
 
 # PLOT LEFT PANEL
 plot(tools_solar, ax1, get_data(tools_solar), legend=False, hint="solar-dominant")
+
+ax1.text(0, 1.025, "a", weight="bold", transform=ax1.transAxes, horizontalalignment='left',
+        verticalalignment='bottom')
+ax2.text(0, 1.025, "b", weight="bold", transform=ax2.transAxes, horizontalalignment='left',
+        verticalalignment='bottom')
+
+
 plt.tight_layout()
 plt.tight_layout()  # Twice to ensure it works properly, it's a bit weird at times'
 # 
-save_figure("figure-3-wind-vs-solar.svg")
+save_figure("figure-3-wind-vs-solar.pdf")

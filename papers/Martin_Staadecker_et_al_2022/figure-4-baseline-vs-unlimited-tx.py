@@ -197,8 +197,14 @@ def highlight_zones(zones, ax):
 
 highlight_zones(zones_to_highlight, axes[0])
 
+axes[0].text(0, 1.025, "a", weight="bold", transform=axes[0].transAxes, horizontalalignment='left',
+        verticalalignment='bottom')
+axes[1].text(0, 1.025, "b", weight="bold", transform=axes[1].transAxes, horizontalalignment='left',
+        verticalalignment='bottom')
+
+
 # SAVE FIGURE
-save_figure("figure-4-baseline-vs-unlimited-tx.svg")
+save_figure("figure-4-baseline-vs-unlimited-tx.pdf")
 
 # %%
 df = tools_supplementary.get_dataframe("storage_capacity.csv")

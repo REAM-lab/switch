@@ -434,7 +434,7 @@ class DataHandler:
         a multi-scenario function.
         @param only return the following functions
         """
-        if not filename.endswith(".csv"):
+        if not filename.endswith(".csv") and not filename.endswith(".parquet"):
             filename += ".csv"
 
         path = self.get_file_path(filename, folder, from_inputs, scenario_specific=False)

@@ -27,6 +27,7 @@ fig = plt.figure()
 ax1 = fig.add_subplot(1, 2, 1, projection=tools_baseline.maps.get_projection())
 ax2 = fig.add_subplot(1, 2, 2, projection=tools_hydro.maps.get_projection())
 
+
 #  CALC BOTTOM PANEL DATA
 def get_data(tools):
     # Get data for mapping code
@@ -72,10 +73,11 @@ def get_data(tools):
     duration = duration[duration["period"] == 2050].drop(columns="period")
     duration = duration.groupby("gen_load_zone", as_index=False).sum()
     duration["value"] = (
-        duration["OnlineEnergyCapacityMWh"] / duration["OnlinePowerCapacityMW"]
+            duration["OnlineEnergyCapacityMWh"] / duration["OnlinePowerCapacityMW"]
     )
     duration = duration[["gen_load_zone", "value"]]
     return transmission, newtx, capacity, duration
+
 
 def plot(tools, ax, data, legend=True):
     transmission, newtx, capacity, duration = data
@@ -102,12 +104,20 @@ def plot(tools, ax, data, legend=True):
     )
     ax.set_title(tools.scenarios[0].name)
 
+
 #  PLOT BOTTOM PANEL
 plot(tools_hydro, ax2, get_data(tools_hydro))
 
 #  PLOT LEFT PANEL
 plot(tools_baseline, ax1, get_data(tools_baseline), legend=False)
+
+ax1.text(0, 1.025, "a", weight="bold", transform=ax1.transAxes, horizontalalignment='left',
+         verticalalignment='bottom')
+ax2.text(0, 1.025, "b", weight="bold", transform=ax2.transAxes,
+         horizontalalignment='left',
+         verticalalignment='bottom')
+
 plt.tight_layout()
 plt.tight_layout()  # Twice to ensure it works properly, it's a bit weird at times'
 #  SAVE FIGURE
-save_figure("figure-s1-impact-of-half-hydro.png")
+save_figure("figure-s3-impact-of-half-hydro.png")
