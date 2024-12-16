@@ -176,7 +176,8 @@ def post_solve(model, outdir):
 
 @graph(
     "emissions",
-    "Emissions per period"
+    "Emissions per period",
+    is_long=True
 )
 def graph_emissions(tools):
     df = tools.get_dataframe("emissions.csv", convert_dot_to_na=True)
@@ -195,7 +196,8 @@ def graph_emissions(tools):
 
 @graph(
     "emissions_duals",
-    "Carbon cap dual values per period"
+    "Carbon cap dual values per period",
+    is_long=True
 )
 def graph_emissions_duals(tools):
     df = tools.get_dataframe("emissions.csv", convert_dot_to_na=True)

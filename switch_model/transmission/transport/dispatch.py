@@ -111,7 +111,8 @@ def post_solve(instance, outdir):
 @graph(
     "transmission_limit_duals",
     title="Transmission limit duals per period",
-    note="Note: Outliers and zero-valued duals are ignored from box plot."
+    note="Note: Outliers and zero-valued duals are ignored from box plot.",
+    is_long=True
 )
 def transmission_limits(tools):
     dispatch = tools.get_dataframe("transmission_dispatch")
@@ -136,7 +137,8 @@ def transmission_limits(tools):
 @graph(
     "transmission_dispatch",
     title="Dispatched electricity over transmission lines during last period (in TWh)",
-    note="Blue dots are net importers, red dots are net exports, greener lines indicate more use. Lines carrying <1TWh total not shown."
+    note="Blue dots are net importers, red dots are net exports, greener lines indicate more use. Lines carrying <1TWh total not shown.",
+    is_long=True
 )
 def transmission_dispatch(tools):
     if not tools.maps.can_make_maps():

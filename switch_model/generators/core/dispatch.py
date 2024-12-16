@@ -611,6 +611,7 @@ def graph_hourly_curtailment(tools):
 @graph(
     "total_dispatch",
     title="Total dispatched electricity",
+    is_long=True
 )
 def graph_total_dispatch(tools):
     # ---------------------------------- #
@@ -819,7 +820,8 @@ def graph_curtailment_per_tech(tools):
     note="Dashed green and red lines are total generation and total demand (incl. transmission losses),"
          " respectively.\nDotted line is the total state of charge (scaled for readability)."
          "\nWe used a 14-day rolling mean to smoothen out values.",
-    supports_multi_scenario=True
+    supports_multi_scenario=True,
+    is_long=True
 )
 def graph_energy_balance_2(tools):
     # Get dispatch dataframe
@@ -915,7 +917,8 @@ def graph_energy_balance_2(tools):
 
 @graph(
     "dispatch_map",
-    title="Dispatched electricity per load zone"
+    title="Dispatched electricity per load zone",
+    is_long=True
 )
 def dispatch_map(tools):
     if not tools.maps.can_make_maps():

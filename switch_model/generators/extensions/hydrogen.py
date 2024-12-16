@@ -712,7 +712,7 @@ def post_solve(m, outdir):
     )
 
 
-@graph("electrolyzer_capacity_per_period_s", title="Total Capacity by Period")
+@graph("electrolyzer_capacity_per_period_s", title="Total Capacity by Period", is_long=True)
 def graph_electrolyzer_capacity(tools):
     elec_capacity = tools.get_dataframe("hydrogen_profit.csv")
     # elec_capacity = tools.pd.read_csv("hydrogen_profit.csv")

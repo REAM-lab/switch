@@ -242,7 +242,8 @@ def post_solve(instance, outdir):
 @graph(
     "energy_balance_duals",
     title="Energy balance duals per period",
-    note="Note: Outliers and zero-valued duals are ignored."
+    note="Note: Outliers and zero-valued duals are ignored.",
+    is_long=True
 )
 def graph_energy_balance(tools):
     load_balance = tools.get_dataframe('load_balance.csv')
@@ -266,7 +267,8 @@ def graph_energy_balance(tools):
 @graph(
     "daily_demand",
     title="Total daily demand",
-    supports_multi_scenario=True
+    supports_multi_scenario=True,
+    is_long=True
 )
 def demand(tools):
     df = tools.get_dataframe("loads.csv", from_inputs=True, drop_scenario_info=False)
@@ -286,7 +288,8 @@ def demand(tools):
 @graph(
     "demand",
     title="Total demand",
-    supports_multi_scenario=True
+    supports_multi_scenario=True,
+    is_long=True
 )
 def yearly_demand(tools):
     df = tools.get_dataframe("loads.csv", from_inputs=True, drop_scenario_info=False)
