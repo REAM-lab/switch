@@ -1,13 +1,21 @@
 # %% IMPORT + CREATE tools
 from matplotlib import pyplot as plt
 
-from papers.Martin_Staadecker_et_al_2022.util import set_style, get_scenario, save_figure
+from papers.Martin_Staadecker_et_al_2022.util import (
+    set_style,
+    get_scenario,
+    save_figure,
+)
 from switch_model.tools.graph.main import GraphTools
 
-tools_baseline = GraphTools([get_scenario("1342", "Baseline Scenario")], set_style=False)
+tools_baseline = GraphTools(
+    [get_scenario("1342", "Baseline Scenario")], set_style=False
+)
 tools_baseline.pre_graphing(multi_scenario=False)
 
-tools_hydro = GraphTools([get_scenario("H050", "50% Hydro Scenario (from Set B)")], set_style=False)
+tools_hydro = GraphTools(
+    [get_scenario("H050", "50% Hydro Scenario (from Set B)")], set_style=False
+)
 tools_hydro.pre_graphing(multi_scenario=False)
 
 ROLLING_AVERAGE_DAYS = 7
@@ -20,7 +28,7 @@ ax1 = fig.add_subplot(1, 2, 1, projection=tools_baseline.maps.get_projection())
 ax2 = fig.add_subplot(1, 2, 2, projection=tools_hydro.maps.get_projection())
 
 
-# %% CALC BOTTOM PANEL DATA
+#  CALC BOTTOM PANEL DATA
 def get_data(tools):
     # Get data for mapping code
     capacity = tools.get_dataframe("gen_cap.csv").rename(
@@ -37,10 +45,11 @@ def get_data(tools):
         "transmission.csv", convert_dot_to_na=True
     ).fillna(0)
     transmission = transmission[transmission["PERIOD"] == 2050]
-    newtx = transmission.copy()
     transmission = transmission.rename(
-        {"trans_lz1": "from", "trans_lz2": "to", "TxCapacityNameplate": "value"}, axis=1
+        {"trans_lz1": "from", "trans_lz2": "to"}, axis=1
     )
+    newtx = transmission.copy()
+    transmission["value"] = transmission["TxCapacityNameplate"] - transmission["BuildTx"]
     transmission = transmission[["from", "to", "value"]]
     transmission = transmission[transmission.value != 0]
     transmission.value *= 1e-3  # Convert to GW
@@ -64,7 +73,7 @@ def get_data(tools):
     duration = duration[duration["period"] == 2050].drop(columns="period")
     duration = duration.groupby("gen_load_zone", as_index=False).sum()
     duration["value"] = (
-        duration["OnlineEnergyCapacityMWh"] / duration["OnlinePowerCapacityMW"]
+            duration["OnlineEnergyCapacityMWh"] / duration["OnlinePowerCapacityMW"]
     )
     duration = duration[["gen_load_zone", "value"]]
     return transmission, newtx, capacity, duration
@@ -79,7 +88,7 @@ def plot(tools, ax, data, legend=True):
         legend=legend,
         color="green",
         bbox_to_anchor=(1, 0.65),
-        title="Total Tx Capacity (GW)",
+        title="Existing Tx Capacity (GW)",
     )
     tools.maps.graph_transmission_capacity(
         newtx,
@@ -96,12 +105,19 @@ def plot(tools, ax, data, legend=True):
     ax.set_title(tools.scenarios[0].name)
 
 
-# %% PLOT BOTTOM PANEL
+#  PLOT BOTTOM PANEL
 plot(tools_hydro, ax2, get_data(tools_hydro))
 
-# %% PLOT LEFT PANEL
+#  PLOT LEFT PANEL
 plot(tools_baseline, ax1, get_data(tools_baseline), legend=False)
+
+ax1.text(0, 1.025, "a", weight="bold", transform=ax1.transAxes, horizontalalignment='left',
+         verticalalignment='bottom')
+ax2.text(0, 1.025, "b", weight="bold", transform=ax2.transAxes,
+         horizontalalignment='left',
+         verticalalignment='bottom')
+
 plt.tight_layout()
 plt.tight_layout()  # Twice to ensure it works properly, it's a bit weird at times'
-# %% SAVE FIGURE
-save_figure("figure-s1-impact-of-half-hydro.png")
+#  SAVE FIGURE
+save_figure("figure-s3-impact-of-half-hydro.png")

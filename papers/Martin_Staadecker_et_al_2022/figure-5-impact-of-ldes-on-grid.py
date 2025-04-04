@@ -11,7 +11,9 @@ import labellines
 
 from papers.Martin_Staadecker_et_al_2022.util import (
     set_style,
-    get_set_e_scenarios, save_figure,
+    get_set_e_scenarios,
+    save_figure,
+    save_df
 )
 from switch_model.tools.graph.main import GraphTools
 
@@ -29,7 +31,7 @@ ax1 = fig.add_subplot(gs[0, 0])
 ax2 = fig.add_subplot(gs[0, 1])
 ax3 = fig.add_subplot(gs[1, :])
 
-# %% IMPACT ON TX AND GEN
+# IMPACT ON TX AND GEN
 
 ax = ax2
 ax.clear()
@@ -91,13 +93,14 @@ colors = tools.get_colors()
 colors["Built Transmission"] = "y"
 colors["Built Generation"] = "r"
 # dotted_tx.plot(ax=ax, linestyle="dashed", color="y", alpha=0.8)
+save_df(df, "figure-5-b.csv")
 df.plot(ax=ax, marker=".", color=colors)
 ax.set_ylabel("Change in capacity compared to baseline")
 ax.yaxis.set_major_formatter(PercentFormatter())
-ax.set_xlabel("WECC-wide storage capacity (TWh)")
-ax.set_title("B. Impact of LDES on transmission and generation capacity")
+ax.set_xlabel("WECC-wide storage energy capacity (TWh)")
+ax.set_title("b", fontweight="bold", loc="left")
 ax.set_ylim(-100, None)
-# %% CURTAILMENT
+# CURTAILMENT
 
 # Read dispatch.csv
 ax = ax1
@@ -130,11 +133,12 @@ curtailment = curtailment.pivot(
 curtailment /= 1000
 curtailment = curtailment.rename_axis("Technology", axis=1)
 curtailment.plot(ax=ax, color=tools.get_colors(), marker=".")
+save_df(curtailment, "figure-5-a.csv")
 ax.set_ylabel("Yearly curtailment (GWh)")
-ax.set_xlabel("WECC-wide storage capacity (TWh)")
-ax.set_title("A. Impact of LDES on curtailment")
+ax.set_xlabel("WECC-wide storage energy capacity (TWh)")
+ax.set_title("a", fontweight="bold", loc="left")
 ax.tick_params(top=False, bottom=False, right=False, left=False)
-# %% State of charge
+# State of charge
 ax = ax3
 ax.clear()
 axr = ax.twinx()
@@ -154,7 +158,7 @@ state_of_charge = tools.transform.timestamp(state_of_charge, use_timepoint=True)
 state_of_charge = state_of_charge.set_index("datetime")
 state_of_charge = state_of_charge.groupby("scenario_name").resample(freq).value.mean()
 state_of_charge = state_of_charge.unstack("scenario_name").rename_axis(
-    "Storage Capacity (TWh)", axis=1
+    "Storage Energy Capacity (TWh)", axis=1
 )
 
 demand = tools.get_dataframe("loads.csv", from_inputs=True).rename(
@@ -169,6 +173,7 @@ total_demand = demand.sum()
 print(total_demand)
 demand = demand.resample(freq).sum()
 
+save_df(state_of_charge, "figure-5-c-charge.csv")
 state_of_charge.plot(
     ax=ax,
     cmap="viridis",
@@ -176,7 +181,6 @@ state_of_charge.plot(
     xlabel="Time of year",
     legend=False,
 )
-
 
 lines = ax.get_lines()
 x_label = {
@@ -186,35 +190,45 @@ x_label = {
     24.0: 230,
     32.0: 245,
     48.0: 260,
-    64.0: 285
+    64.0: 285,
 }
 for line in lines:
     label = float(line.get_label())
     if label not in x_label.keys():
         continue
-    labellines.labelLine(line, state_of_charge.index[x_label[label]], linespacing=1, outline_width=1, label=str(int(label))+"TWh", align=False, color='k', fontsize="small")
+    labellines.labelLine(
+        line,
+        state_of_charge.index[x_label[label]],
+        linespacing=1,
+        outline_width=1,
+        label=str(int(label)) + "TWh",
+        align=False,
+        color="k",
+        fontsize="small",
+    )
 
 demand = demand.iloc[1:-1]
 demand_lines = axr.plot(demand, c="dimgray", linestyle="--", alpha=0.5)
+save_df(demand, "figure-5-c-demand.csv")
 axr.legend(demand_lines, [f"Demand ({total_demand:.0f} TWh/year)"])
 
 ax.set_ylim(0, 65)
 axr.set_ylim(0, 65 / 10)
 axr.set_ylabel("Demand (TWh/day)")
 
-ax.set_title("C. State of charge throughout the year")
+ax.set_title("c", fontweight="bold", loc="left")
 
 plt.tight_layout()
 
 plt.colorbar(
     cm.ScalarMappable(norm=Normalize(1.94, 64), cmap="viridis"),
     ax=ax,
-    label="Storage Capacity (TWh)",
+    label="Storage Energy Capacity (TWh)",
     fraction=0.1,
-    pad=0.1
+    pad=0.1,
 )
-# %% SAVE FIGURE
-save_figure("figure-5-impact-of-ldes-on-grid.png")
+# SAVE FIGURE
+save_figure("figure-5-impact-of-ldes-on-grid.pdf")
 
 # %% CALCULATIONS
 cap_total = cap["Solar"] + cap["Wind"]
@@ -233,4 +247,3 @@ cap / cap.loc[20] - 1  # solar increase %
 # %% transmission
 100 - tx / tx.iloc[0] * 100
 # (3 - 1.94) * 1000 / ((1 - tx.loc[3] / tx.iloc[0]) * 100)
-

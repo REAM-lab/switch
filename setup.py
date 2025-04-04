@@ -76,9 +76,9 @@ setup(
         "gurobipy",  # used to provided python bindings for Gurobi for faster solving
         "pyyaml",  # used to read configurations for switch
         # Following libraries used for graphing
-        "matplotlib",
+        "matplotlib>=3.5.3",  # Below 3.5.3 we get the following issue https://github.com/mwaskom/seaborn/issues/3312
         "seaborn",
-        "plotnine",
+        "plotnine==0.8.0",
         "scipy",
         "pillow",  # Image processing to make plots stick together
     ],
@@ -96,7 +96,7 @@ setup(
         "dev": ["ipdb", "black", "psycopg2-binary"],
         # On Windows at least, installing these will only work via conda.
         # Run conda install -c conda-forge geopandas shapely [... all the other packages]
-        "maps_INSTALL_WITH_CONDA": ["geopandas", "shapely", "cartopy", "plotnine"]
+        "maps_INSTALL_WITH_CONDA": ["geopandas", "shapely==1.8", "cartopy", "plotnine"]
     },
     entry_points={
         "console_scripts": [

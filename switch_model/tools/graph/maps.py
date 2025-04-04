@@ -1,9 +1,13 @@
 """
 Helper code to create maps of the WECC
 """
+import math
+from collections import defaultdict
 
 import numpy as np
 import warnings
+
+from shapely.geometry import Point
 
 
 class GraphMapTools:
@@ -29,7 +33,8 @@ class GraphMapTools:
         except ModuleNotFoundError:
             warnings.warn(
                 "Packages geopandas, shapely or cartopy are missing, no maps will be created. "
-                "If on Windows make sure you install them through conda.")
+                "If on Windows make sure you install them through conda."
+            )
             return False
         return True
 
@@ -51,7 +56,8 @@ class GraphMapTools:
         except ModuleNotFoundError:
             raise Exception(
                 "Could not find package geopandas, shapely or cartopy. "
-                "If on Windows make sure you install them through conda.")
+                "If on Windows make sure you install them through conda."
+            )
 
         self._shapely = shapely
         self._cartopy = cartopy
@@ -61,16 +67,23 @@ class GraphMapTools:
         # Read shape files
         try:
             self._wecc_lz = geopandas.read_file(
-                self._tools.get_file_path("maps/wecc_lz_4326.geojson", from_inputs=True))
+                self._tools.get_file_path("maps/wecc_lz_4326.geojson", from_inputs=True)
+            )
             self._center_points = geopandas.read_file(
                 self._tools.get_file_path(
-                    "maps/wecc_centroids_4326_3.geojson", from_inputs=True), crs="epsg:4326"
+                    "maps/wecc_centroids_4326_3.geojson", from_inputs=True
+                ),
+                crs="epsg:4326",
             )
         except FileNotFoundError:
-            raise Exception("Can't create maps, files are missing. Try running switch get_inputs.")
+            raise Exception(
+                "Can't create maps, files are missing. Try running switch get_inputs."
+            )
 
         self._wecc_lz = self._wecc_lz.rename({"LOAD_AREA": "gen_load_zone"}, axis=1)
-        self._center_points = self._center_points.rename({"LOAD_AREA": "gen_load_zone"}, axis=1)
+        self._center_points = self._center_points.rename(
+            {"LOAD_AREA": "gen_load_zone"}, axis=1
+        )
         self._center_points = self._center_points[["gen_load_zone", "geometry"]]
 
         self._loaded_dependencies = True
@@ -86,8 +99,12 @@ class GraphMapTools:
         # will not be defined.
         # Note we first need to check that self._cartopy.mpl exists since it starts out
         # uninitialized.
-        if (not hasattr(self._cartopy, "mpl")) or type(ax) != self._cartopy.mpl.geoaxes.GeoAxesSubplot:
-            raise Exception("Axes need to be create with 'projection=tools.maps.get_projection()'")
+        if (not hasattr(self._cartopy, "mpl")) or type(
+            ax
+        ) != self._cartopy.mpl.geoaxes.GeoAxesSubplot:
+            raise Exception(
+                "Axes need to be create with 'projection=tools.maps.get_projection()'"
+            )
 
         map_colors = {
             "ocean": "lightblue",
@@ -101,7 +118,7 @@ class GraphMapTools:
         # Add land and ocean to map
         ax.add_feature(
             self._cartopy.feature.LAND.with_scale(resolution),
-            facecolor=map_colors["land"]
+            facecolor=map_colors["land"],
         )
         # ax.add_feature(
         #     self._cartopy.feature.OCEAN.with_scale(resolution), facecolor=map_colors["ocean"]
@@ -122,11 +139,15 @@ class GraphMapTools:
         )
 
         # Add state borders
-        ax.add_feature(self._cartopy.feature.STATES, linewidth=0.25, edgecolor="dimgray")
+        ax.add_feature(
+            self._cartopy.feature.STATES, linewidth=0.25, edgecolor="dimgray"
+        )
 
         # Add international borders
         ax.add_feature(
-            self._cartopy.feature.BORDERS.with_scale(resolution), linewidth=0.25, edgecolor="dimgray"
+            self._cartopy.feature.BORDERS.with_scale(resolution),
+            linewidth=0.25,
+            edgecolor="dimgray",
         )
 
         return ax
@@ -135,33 +156,41 @@ class GraphMapTools:
         # REFERENC: https://tinyurl.com/app/myurls
         # determine arches
         start = 0.0
-        xy = []
-        s = []
-        for ratio in ratios:
-            x0 = [0] + np.cos(
-                np.linspace(2 * np.pi * start, 2 * np.pi * (start + ratio), 30)
-            ).tolist()  # 30
-            y0 = [0] + np.sin(
-                np.linspace(2 * np.pi * start, 2 * np.pi * (start + ratio), 30)
-            ).tolist()  # 30
+        for ratio, color in zip(ratios, colors):
+            end = start + ratio * 2 * np.pi
+            resolution = 30
+            angle_range = np.linspace(start, end, resolution)
+            x_values = [0] + np.cos(angle_range).tolist()  # 30
+            y_values = [0] + np.sin(angle_range).tolist()  # 30
 
-            xy1 = np.column_stack([x0, y0])
-            s1 = np.abs(xy1).max()
+            marker_path = np.column_stack([x_values, y_values])
 
-            xy.append(xy1)
-            s.append(s1)
-            start += ratio
-
-        for xyi, si, c in zip(xy, s, colors):
             ax.scatter(
-                [x], [y], marker=xyi, s=size * si ** 2, c=c, edgecolor="dimgray",
+                [x],
+                [y],
+                marker=marker_path,
+                s=size * np.abs(marker_path).max() ** 2,
+                c=color,
+                edgecolor="dimgray",
                 transform=self._projection,
                 zorder=10,
-                linewidth=0.25
+                linewidth=0.25,
             )
 
-    def graph_pie_chart(self, df, bins=(0, 10, 30, 60, float("inf")), sizes=(100, 200, 300, 400), ax=None,
-                        title="Power Capacity (GW)", legend=True):
+            start = end
+
+    def graph_pie_chart(
+        self,
+        df,
+        bins=(0, 10, 30, 60, float("inf")),
+        sizes=(100, 200, 300, 400),
+        ax=None,
+        title="Power Capacity (GW)",
+        legend=True,
+        colors=None,
+        bbox_to_anchor=(1, 0),
+        labelspacing=1
+    ):
         """
         Graphs the data from the dataframe to a map pie chart.
         The dataframe should have 3 columns, gen_load_zone, gen_type and value.
@@ -170,17 +199,22 @@ class GraphMapTools:
 
         if ax is None:
             ax = self.draw_base_map()
+        if colors is None:
+            colors = self._tools.get_colors()
         df = df.merge(center_points, on="gen_load_zone")
 
         assert not df["gen_type"].isnull().values.any()
-        colors = self._tools.get_colors()
         lz_values = df.groupby("gen_load_zone")[["value"]].sum()
         if (lz_values["value"] == 0).any():
-            raise NotImplementedError("Can't plot when some load zones have total value of 0")
+            raise NotImplementedError(
+                "Can't plot when some load zones have total value of 0"
+            )
         lz_values["size"] = self._tools.pd.cut(lz_values.value, bins=bins, labels=sizes)
         if lz_values["size"].isnull().values.any():
             lz_values["size"] = 150
-            warnings.warn("Not using variable pie chart size since values were out of bounds during cutting")
+            warnings.warn(
+                "Not using variable pie chart size since values were out of bounds during cutting"
+            )
         for index, group in df.groupby("gen_load_zone"):
             x, y = group["geometry"].iloc[0].x, group["geometry"].iloc[0].y
             group_sum = group.groupby("gen_type")["value"].sum().sort_values()
@@ -195,24 +229,26 @@ class GraphMapTools:
             legend_points = []
             for size, label in zip(sizes, self._tools.create_bin_labels(bins)):
                 legend_points.append(
-                    ax.scatter([], [], c="k", alpha=0.5, s=size, label=str(label))
+                    ax.scatter([], [], c="k", alpha=0.5, s=size, label=f" {label}")
                 )
             legend = ax.legend(
                 handles=legend_points,
                 title=title,
-                labelspacing=0.75,
-                bbox_to_anchor=(1, 0),
+                labelspacing=labelspacing,
+                bbox_to_anchor=bbox_to_anchor,
                 framealpha=0,
                 loc="lower left",
                 fontsize="small",
-                title_fontsize="small"
+                title_fontsize="small",
             )
-            ax.add_artist(legend)  # Required, see : https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#multiple-legends-on-the-same-axes
+            ax.add_artist(
+                legend
+            )  # Required, see : https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#multiple-legends-on-the-same-axes
 
             legend_points = []
             for tech in df["gen_type"].unique():
                 legend_points.append(
-                    ax.scatter([],[],c=colors[tech], marker="s", label=tech)
+                    ax.scatter([], [], c=colors[tech], marker="s", label=tech)
                 )
 
             legend = ax.legend(
@@ -223,24 +259,24 @@ class GraphMapTools:
                 # framealpha=0,
                 fontsize="small",
                 title_fontsize="small",
-                labelspacing=0.3
+                labelspacing=0.3,
             )
             ax.add_artist(legend)
 
         return ax
 
-    def graph_duration(self, df, bins=(0, 4, 6, 8, 10, float("inf")), ax=None, title="Storage duration (h)", **kwargs):
+    def graph_duration(
+        self,
+        df,
+        bins=(0, 4, 6, 8, 10, float("inf")),
+        ax=None,
+        title="Storage duration (h)",
+        **kwargs
+    ):
         return self.graph_points(df, bins=bins, ax=ax, title=title, **kwargs)
 
     def graph_points(
-            self,
-            df,
-            bins,
-            cmap="RdPu",
-            ax=None,
-            size=30,
-            title=None,
-            legend=True
+        self, df, bins, cmap="RdPu", ax=None, size=30, title=None, legend=True, bbox_to_anchor=(1, 1)
     ):
         """
         Graphs the data from the dataframe to a points on each cell.
@@ -255,7 +291,7 @@ class GraphMapTools:
             ax = self.draw_base_map()
         df = df.merge(center_points, on="gen_load_zone", validate="one_to_one")
         n = len(bins)
-        colors = [cmap(x/(n-2)) for x in range(n-1)]
+        colors = [cmap(x / (n - 2)) for x in range(n - 1)]
         df["color"] = self._tools.pd.cut(df.value, bins=bins, labels=colors)
         if "size" not in df.columns:
             df["size"] = size
@@ -268,17 +304,28 @@ class GraphMapTools:
                 color=row["color"],
                 transform=self._projection,
                 zorder=10,
-                linewidth=0.5,
+                linewidth=0.25,
                 edgecolor="dimgray",
             )
-        legend_handles = [self._tools.plt.lines.Line2D([], [], color=c, marker=".", markersize=7.5, label=l, linestyle="None",
-                                                       markeredgewidth=0.5, markeredgecolor="dimgray") for c, l in
-                          zip(colors, self._tools.create_bin_labels(bins))]
+        legend_handles = [
+            self._tools.plt.lines.Line2D(
+                [],
+                [],
+                color=c,
+                marker=".",
+                markersize=7.5,
+                label=l,
+                linestyle="None",
+                markeredgewidth=0.5,
+                markeredgecolor="dimgray",
+            )
+            for c, l in zip(colors, self._tools.create_bin_labels(bins))
+        ]
         if legend:
             legend = ax.legend(
                 title=title,
                 handles=legend_handles,
-                bbox_to_anchor=(1, 1),
+                bbox_to_anchor=bbox_to_anchor,
                 loc="upper left",
                 framealpha=0,
                 fontsize="small",
@@ -286,10 +333,13 @@ class GraphMapTools:
                 # labelspacing=1
             )
             ax.add_artist(
-                legend)  # Required, see : https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#multiple-legends-on-the-same-axes
+                legend
+            )  # Required, see : https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#multiple-legends-on-the-same-axes
         return legend_handles
 
-    def graph_transmission_capacity(self, df, bins=(0, 1, 5, 10, float("inf")), title="Tx Capacity (GW)", **kwargs):
+    def graph_transmission_capacity(
+        self, df, bins=(0, 1, 5, 10, float("inf")), title="Tx Capacity (GW)", **kwargs
+    ):
         self.graph_lines(df, bins=bins, title=title, **kwargs)
 
     def graph_load_zone_colors(self, colors, ax):
@@ -310,8 +360,18 @@ class GraphMapTools:
                 # alpha=0.8,
             )
 
-    def graph_lines(self, df, bins, ax=None, legend=True, widths=(0.25, 0.5, 1, 1.5), color="red", bbox_to_anchor=(1, 0.3),
-                    title=None):
+    def graph_lines(
+        self,
+        df,
+        bins,
+        ax=None,
+        legend=True,
+        widths=(0.25, 0.5, 1, 1.5),
+        color="red",
+        bbox_to_anchor=(1, 0.3),
+        title=None,
+        skew_factor=0,
+    ):
         """
         Graphs the data frame a dataframe onto a map.
         The dataframe should have 4 columns:
@@ -324,7 +384,9 @@ class GraphMapTools:
         _, center_points = self._load_maps()
 
         # Merge duplicate rows if table was unidirectional
-        df[["from", "to"]] = df[["from", "to"]].apply(sorted, axis=1, result_type="expand")
+        df[["from", "to"]] = df[["from", "to"]].apply(
+            sorted, axis=1, result_type="expand"
+        )
         df = df.groupby(["from", "to"], as_index=False)["value"].sum()
 
         df = df.merge(
@@ -332,30 +394,47 @@ class GraphMapTools:
             left_on="from",
             right_on="from_gen_load_zone",
         ).merge(
-            center_points.add_prefix("to_"),
-            left_on="to",
-            right_on="to_gen_load_zone"
-        )[["from_geometry", "to_geometry", "value"]]
+            center_points.add_prefix("to_"), left_on="to", right_on="to_gen_load_zone"
+        )[
+            ["from_geometry", "to_geometry", "value"]
+        ]
 
         def make_line(r):
-            return self._shapely.geometry.LineString([r["from_geometry"], r["to_geometry"]])
+            x1 = r["from_geometry"].x
+            x2 = r["to_geometry"].x
+            y1 = r["from_geometry"].y
+            y2 = r["to_geometry"].y
+            if skew_factor != 0:
+                if y2 == y1:
+                    skew_x = 0
+                    skew_y = skew_factor if x2 < x1 else -skew_factor
+                else:
+                    skew_slope = -(x2 - x1) / (y2 - y1)  # perpendicular to line slope
+                    skew_x = 1 / math.sqrt(skew_slope ** 2 + 1)
+                    skew_x *= skew_factor
+                    skew_y = skew_x * skew_slope
+                    if y2 < y1:
+                        skew_y *= -1
+                        skew_x *= -1
+                x1 += skew_x
+                x2 += skew_x
+                y1 += skew_y
+                y2 += skew_y
+            return self._shapely.geometry.LineString([Point(x1, y1), Point(x2, y2)])
 
         df["geometry"] = df.apply(make_line, axis=1)
-        df = df[df.value != 0] # Drop lines with no thickness
+        df = df[df.value != 0]  # Drop lines with no thickness
         # Cast to GeoDataFrame
-        df = self._geopandas.GeoDataFrame(df[["geometry", "value"]], geometry="geometry")
+        df = self._geopandas.GeoDataFrame(
+            df[["geometry", "value"]], geometry="geometry"
+        )
         df["width"] = self._tools.pd.cut(df.value, bins=bins, labels=widths)
         if df["width"].isnull().values.any():
             df["width"] = 0.5
             warnings.warn(
                 "Not using variable widths for tx lines since values were out of bounds during binning"
             )
-        df.plot(
-            ax=ax,
-            legend=legend,
-            lw=df["width"],
-            color=color
-        )
+        df.plot(ax=ax, legend=legend, lw=df["width"], color=color)
 
         if legend:
             legend_points = []
@@ -370,8 +449,10 @@ class GraphMapTools:
                 framealpha=0,
                 loc="center left",
                 fontsize="small",
-                title_fontsize="small"
+                title_fontsize="small",
             )
-            ax.add_artist(legend)  # Required, see : https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#multiple-legends-on-the-same-axes
+            ax.add_artist(
+                legend
+            )  # Required, see : https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#multiple-legends-on-the-same-axes
 
         return ax
