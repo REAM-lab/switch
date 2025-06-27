@@ -8,7 +8,6 @@ the Switch model.
 INPUT FILE FORMAT
     Import project-specific data from an input directory.
 
-
 """
 from __future__ import division
 
