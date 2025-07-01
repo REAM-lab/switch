@@ -434,7 +434,7 @@ class DataHandler:
         a multi-scenario function.
         @param only return the following functions
         """
-        if not filename.endswith(".csv") and not filename.endswith(".parquet"):
+        if not filename.endswith(".csv"):
             filename += ".csv"
 
         path = self.get_file_path(filename, folder, from_inputs, scenario_specific=False)
@@ -642,7 +642,7 @@ class GraphTools(DataHandler):
         """
         try:
             tech_colors = self.get_dataframe(filename="graph_tech_colors.csv", from_inputs=True, force_one_scenario=True)
-        except FileNotFoundError:
+        except:
             return None
         filtered_tech_colors = tech_colors[tech_colors['map_name'] == map_name]
         if n is not None:

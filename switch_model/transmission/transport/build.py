@@ -329,7 +329,8 @@ def post_solve(instance, outdir):
 
 @graph(
     "transmission_capacity",
-    title="Transmission capacity per period"
+    title="Transmission capacity per period",
+    is_long=True
 )
 def transmission_capacity(tools):
     transmission = tools.get_dataframe("transmission.csv", convert_dot_to_na=True).fillna(0)
@@ -353,7 +354,8 @@ def transmission_capacity(tools):
 @graph(
     "transmission_map",
     title="Total transmission capacity for the last period (in GW)",
-    note="Lines <1 GW not shown"
+    note="Lines <1 GW not shown",
+    is_long=True
 )
 def transmission_map(tools):
     if not tools.maps.can_make_maps():
@@ -371,7 +373,8 @@ def transmission_map(tools):
 @graph(
     "transmission_buildout",
     title="New transmission capacity built across all periods (in GW)",
-    note="Lines with <0.1 GW built not shown."
+    note="Lines with <0.1 GW built not shown.",
+    is_long=True
 )
 def transmission_map(tools):
     if not tools.maps.can_make_maps():

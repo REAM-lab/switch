@@ -15,14 +15,18 @@ from switch_model.utilities import query_yes_no
 from switch_model.wecc.utilities import connect
 from .utils import insert_to_db, timeit
 from .sampler_peak_median import peak_median
+from .sampler_peak_median_fixed import peak_median_fixed
 from .sampler_year_round import sample_year_round
+from .sampler_year_round_multi_ts import sample_year_round_multi_ts
 
 # The schema is general for the script
 SCHEMA = "switch"
 
 sampling_methods = {
     "peak_median": peak_median,
-    "year_round": sample_year_round
+    "peak_median_fixed": peak_median_fixed,
+    "year_round": sample_year_round,
+    "year_round_multi_ts": sample_year_round_multi_ts
 }
 
 

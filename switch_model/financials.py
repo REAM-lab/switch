@@ -373,7 +373,8 @@ def post_solve(instance, outdir):
 @graph(
     "costs",
     title="Itemized costs per period",
-    supports_multi_scenario=True
+    supports_multi_scenario=True,
+    is_long=True
 )
 def graph(tools):
     costs_itemized = tools.get_dataframe("costs_itemized.csv")

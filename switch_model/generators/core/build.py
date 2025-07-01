@@ -503,7 +503,6 @@ def define_components(mod):
         rule=lambda m, g, p: (
                 m.gen_capacity_limit_mw[g] * max_build_potential_scaling_factor >= m.GenCapacity[
             g, p] * max_build_potential_scaling_factor))
-
     # The following components enforce minimum capacity build-outs.
     # Note that this adds binary variables to the model.
     mod.gen_min_build_capacity = Param(mod.GENERATION_PROJECTS, input_file="generation_projects_info.csv",
@@ -630,7 +629,8 @@ def post_solve(m, outdir):
 
 @graph(
     "generation_capacity_per_period",
-    title="Online Generation Capacity Per Period"
+    title="Online Generation Capacity Per Period",
+    is_long=True
 )
 def graph_capacity(tools):
     # Load gen_cap.csv
@@ -671,7 +671,8 @@ def graph_capacity(tools):
 @graph(
     "buildout_gen_per_period",
     title="Built Capacity per Period",
-    supports_multi_scenario=True
+    supports_multi_scenario=True,
+    is_long=True
 )
 def graph_buildout(tools):
     build_gen = tools.get_dataframe("BuildGen.csv", dtype={"GEN_BLD_YRS_1": str})
@@ -724,7 +725,8 @@ def graph_buildout(tools):
     title="Buildout relative to max allowed for period",
     note="\nNote 1: This graph excludes predetermined buildout and projects that have no capacity limit."
          "\nTechnologies that contain projects with no capacity limit are marked by a * and their graphs may"
-         "be misleading."
+         "be misleading.",
+    is_long=True
 )
 def graph_buildout_per_tech(tools):
     # Load gen_cap.csv
@@ -782,7 +784,8 @@ def graph_buildout_per_tech(tools):
 
 @graph(
     "online_capacity_map",
-    title="Map of online capacity per load zone."
+    title="Map of online capacity per load zone.",
+    is_long=True
 )
 def buildout_map(tools):
     if not tools.maps.can_make_maps():

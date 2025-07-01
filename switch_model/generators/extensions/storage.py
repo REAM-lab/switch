@@ -508,6 +508,7 @@ def post_solve(instance, outdir):
     " the difference between the maximum and minimum"
     " state of charge in a 1-day rolling window.\n"
     "The black line is the 14-day rolling mean of the state of charge.",
+    is_long=True
 )
 def graph_state_of_charge(tools):
     # Each panel is a period and scenario
@@ -596,6 +597,7 @@ def graph_state_of_charge(tools):
     "state_of_charge_per_duration",
     title="State of Charge Throughout the Year by Duration",
     supports_multi_scenario=True,
+    is_long=True
 )
 def graph_state_of_charge_per_duration(tools):
     # Read the capacity of each project and label they by duration
@@ -647,6 +649,7 @@ def graph_state_of_charge_per_duration(tools):
 
 @graph(
     "storage_dispatch_frequency",
+    is_long=True
 )
 def graph_dispatch_cycles(tools):
     df = tools.get_dataframe("storage_dispatch")
@@ -693,7 +696,7 @@ def graph_dispatch_cycles(tools):
     ax.grid(True, which="both", axis="x")
 
 
-@graph("graph_buildout", supports_multi_scenario=True)
+@graph("graph_buildout", supports_multi_scenario=True, is_long=True)
 def graph_buildout(tools):
     """
     Create graphs relating to the storage that has been built

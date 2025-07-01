@@ -65,6 +65,7 @@ data_types = {
     "timeseries": (
         ('timeseries.csv', 'TIMESERIES'),
         [
+            ('hydro_timeseries.csv', 'timeseries'),
             ('timepoints.csv', 'timeseries')
         ]
     ),

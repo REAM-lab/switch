@@ -175,7 +175,7 @@ def load_inputs(mod, switch_data, inputs_dir):
     The following files are optional. If no representative data is
     provided for a generation technology, it will default to a single
     line segment with an intercept of 0 and a slope equal to the full
-    load heat22 rate. If no specific data is provided for a project, it
+    load heat rate. If no specific data is provided for a project, it
     will default to its generation technology.
 
     gen_inc_heat_rates.csv

@@ -1,15 +1,14 @@
 """
-This module allows defining a constraint that specifies a minimum buildout for a certain type of gen_tech.
+This module allows defining a constraint that specifies a minimum buildout and minimum generation for a certain type of gen_tech.
 
 The advantage of this module is that it stills allows switch to decide where to place
-the specified technology.
+the specified technology and when to dispatch it.
 """
 import os
 
 from pyomo.environ import *
 
 from switch_model.reporting import write_table
-
 
 def define_components(mod):
     mod.GEN_TECH_PER_PERIOD = Set(
@@ -66,6 +65,32 @@ def define_components(mod):
         doc="Constraint enforcing that the energy capacity > minimum"
     )
 
+    mod.min_Energy_MWh_typical_yr = Param(
+        mod.GEN_TECH_PER_PERIOD,
+        within=NonNegativeReals,
+        default=0,
+        doc="The minimum amount of energy generation in MWh for a period and generation technology"
+    )
+
+    mod.AnnualGenByTech = Expression(
+        mod.GENERATION_TECHNOLOGIES, mod.PERIODS, 
+        rule=lambda m, tech, period:
+        sum(m.DispatchGen[g, t] * m.tp_weight_in_year[t]
+            for g in m.GENERATION_PROJECTS
+            if m.gen_tech[g] == tech
+            for t in m.TPS_FOR_GEN[g]
+            if m.tp_period[t] == period),
+        doc="Annual generation by technology in MWh for each period."
+    )
+
+    mod.Enforce_Minimum_Generation_Per_Tech = Constraint(
+        mod.GEN_TECH_PER_PERIOD,
+        rule=lambda m, tech, p:
+        Constraint.Skip if m.min_Energy_MWh_typical_yr[tech, p] == 0
+        else m.AnnualGenByTech[tech, p] * energy_scaling_factor >=
+             m.min_Energy_MWh_typical_yr[tech, p] * energy_scaling_factor,
+        doc="Constraint enforcing that the energy generation > minimum"
+    )
 
 def load_inputs(mod, switch_data, inputs_dir):
     """
@@ -74,16 +99,19 @@ def load_inputs(mod, switch_data, inputs_dir):
      min_per_tech.csv with the following format:
          gen_tech,period,minimum_capacity_mw,minimum_energy_capacity_mwh
          Nuclear,2040,10,.
+         
+     min_gen_per_tech.csv with the following format:
+         gen_tech,period,min_Energy_MWh_typical_yr
+         Nuclear,2040,1e5
     """
     switch_data.load_aug(
         filename=os.path.join(inputs_dir, "min_per_tech.csv"),
-        param=(mod.minimum_capacity_mw, mod.minimum_energy_capacity_mwh),
+        param=(mod.minimum_capacity_mw, mod.minimum_energy_capacity_mwh,mod.min_Energy_MWh_typical_yr),
         auto_select=True,
         # We want this module to run even if we don't specify a constraint so we still get the useful outputs
         optional=True,
-        optional_params=(mod.minimum_capacity_mw, mod.minimum_energy_capacity_mwh)
+        optional_params=(mod.minimum_capacity_mw, mod.minimum_energy_capacity_mwh,mod.min_Energy_MWh_typical_yr)
     )
-
 
 def post_solve(mod, outdir):
     write_table(

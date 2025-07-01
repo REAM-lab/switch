@@ -39,7 +39,7 @@ def load_scenario_from_config(config, db_cursor) -> ScenarioParams:
     # Read from the database all the parameters.
     db_cursor.execute(
         f"""SELECT {",".join(param_names)}
-            FROM scenario
+            FROM scenario_corrected
             WHERE scenario_id = {params.scenario_id};"""
     )
     db_values = list(db_cursor.fetchone())

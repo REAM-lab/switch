@@ -135,6 +135,10 @@ def define_components(mod):
                                 input_column="so2_intensity", )
     mod.f_ch4_intensity = Param(mod.FUELS, within=NonNegativeReals, default=0, input_file="fuels.csv",
                                 input_column="ch4_intensity", )
+    mod.f_nh3_intensity = Param(mod.FUELS, within=NonNegativeReals, default=0, input_file="fuels.csv",
+                                input_column="nh3_intensity", )
+    mod.f_pm25_intensity = Param(mod.FUELS, within=NonNegativeReals, default=0, input_file="fuels.csv",
+                                input_column="pm25_intensity", )
 
     mod.min_data_check('f_co2_intensity')
     # Ensure that fuel and non-fuel sets have no overlap.

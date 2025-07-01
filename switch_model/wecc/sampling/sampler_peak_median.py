@@ -16,12 +16,12 @@ def sample_timepoints(
     dates,
     peak,
     period_id,
-    number_tps: int = 6,
+    number_tps,
 ):
     """
     Returns a dataframe of timepoints for the given dates
     """
-    if number_tps != 6:
+    if number_tps not in [6, 24]:
         raise NotImplementedError(f"{number_tps} tps is not yet implemented")
     columns_to_return = [
         "date",
@@ -43,10 +43,17 @@ def sample_timepoints(
             # Find timepoint with peak load
             subset_peak = subset["demand_mw"].idxmax()
             # Get a range of timepoints around the peak
-            start_timepoint = subset_peak - pd.Timedelta(value=delta_t * 2, unit="hours")
-            end_timepoint = subset_peak + pd.Timedelta(value=(delta_t * 2 + delta_t), unit="hours")
-            # Return the timepoints in that range
-            tps = subset[start_timepoint: end_timepoint: delta_t]
+            if number_tps == 6:
+    			# For 6 timepoints, use a 4-hour interval
+                start_timepoint = subset_peak - pd.Timedelta(value=delta_t * 2, unit="hours")
+                end_timepoint = subset_peak + pd.Timedelta(value=(delta_t * 2 + delta_t), unit="hours")
+                tps = subset[start_timepoint: end_timepoint: delta_t]
+            elif number_tps == 24:
+                # For 24 timepoints, use the whole day
+                tps = subset[::delta_t]
+            else:
+                raise NotImplementedError(f"{number_tps} tps is not yet implemented")
+            # Return the timepoints in that range  
         else:
             # Get all the timepoints in that day
             subset = df.loc[date].copy()
@@ -71,7 +78,7 @@ def sample_timepoints(
 
 def _get_timeseries(
     data: pd.DataFrame,
-    number_tps: int = 6,
+    number_tps,
     *args,
     **kwargs,
 ):
@@ -184,6 +191,7 @@ def peak_median(
             sample_timepoints(
                 df_tmp,
                 median_days,
+                number_tps=number_tps,
                 period_id=period_id,
                 peak=False
             )
@@ -198,6 +206,7 @@ def peak_median(
     # Get the timeseries for the given timepoints
     timeseries = _get_timeseries(
         sampled_tps,
+        number_tps=number_tps,
         scale_to_period=scale_to_period,
     )
     # Filter out the id column
@@ -224,8 +233,5 @@ def peak_median(
         how="right",
         on=["period_id", "day_no"],
     )
-
-    # FIXME: Overlaping timepoints cause troubles on the DB
-    breakpoint()
 
     return timeseries[columns_ts], sampled_tps_tms[columns]

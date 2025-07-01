@@ -18,7 +18,9 @@ is unspecified.
 
 Specifying any of   carbon_cap_tnox_per_yr, carbon_cost_dollar_per_tnox,
                     carbon_cap_tso2_per_yr, carbon_cost_dollar_per_tso2,
-                    carbon_cap_tch4_per_yr, carbon_cost_dollar_per_tch4
+                    carbon_cap_tch4_per_yr, carbon_cost_dollar_per_tch4,
+                    carbon_cap_tnh3_per_yr, carbon_cost_dollar_per_tnh3,
+                    carbon_cap_tpm25_per_yr, carbon_cost_dollar_per_tpm25
     will have the same effect as descibed above, just for different greenhouse gases.
 
 INPUT FILE FORMAT
@@ -32,6 +34,8 @@ INPUT FILE FORMAT
         carbon_cap_tnox_per_yr, carbon_cost_dollar_per_tnox,
         carbon_cap_tso2_per_yr, carbon_cost_dollar_per_tso2,
         carbon_cap_tch4_per_yr, carbon_cost_dollar_per_tch4,
+        carbon_cap_tnh3_per_yr, carbon_cost_dollar_per_tnh3,
+        carbon_cap_tpm25_per_yr, carbon_cost_dollar_per_tpm25,
 """
 from __future__ import division
 import os
@@ -54,6 +58,12 @@ def define_components(model):
     model.carbon_cap_tch4_per_yr = Param(model.PERIODS, default=float('inf'), input_file="carbon_policies.csv",
                                          doc=(
             "CH4 emissions from this model must be less than this cap. This is specified in metric tonnes of CH4 per year."))
+    model.carbon_cap_tnh3_per_yr = Param(model.PERIODS, default=float('inf'), input_file="carbon_policies.csv",
+                                         doc=(
+            "NH3 emissions from this model must be less than this cap. This is specified in metric tonnes of NH3 per year."))
+    model.carbon_cap_tpm25_per_yr = Param(model.PERIODS, default=float('inf'), input_file="carbon_policies.csv",
+                                         doc=(
+            "PM2.5 emissions from this model must be less than this cap. This is specified in metric tonnes of PM2.5 per year."))
 
     # We use a scaling factor to improve the numerical properties
     # of the model. The scaling factor was determined using trial
@@ -88,6 +98,20 @@ def define_components(model):
               Constraint.Skip if m.carbon_cap_tch4_per_yr[p] == float('inf')
               else m.AnnualEmissionsCH4[p] <= m.carbon_cap_tch4_per_yr[p],
         doc="Enforces the carbon cap for generation-related CH4 emissions.")
+    
+    model.Enforce_Carbon_Cap_NH3= Constraint(
+        model.PERIODS,
+        rule=lambda m, p:
+              Constraint.Skip if m.carbon_cap_tnh3_per_yr[p] == float('inf')
+              else m.AnnualEmissionsNH3[p] <= m.carbon_cap_tnh3_per_yr[p],
+        doc="Enforces the carbon cap for generation-related NH3 emissions.")
+        
+    model.Enforce_Carbon_Cap_PM25 = Constraint(
+        model.PERIODS,
+        rule=lambda m, p:
+              Constraint.Skip if m.carbon_cap_tpm25_per_yr[p] == float('inf')
+              else m.AnnualEmissionsPM25[p] <= m.carbon_cap_tpm25_per_yr[p],
+        doc="Enforces the carbon cap for generation-related PM2.5 emissions.")
 
     # Make sure the model has a dual suffix for determining implicit carbon costs
     model.enable_duals()
@@ -104,6 +128,12 @@ def define_components(model):
     model.carbon_cost_dollar_per_tch4 = Param(
         model.PERIODS, default=0.0, input_file="carbon_policies.csv",
         doc="The cost adder applied to CH4 emissions, in future dollars per metric tonne of CH4.")
+    model.carbon_cost_dollar_per_tnh3 = Param(
+        model.PERIODS, default=0.0, input_file="carbon_policies.csv",
+        doc="The cost adder applied to NH3 emissions, in future dollars per metric tonne of NH3.")
+    model.carbon_cost_dollar_per_tpm25 = Param(
+        model.PERIODS, default=0.0, input_file="carbon_policies.csv",
+        doc="The cost adder applied to PM2.5 emissions, in future dollars per metric tonne of PM2.5.")
 
     model.EmissionsCosts = Expression(
         model.PERIODS,
@@ -111,10 +141,14 @@ def define_components(model):
               m.AnnualEmissions[p] * m.carbon_cost_dollar_per_tco2[p] +
               m.AnnualEmissionsNOx[p] * m.carbon_cost_dollar_per_tnox[p] +
               m.AnnualEmissionsSO2[p] * m.carbon_cost_dollar_per_tso2[p] +
-              m.AnnualEmissionsCH4[p] * m.carbon_cost_dollar_per_tch4[p]),
+              m.AnnualEmissionsCH4[p] * m.carbon_cost_dollar_per_tch4[p] +
+              m.AnnualEmissionsNH3[p] * m.carbon_cost_dollar_per_tnh3[p] +
+              m.AnnualEmissionsPM25[p] * m.carbon_cost_dollar_per_tpm25[p]),
         doc="Enforces the carbon cap for generation-related emissions.")
 
     model.Cost_Components_Per_Period.append('EmissionsCosts')
+    
+    
 
 
 def post_solve(model, outdir):
@@ -129,7 +163,7 @@ def post_solve(model, outdir):
     values will not be exported.
     """
     def get_row(model, period):
-        # Loop through all 4 green house gases (GHG) and add the value to the row.
+        # Loop through all 6 green house gases (GHG) and add the value to the row.
         GHGs = [
             {"AnnualEmissions": model.AnnualEmissions, "cap": model.carbon_cap_tco2_per_yr,
              "cost_per_t": model.carbon_cost_dollar_per_tco2, "Enforce_Carbon_Cap": "Enforce_Carbon_Cap"},
@@ -139,6 +173,10 @@ def post_solve(model, outdir):
              "cost_per_t": model.carbon_cost_dollar_per_tso2, "Enforce_Carbon_Cap": "Enforce_Carbon_Cap_SO2"},
             {"AnnualEmissions": model.AnnualEmissionsCH4, "cap": model.carbon_cap_tch4_per_yr,
              "cost_per_t": model.carbon_cost_dollar_per_tch4, "Enforce_Carbon_Cap": "Enforce_Carbon_Cap_CH4"},
+             {"AnnualEmissions": model.AnnualEmissionsNH3, "cap": model.carbon_cap_tnh3_per_yr,
+             "cost_per_t": model.carbon_cost_dollar_per_tnh3, "Enforce_Carbon_Cap": "Enforce_Carbon_Cap_NH3"},
+             {"AnnualEmissions": model.AnnualEmissionsPM25, "cap": model.carbon_cap_tpm25_per_yr,
+             "cost_per_t": model.carbon_cost_dollar_per_tpm25, "Enforce_Carbon_Cap": "Enforce_Carbon_Cap_PM25"},
         ]
 
         return (period,) + tuple(
@@ -170,13 +208,18 @@ def post_solve(model, outdir):
                   "carbon_cost_dollar_per_tso2", "carbon_cost_annual_total_so2",
                   "AnnualEmissions_tCH4_per_yr", "carbon_cap_tch4_per_yr", "carbon_cap_dual_future_dollar_per_tch4",
                   "carbon_cost_dollar_per_tch4", "carbon_cost_annual_total_ch4",
+                  "AnnualEmissions_tNH3_per_yr", "carbon_cap_tnh3_per_yr", "carbon_cap_dual_future_dollar_per_tnh3",
+                  "carbon_cost_dollar_per_tnh3", "carbon_cost_annual_total_nh3",
+                  "AnnualEmissions_tPM25_per_yr", "carbon_cap_tpm25_per_yr", "carbon_cap_dual_future_dollar_per_tpm25",
+                  "carbon_cost_dollar_per_tpm25", "carbon_cost_annual_total_pm25",
                   ),
         values=get_row)
 
 
 @graph(
     "emissions",
-    "Emissions per period"
+    "Emissions per period",
+    is_long=True
 )
 def graph_emissions(tools):
     df = tools.get_dataframe("emissions.csv", convert_dot_to_na=True)
@@ -195,7 +238,8 @@ def graph_emissions(tools):
 
 @graph(
     "emissions_duals",
-    "Carbon cap dual values per period"
+    "Carbon cap dual values per period",
+    is_long=True
 )
 def graph_emissions_duals(tools):
     df = tools.get_dataframe("emissions.csv", convert_dot_to_na=True)

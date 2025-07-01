@@ -179,7 +179,8 @@ def post_solve(model, outdir):
 
 @graph(
     "emissions_CA",
-    "California's Total Emissions"
+    "California's Total Emissions",
+    is_long=True
 )
 def graph(tools):
     # Plot emissions over time

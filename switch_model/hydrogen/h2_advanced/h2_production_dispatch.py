@@ -8,6 +8,10 @@ the Switch model.
 INPUT FILE FORMAT
     Import project-specific data from an input directory.
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9f8376e (inital changes to pipeline transport module)
 """
 from __future__ import division
 
@@ -26,12 +30,22 @@ dependencies = 'switch_model.timescales', 'switch_model.balancing.load_zones', \
                'switch_model.financials', 'switch_model.energy_sources.properties', \
                'switch_model.hydrogen.h2_advanced.h2_production_build'
 optional_dependencies = 'switch_model.h2_transport'
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9f8376e (inital changes to pipeline transport module)
 
 def define_components(m):
     if not m.options.no_hydrogen:
         define_hydrogen_components(m)
 
+<<<<<<< HEAD
+=======
+def define_components(m):
+    if not m.options.no_hydrogen:
+        define_hydrogen_components(m)
+
+>>>>>>> 9f8376e (inital changes to pipeline transport module)
 def define_hydrogen_components(m):
     """
 

@@ -443,6 +443,14 @@ def define_components(mod):
     		for z in m.LOAD_ZONES),
     	doc="The annual cost in dollars of CCS pipelines connecting each load zone to a carbon sink.")
     mod.Cost_Components_Per_Period.append('AnnualCCSPipelineCosts')
+    	
+    mod.AnnualCCS45QTaxCredit = Expression(
+    	mod.PERIODS,
+    	rule = lambda m, period: sum(
+    		-70.05 * m.AnnualCapturedEmissions_by_z[z, period]
+    		for z in m.LOAD_ZONES),
+    	doc="The annual savings in dollars from 45Q tax credit, which grants $85/tonne ($2023) of CO2 captured.")
+    mod.Cost_Components_Per_Period.append('AnnualCCS45QTaxCredit')
 
     mod.AnnualEmissionsNOx = Expression(
         mod.PERIODS,
@@ -704,6 +712,7 @@ def graph_hourly_curtailment(tools):
 @graph(
     "total_dispatch",
     title="Total dispatched electricity",
+    is_long=True
 )
 def graph_total_dispatch(tools):
     # ---------------------------------- #
@@ -912,7 +921,8 @@ def graph_curtailment_per_tech(tools):
     note="Dashed green and red lines are total generation and total demand (incl. transmission losses),"
          " respectively.\nDotted line is the total state of charge (scaled for readability)."
          "\nWe used a 14-day rolling mean to smoothen out values.",
-    supports_multi_scenario=True
+    supports_multi_scenario=True,
+    is_long=True
 )
 def graph_energy_balance_2(tools):
     # Get dispatch dataframe
@@ -1008,7 +1018,8 @@ def graph_energy_balance_2(tools):
 
 @graph(
     "dispatch_map",
-    title="Dispatched electricity per load zone"
+    title="Dispatched electricity per load zone",
+    is_long=True
 )
 def dispatch_map(tools):
     if not tools.maps.can_make_maps():
