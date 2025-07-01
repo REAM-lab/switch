@@ -2,25 +2,15 @@
 # Licensed under the Apache License, Version 2.0, which is in the LICENSE file.
 
 """
-This module defines storage technologies. It builds on top of generic
-generators, adding components for deciding how much energy to build into
+This module defines hydrogen storage technologies. It adds components for deciding how much energy to build into
 storage, when to charge, energy accounting, etc.
 
 INPUT FILE FORMAT
     Import storage parameters. Optional columns are noted with a *.
 
-    generation_projects_info.csv
-        GENERATION_PROJECT, ...
-        gen_storage_efficiency, gen_discharge_efficiency*, gen_store_to_release_ratio*,
-        gen_storage_energy_to_power_ratio*, gen_storage_max_cycles_per_year*
-        gen_self_discharge_rate*, gen_land_use_rate*
-
-    # TODO: maybe move the columns above to a storage_gen_info file to avoid the weird index
-    # reading and avoid having to create these extra columns for all projects;
-    # Alternatively, say that these values are specified for _all_ projects (maybe with None
-    # as default) and then define STORAGE_GENS as the subset of projects for which
-    # gen_storage_efficiency has been specified, then require valid settings for all
-    # STORAGE_GENS.
+    h2_storage.csv
+        H2_STOR_ID, h2_stor_type, stor_load_zone, stor_capital_cost_per_kg, 
+        stor_fixed_om_per_kg, stor_maximum_size_kg, stor_life_years
 
     gen_build_costs.csv
         GENERATION_PROJECT, build_year, ...
@@ -43,80 +33,60 @@ from switch_model.tools.graph import graph
 
 dependencies = (
     "switch_model.timescales",
+    "switch_model.hydrogen.h2_advanced.h2_timescales",
     "switch_model.balancing.load_zones",
     "switch_model.financials",
     "switch_model.energy_sources.properties",
-    "switch_model.generators.core.build",
-    "switch_model.generators.core.dispatch",
+    "switch_model.hydrogen.h2_advanced.h2_production_build"
 )
 
 
 def define_components(mod):
+    if not mod.options.no_hydrogen:
+        define_hydrogen_components(mod)
+
+def define_hydrogen_components(mod):
     """
 
-    STORAGE_GENS is the subset of projects that can provide energy storage.
+    H2_STOR is the set of H2 storage candidate projects, which are of different types 
+    (liquid_hydrogen_tank, gas_hydrogen_tank, hard_rock, salt_cavern).
 
-    STORAGE_GEN_BLD_YRS is the subset of GEN_BLD_YRS, restricted
-    to storage projects.
+    STORAGE_PROD_BLD_YRS is the subset of PROD_BLD_YRS, restricted
+    to H2 storage projects.
 
-    gen_storage_efficiency[STORAGE_GENS] describes the round trip
-    efficiency of a storage technology. A storage technology that is 75
-    percent efficient would have a storage_efficiency of .75. If 1 MWh
-    was stored in such a storage project, 750 kWh would be available for
-    extraction later. Internal leakage or energy dissipation of storage
-    technologies is assumed to be neglible, which is consistent with
-    short-duration storage technologies currently on the market which
-    tend to consume stored power within 1 day. If a given storage
-    technology has significant internal discharge when it stores power
-    for extended time perios, then those behaviors will need to be
-    modeled in more detail.
-
-    gen_discharge_efficiency[STORAGE_GENS] describes the efficiency during
-    discharging. A discharge efficiency of 0.90 means that 90% of the energy
-    stored reaches the grid during discharging. Note that gen_storage_efficiency
-    is the efficiency while charging. To only specify the round trip efficiency
-    set gen_storage_efficiency to the round trip efficiency and leave this
-    parameter at its default of 1.
-
-    gen_store_to_release_ratio[STORAGE_GENS] describes the maximum rate
-    that energy can be stored, expressed as a ratio of discharge power
-    capacity. This is an optional parameter and will default to 1. If a
-    storage project has 1 MW of dischage capacity and a gen_store_to_release_ratio
-    of 1.2, then it can consume up to 1.2 MW of power while charging.
-
-    gen_storage_energy_to_power_ratio[STORAGE_GENS], if specified, restricts
+    gen_storage_energy_to_power_ratio[H2_STOR], if specified, restricts
     the storage capacity (in MWh) to be a fixed multiple of the output
     power (in MW), i.e., specifies a particular number of hours of
     storage capacity. Omit this column or specify "." to allow Switch
     to choose the energy/power ratio. (Note: gen_storage_energy_overnight_cost
     or gen_overnight_cost should often be set to 0 when using this.)
 
-    gen_storage_max_cycles_per_year[STORAGE_GENS], if specified, restricts
+    gen_storage_max_cycles_per_year[H2_STOR], if specified, restricts
     the number of charge/discharge cycles each storage project can perform
     per year; one cycle is defined as discharging an amount of energy
     equal to the storage capacity of the project.
 
-    gen_self_discharge_rate[STORAGE_GENS] is the fraction of the charge that is lost
+    gen_self_discharge_rate[H2_STOR] is the fraction of the charge that is lost
     over a day. This is used for certain types of storage such as thermal energy
     storage that slowly loses its charge over time. Default is 0 (no self discharge).
 
-    gen_land_use_rate[STORAGE_GENS] is the amount of land used in square meters per MWh
+    gen_land_use_rate[H2_STOR] is the amount of land used in square meters per MWh
     of storage for the given storage technology. Defaults to 0.
 
     gen_storage_energy_overnight_cost[(g, bld_yr) in
-    STORAGE_GEN_BLD_YRS] is the overnight capital cost per MWh of
+    STORAGE_PROD_BLD_YRS] is the overnight capital cost per MWh of
     energy capacity for building the given storage technology installed in the
     given investment period. This is only defined for storage technologies.
     Note that this describes the energy component and the overnight_cost
     describes the power component.
 
     gen_predetermined_storage_energy_mwh[(g, bld_yr) in
-    PREDETERMINED_GEN_BLD_YRS] is the amount of storage that has either been
+    PREDETERMINED_PROD_BLD_YRS] is the amount of storage that has either been
     installed previously, or is slated for installation and is not a free
     decision variable. This is analogous to gen_predetermined_cap, but in
     units of energy of storage capacity (MWh) rather than power (MW).
 
-    BuildStorageEnergy[(g, bld_yr) in STORAGE_GEN_BLD_YRS]
+    BuildStorageEnergy[(g, bld_yr) in STORAGE_PROD_BLD_YRS]
     is a decision of how much energy capacity to build onto a storage
     project. This is analogous to BuildGen, but for energy rather than power.
 
@@ -155,20 +125,20 @@ def define_components(mod):
     in meters squared for a given storage project during a given period.
     """
 
-    mod.STORAGE_GENS = Set(within=mod.GENERATION_PROJECTS, dimen=1)
+    mod.H2_STOR = Set(within=mod.GENERATION_PROJECTS, dimen=1)
     mod.STORAGE_GEN_PERIODS = Set(
         within=mod.GEN_PERIODS,
         initialize=lambda m: [
-            (g, p) for g in m.STORAGE_GENS for p in m.PERIODS_FOR_GEN[g]
+            (g, p) for g in m.H2_STOR for p in m.PERIODS_FOR_GEN[g]
         ],
     )
     mod.gen_storage_efficiency = Param(
-        mod.STORAGE_GENS,
+        mod.H2_STOR,
         input_file="generation_projects_info.csv",
         within=PercentFraction,
     )
     mod.gen_discharge_efficiency = Param(
-        mod.STORAGE_GENS,
+        mod.H2_STOR,
         within=PercentFraction,
         default=1,
         input_file="generation_projects_info.csv",
@@ -176,63 +146,63 @@ def define_components(mod):
     )
     # TODO: rename to gen_charge_to_discharge_ratio?
     mod.gen_store_to_release_ratio = Param(
-        mod.STORAGE_GENS,
+        mod.H2_STOR,
         within=NonNegativeReals,
         input_file="generation_projects_info.csv",
         default=1.0,
     )
     mod.gen_storage_energy_to_power_ratio = Param(
-        mod.STORAGE_GENS,
+        mod.H2_STOR,
         input_file="generation_projects_info.csv",
         within=NonNegativeReals,
         default=float("inf"),
     )  # inf is a flag that no value is specified (nan and None don't work)
     mod.gen_storage_max_cycles_per_year = Param(
-        mod.STORAGE_GENS,
+        mod.H2_STOR,
         within=NonNegativeReals,
         input_file="generation_projects_info.csv",
         default=float("inf"),
     )
     mod.gen_self_discharge_rate = Param(
-        mod.STORAGE_GENS,
+        mod.H2_STOR,
         within=PercentFraction,
         default=0,
         input_file="generation_projects_info.csv",
         doc="Percent of stored energy lost per day.",
     )
     mod.gen_land_use_rate = Param(
-        mod.STORAGE_GENS,
+        mod.H2_STOR,
         within=NonNegativeReals,
         default=0,
         input_file="generation_projects_info.csv",
         doc="Meters squared of land used per MWh of storage",
     )
 
-    mod.STORAGE_GEN_BLD_YRS = Set(
+    mod.STORAGE_PROD_BLD_YRS = Set(
         dimen=2,
         initialize=lambda m: [
-            (g, bld_yr) for g in m.STORAGE_GENS for bld_yr in m.BLD_YRS_FOR_GEN[g]
+            (g, bld_yr) for g in m.H2_STOR for bld_yr in m.BLD_YRS_FOR_GEN[g]
         ],
     )
     mod.gen_storage_energy_overnight_cost = Param(
-        mod.STORAGE_GEN_BLD_YRS,
+        mod.STORAGE_PROD_BLD_YRS,
         input_file="gen_build_costs.csv",
         within=NonNegativeReals,
     )
     mod.min_data_check("gen_storage_energy_overnight_cost")
     mod.gen_predetermined_storage_energy_mwh = Param(
-        mod.PREDETERMINED_GEN_BLD_YRS,
+        mod.PREDETERMINED_PROD_BLD_YRS,
         input_file="gen_build_predetermined.csv",
         within=NonNegativeReals,
     )
-    mod.PREDETERMINED_STORAGE_GEN_BLD_YRS = Set(
-        initialize=mod.PREDETERMINED_GEN_BLD_YRS,
+    mod.PREDETERMINED_STORAGE_PROD_BLD_YRS = Set(
+        initialize=mod.PREDETERMINED_PROD_BLD_YRS,
         filter=lambda m, g, bld_yr: (g, bld_yr)
         in m.gen_predetermined_storage_energy_mwh,
     )
 
     def bounds_BuildStorageEnergy(m, g, bld_yr):
-        if (g, bld_yr) in m.PREDETERMINED_STORAGE_GEN_BLD_YRS:
+        if (g, bld_yr) in m.PREDETERMINED_STORAGE_PROD_BLD_YRS:
             return (
                 m.gen_predetermined_storage_energy_mwh[g, bld_yr],
                 m.gen_predetermined_storage_energy_mwh[g, bld_yr],
@@ -241,7 +211,7 @@ def define_components(mod):
             return (0, None)
 
     mod.BuildStorageEnergy = Var(
-        mod.STORAGE_GEN_BLD_YRS,
+        mod.STORAGE_PROD_BLD_YRS,
         within=NonNegativeReals,
         bounds=bounds_BuildStorageEnergy,
     )
@@ -262,7 +232,7 @@ def define_components(mod):
         ]
 
     mod.BuildStorageEnergy_assign_default_value = BuildAction(
-        mod.PREDETERMINED_STORAGE_GEN_BLD_YRS,
+        mod.PREDETERMINED_STORAGE_PROD_BLD_YRS,
         rule=BuildStorageEnergy_assign_default_value,
     )
 
@@ -278,7 +248,7 @@ def define_components(mod):
                 * crf(m.interest_rate, m.gen_max_age[g])
                 for bld_yr in m.BLD_YRS_FOR_GEN_PERIOD[g, p]
             )
-            for g in m.STORAGE_GENS
+            for g in m.H2_STOR
         ),
     )
     mod.Cost_Components_Per_Period.append("StorageEnergyFixedCost")
@@ -289,10 +259,10 @@ def define_components(mod):
     # rule=lambda m, p: sum(m.BuildStorageEnergy[g, bld_yr] *
     #            m.gen_storage_energy_overnight_cost[g, bld_yr] *
     #            crf(m.interest_rate, m.gen_max_age[g])
-    #            for (g, bld_yr) in m.STORAGE_GEN_BLD_YRS))
+    #            for (g, bld_yr) in m.STORAGE_PROD_BLD_YRS))
 
     mod.StorageEnergyCapacity = Expression(
-        mod.STORAGE_GENS,
+        mod.H2_STOR,
         mod.PERIODS,
         rule=lambda m, g, period: sum(
             m.BuildStorageEnergy[g, bld_yr]
@@ -301,7 +271,7 @@ def define_components(mod):
     )
 
     mod.LandUse = Expression(
-        mod.STORAGE_GENS,
+        mod.H2_STOR,
         mod.PERIODS,
         rule=lambda m, g, p: m.gen_land_use_rate[g] * m.StorageEnergyCapacity[g, p],
     )
@@ -309,7 +279,7 @@ def define_components(mod):
     mod.STORAGE_GEN_TPS = Set(
         dimen=2,
         initialize=lambda m: (
-            (g, tp) for g in m.STORAGE_GENS for tp in m.TPS_FOR_GEN[g]
+            (g, tp) for g in m.H2_STOR for tp in m.TPS_FOR_GEN[g]
         ),
     )
 
@@ -336,7 +306,7 @@ def define_components(mod):
 
     # use fixed energy/power ratio (# hours of capacity) when specified
     mod.Enforce_Fixed_Energy_Storage_Ratio = Constraint(
-        mod.STORAGE_GEN_BLD_YRS,
+        mod.STORAGE_PROD_BLD_YRS,
         rule=lambda m, g, y: Constraint.Skip
         if m.gen_storage_energy_to_power_ratio[g] == float("inf")  # no value specified
         else (
@@ -422,7 +392,7 @@ def define_components(mod):
 def load_inputs(mod, switch_data, inputs_dir):
     # Base the set of storage projects on storage efficiency being specified.
     # TODO: define this in a more normal way
-    switch_data.data()["STORAGE_GENS"] = {
+    switch_data.data()["H2_STOR"] = {
         None: list(switch_data.data(name="gen_storage_efficiency").keys())
     }
 
@@ -438,7 +408,7 @@ def post_solve(instance, outdir):
     # Write how much is built each build year for each project to storage_builds.csv
     reporting.write_table(
         instance,
-        instance.STORAGE_GEN_BLD_YRS,
+        instance.STORAGE_PROD_BLD_YRS,
         output_file=os.path.join(outdir, "storage_builds.csv"),
         headings=(
             "generation_project",

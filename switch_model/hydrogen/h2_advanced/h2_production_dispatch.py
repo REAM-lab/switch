@@ -2,19 +2,13 @@
 # Licensed under the Apache License, Version 2.0, which is in the LICENSE file.
 
 """
-Defines model components to describe generation projects build-outs for
-the Switch model. This module requires either generators.core.unitcommit or
-generators.core.no_commit to constrain project dispatch to either committed or
-installed capacity.
+Defines model components to describe H2 production project build-outs for
+the Switch model. 
 
 INPUT FILE FORMAT
     Import project-specific data from an input directory.
 
-    variable_capacity_factors can be skipped if no variable
-    renewable projects are considered in the optimization.
 
-    variable_capacity_factors.csv
-        GENERATION_PROJECT, timepoint, gen_max_capacity_factor
 """
 from __future__ import division
 
@@ -31,11 +25,15 @@ from switch_model.tools.graph import graph
 
 dependencies = 'switch_model.timescales', 'switch_model.balancing.load_zones', \
                'switch_model.financials', 'switch_model.energy_sources.properties', \
-               'switch_model.generators.core.build'
-optional_dependencies = 'switch_model.transmission.local_td'
+               'switch_model.hydrogen.h2_advanced.h2_production_build'
+optional_dependencies = 'switch_model.h2_transport'
 
 
-def define_components(mod):
+def define_components(m):
+    if not m.options.no_hydrogen:
+        define_hydrogen_components(m)
+
+def define_hydrogen_components(m):
     """
 
     Adds components to a Pyomo abstract model object to describe the
