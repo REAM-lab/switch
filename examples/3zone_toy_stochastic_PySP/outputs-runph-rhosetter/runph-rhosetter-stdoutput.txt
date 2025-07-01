@@ -1,0 +1,1395 @@
+$ python C:/Users/inodu_notebook_05/Desktop/switch/venv/Scripts/runph.exe --model-directory=. --instance-directory=inputs/pysp_inputs --solver=glpk --default-rho=1000.0 --traceback --rho-cfgfile=rhosetter.py  --solution-writer=pyomo.pysp.plugins.csvsolutionwriter --output-scenario-tree-solution --linearize-nonbinary-penalty-terms=5 --bounds-cfgfile=pha_bounds_cfg.py
+loading model...
+model successfully loaded...
+User-defined PH solution writer module=pyomo.pysp.plugins.csvsolutionwriter already imported - skipping
+Importing module=rhosetter.py
+Module successfully loaded
+Importing module=pha_bounds_cfg.py
+Module successfully loaded
+Initializing PH
+
+Executing user rho setter callback function
+Executing user bound setter callback function
+Starting PH
+
+Initiating PH iteration=0
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84879349.9861 Max-Min=14722868.24
+Converger=Normalized term diff value is         0.1725 - threshold reached=False
+Cumulative run-time=0.45 seconds
+
+Initiating PH iteration=1
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84902827.9719 Max-Min=14680913.96
+Converger=Normalized term diff value is         0.1824 - threshold reached=False
+Cumulative run-time=0.97 seconds
+
+Initiating PH iteration=2
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84422878.9116 Max-Min=14709083.09
+Converger=Normalized term diff value is         0.1743 - threshold reached=False
+Cumulative run-time=1.36 seconds
+
+Initiating PH iteration=3
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84233479.4906 Max-Min=14671208.39
+Converger=Normalized term diff value is         0.1700 - threshold reached=False
+Cumulative run-time=1.71 seconds
+
+Initiating PH iteration=4
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84153227.3653 Max-Min=14668531.17
+Converger=Normalized term diff value is         0.1708 - threshold reached=False
+Cumulative run-time=2.13 seconds
+
+Initiating PH iteration=5
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84117154.4126 Max-Min=14682465.88
+Converger=Normalized term diff value is         0.1695 - threshold reached=False
+Cumulative run-time=2.48 seconds
+
+Initiating PH iteration=6
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84097105.4522 Max-Min=14694540.79
+Converger=Normalized term diff value is         0.1532 - threshold reached=False
+Cumulative run-time=2.83 seconds
+
+Initiating PH iteration=7
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84090191.5507 Max-Min=14703519.09
+Converger=Normalized term diff value is         0.1528 - threshold reached=False
+Cumulative run-time=3.19 seconds
+
+Initiating PH iteration=8
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84085685.4349 Max-Min=14709814.08
+Converger=Normalized term diff value is         0.1526 - threshold reached=False
+Cumulative run-time=3.53 seconds
+
+Initiating PH iteration=9
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84135974.5531 Max-Min=14554337.46
+Converger=Normalized term diff value is         0.1650 - threshold reached=False
+Cumulative run-time=3.90 seconds
+
+Initiating PH iteration=10
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84138143.8682 Max-Min=14598084.25
+Converger=Normalized term diff value is         0.1563 - threshold reached=False
+Cumulative run-time=4.23 seconds
+
+Initiating PH iteration=11
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84139202.8670 Max-Min=14597335.84
+Converger=Normalized term diff value is         0.1405 - threshold reached=False
+Cumulative run-time=4.58 seconds
+
+Initiating PH iteration=12
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84203589.9100 Max-Min=14407355.53
+Converger=Normalized term diff value is         0.1366 - threshold reached=False
+Cumulative run-time=4.91 seconds
+
+Initiating PH iteration=13
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84203595.9395 Max-Min=14402792.74
+Converger=Normalized term diff value is         0.1331 - threshold reached=False
+Cumulative run-time=5.31 seconds
+
+Initiating PH iteration=14
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84191153.4550 Max-Min=14379891.67
+Converger=Normalized term diff value is         0.1392 - threshold reached=False
+Cumulative run-time=5.65 seconds
+
+Initiating PH iteration=15
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84180447.6422 Max-Min=14412009.11
+Converger=Normalized term diff value is         0.1378 - threshold reached=False
+Cumulative run-time=5.99 seconds
+
+Initiating PH iteration=16
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84197545.9334 Max-Min=14360714.24
+Converger=Normalized term diff value is         0.1394 - threshold reached=False
+Cumulative run-time=6.33 seconds
+
+Initiating PH iteration=17
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84191151.6389 Max-Min=14379897.12
+Converger=Normalized term diff value is         0.1387 - threshold reached=False
+Cumulative run-time=6.66 seconds
+
+Initiating PH iteration=18
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84189903.7580 Max-Min=14383640.76
+Converger=Normalized term diff value is         0.1385 - threshold reached=False
+Cumulative run-time=7.00 seconds
+
+Initiating PH iteration=19
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84293183.3018 Max-Min=14130658.91
+Converger=Normalized term diff value is         0.1344 - threshold reached=False
+Cumulative run-time=7.33 seconds
+
+Initiating PH iteration=20
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84293735.5243 Max-Min=14166111.57
+Converger=Normalized term diff value is         0.1307 - threshold reached=False
+Cumulative run-time=7.67 seconds
+
+Initiating PH iteration=21
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84319410.4500 Max-Min=14194054.85
+Converger=Normalized term diff value is         0.1520 - threshold reached=False
+Cumulative run-time=8.00 seconds
+
+Initiating PH iteration=22
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84149652.4858 Max-Min=13832322.92
+Converger=Normalized term diff value is         0.1451 - threshold reached=False
+Cumulative run-time=8.34 seconds
+
+Initiating PH iteration=23
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84124619.5031 Max-Min=13567905.94
+Converger=Normalized term diff value is         0.1520 - threshold reached=False
+Cumulative run-time=8.67 seconds
+
+Initiating PH iteration=24
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84139563.4298 Max-Min=13473008.20
+Converger=Normalized term diff value is         0.1602 - threshold reached=False
+Cumulative run-time=9.02 seconds
+
+Initiating PH iteration=25
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84094915.5639 Max-Min=13582068.60
+Converger=Normalized term diff value is         0.1366 - threshold reached=False
+Cumulative run-time=9.36 seconds
+
+Initiating PH iteration=26
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84116933.7164 Max-Min=13391762.55
+Converger=Normalized term diff value is         0.1413 - threshold reached=False
+Cumulative run-time=9.69 seconds
+
+Initiating PH iteration=27
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84137908.5872 Max-Min=13412037.70
+Converger=Normalized term diff value is         0.1406 - threshold reached=False
+Cumulative run-time=10.03 seconds
+
+Initiating PH iteration=28
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83852546.2591 Max-Min=12649838.35
+Converger=Normalized term diff value is         0.1375 - threshold reached=False
+Cumulative run-time=10.45 seconds
+
+Initiating PH iteration=29
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83824631.4522 Max-Min=12758064.17
+Converger=Normalized term diff value is         0.1360 - threshold reached=False
+Cumulative run-time=10.79 seconds
+
+Initiating PH iteration=30
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83745720.0690 Max-Min=12330976.50
+Converger=Normalized term diff value is         0.1431 - threshold reached=False
+Cumulative run-time=11.14 seconds
+
+Initiating PH iteration=31
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83563230.1039 Max-Min=11966874.64
+Converger=Normalized term diff value is         0.1433 - threshold reached=False
+Cumulative run-time=11.47 seconds
+
+Initiating PH iteration=32
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83589382.7214 Max-Min=11896324.35
+Converger=Normalized term diff value is         0.1425 - threshold reached=False
+Cumulative run-time=11.81 seconds
+
+Initiating PH iteration=33
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83445700.6406 Max-Min=11682483.43
+Converger=Normalized term diff value is         0.1339 - threshold reached=False
+Cumulative run-time=12.16 seconds
+
+Initiating PH iteration=34
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83486769.2422 Max-Min=11596145.41
+Converger=Normalized term diff value is         0.1426 - threshold reached=False
+Cumulative run-time=12.53 seconds
+
+Initiating PH iteration=35
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83105988.0852 Max-Min=9668339.86
+Converger=Normalized term diff value is         0.1379 - threshold reached=False
+Cumulative run-time=12.91 seconds
+
+Initiating PH iteration=36
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83217321.5449 Max-Min=9306518.11
+Converger=Normalized term diff value is         0.1239 - threshold reached=False
+Cumulative run-time=13.33 seconds
+
+Initiating PH iteration=37
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83264283.0655 Max-Min=9166241.18
+Converger=Normalized term diff value is         0.1295 - threshold reached=False
+Cumulative run-time=13.71 seconds
+
+Initiating PH iteration=38
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83273183.4400 Max-Min=9124559.34
+Converger=Normalized term diff value is         0.1291 - threshold reached=False
+Cumulative run-time=14.08 seconds
+
+Initiating PH iteration=39
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83285058.7227 Max-Min=9078946.36
+Converger=Normalized term diff value is         0.1330 - threshold reached=False
+Cumulative run-time=14.42 seconds
+
+Initiating PH iteration=40
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83300379.6433 Max-Min=9164596.64
+Converger=Normalized term diff value is         0.1328 - threshold reached=False
+Cumulative run-time=14.75 seconds
+
+Initiating PH iteration=41
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83302191.7202 Max-Min=9070908.23
+Converger=Normalized term diff value is         0.1302 - threshold reached=False
+Cumulative run-time=15.09 seconds
+
+Initiating PH iteration=42
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83325544.1238 Max-Min=9151313.44
+Converger=Normalized term diff value is         0.1316 - threshold reached=False
+Cumulative run-time=15.43 seconds
+
+Initiating PH iteration=43
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83157990.4033 Max-Min=8589906.97
+Converger=Normalized term diff value is         0.1308 - threshold reached=False
+Cumulative run-time=15.88 seconds
+
+Initiating PH iteration=44
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83091083.5812 Max-Min=8455351.23
+Converger=Normalized term diff value is         0.1296 - threshold reached=False
+Cumulative run-time=16.23 seconds
+
+Initiating PH iteration=45
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83057580.5808 Max-Min=8376824.58
+Converger=Normalized term diff value is         0.1286 - threshold reached=False
+Cumulative run-time=16.58 seconds
+
+Initiating PH iteration=46
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83121814.0977 Max-Min=8599254.04
+Converger=Normalized term diff value is         0.1270 - threshold reached=False
+Cumulative run-time=16.91 seconds
+
+Initiating PH iteration=47
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83169339.1349 Max-Min=8529605.42
+Converger=Normalized term diff value is         0.1262 - threshold reached=False
+Cumulative run-time=17.28 seconds
+
+Initiating PH iteration=48
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83189901.9405 Max-Min=8595302.68
+Converger=Normalized term diff value is         0.1275 - threshold reached=False
+Cumulative run-time=17.62 seconds
+
+Initiating PH iteration=49
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83200390.8792 Max-Min=8502519.24
+Converger=Normalized term diff value is         0.1121 - threshold reached=False
+Cumulative run-time=17.96 seconds
+
+Initiating PH iteration=50
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83203503.8842 Max-Min=8593231.45
+Converger=Normalized term diff value is         0.1111 - threshold reached=False
+Cumulative run-time=18.30 seconds
+
+Initiating PH iteration=51
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83199421.7558 Max-Min=8524840.87
+Converger=Normalized term diff value is         0.1105 - threshold reached=False
+Cumulative run-time=18.64 seconds
+
+Initiating PH iteration=52
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83187916.4045 Max-Min=8550543.53
+Converger=Normalized term diff value is         0.0942 - threshold reached=False
+Cumulative run-time=18.97 seconds
+
+Initiating PH iteration=53
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83189858.9207 Max-Min=8579559.80
+Converger=Normalized term diff value is         0.0792 - threshold reached=False
+Cumulative run-time=19.31 seconds
+
+Initiating PH iteration=54
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83197900.4870 Max-Min=8501177.11
+Converger=Normalized term diff value is         0.0813 - threshold reached=False
+Cumulative run-time=19.64 seconds
+
+Initiating PH iteration=55
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83200959.8722 Max-Min=8592973.62
+Converger=Normalized term diff value is         0.0800 - threshold reached=False
+Cumulative run-time=19.98 seconds
+
+Initiating PH iteration=56
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84085093.1211 Max-Min=10839721.26
+Converger=Normalized term diff value is         0.0927 - threshold reached=False
+Cumulative run-time=20.34 seconds
+
+Initiating PH iteration=57
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84090806.4186 Max-Min=10927848.37
+Converger=Normalized term diff value is         0.0944 - threshold reached=False
+Cumulative run-time=20.69 seconds
+
+Initiating PH iteration=58
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84087182.1125 Max-Min=10844020.89
+Converger=Normalized term diff value is         0.0928 - threshold reached=False
+Cumulative run-time=21.19 seconds
+
+Initiating PH iteration=59
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84094945.2866 Max-Min=10917938.56
+Converger=Normalized term diff value is         0.0939 - threshold reached=False
+Cumulative run-time=21.53 seconds
+
+Initiating PH iteration=60
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84402621.1141 Max-Min=11775107.16
+Converger=Normalized term diff value is         0.1030 - threshold reached=False
+Cumulative run-time=21.87 seconds
+
+Initiating PH iteration=61
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84588719.3205 Max-Min=12360926.81
+Converger=Normalized term diff value is         0.1183 - threshold reached=False
+Cumulative run-time=22.20 seconds
+
+Initiating PH iteration=62
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84629735.4559 Max-Min=12497057.95
+Converger=Normalized term diff value is         0.1163 - threshold reached=False
+Cumulative run-time=22.55 seconds
+
+Initiating PH iteration=63
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84352492.4746 Max-Min=11556137.93
+Converger=Normalized term diff value is         0.1177 - threshold reached=False
+Cumulative run-time=22.89 seconds
+
+Initiating PH iteration=64
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=84511212.3713 Max-Min=12123115.34
+Converger=Normalized term diff value is         0.1270 - threshold reached=False
+Cumulative run-time=23.24 seconds
+
+Initiating PH iteration=65
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83510287.4680 Max-Min=9233263.00
+Converger=Normalized term diff value is         0.1320 - threshold reached=False
+Cumulative run-time=23.63 seconds
+
+Initiating PH iteration=66
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83787011.5312 Max-Min=9922752.92
+Converger=Normalized term diff value is         0.1288 - threshold reached=False
+Cumulative run-time=24.06 seconds
+
+Initiating PH iteration=67
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83189891.1651 Max-Min=8208540.89
+Converger=Normalized term diff value is         0.1316 - threshold reached=False
+Cumulative run-time=24.42 seconds
+
+Initiating PH iteration=68
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83373615.0786 Max-Min=8432242.15
+Converger=Normalized term diff value is         0.1304 - threshold reached=False
+Cumulative run-time=24.78 seconds
+
+Initiating PH iteration=69
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83715225.7119 Max-Min=9464242.90
+Converger=Normalized term diff value is         0.1269 - threshold reached=False
+Cumulative run-time=25.22 seconds
+
+Initiating PH iteration=70
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83952281.3313 Max-Min=10231106.53
+Converger=Normalized term diff value is         0.1299 - threshold reached=False
+Cumulative run-time=25.59 seconds
+
+Initiating PH iteration=71
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83256545.5743 Max-Min=8198058.98
+Converger=Normalized term diff value is         0.1319 - threshold reached=False
+Cumulative run-time=25.92 seconds
+
+Initiating PH iteration=72
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83360273.3136 Max-Min=8430220.41
+Converger=Normalized term diff value is         0.1283 - threshold reached=False
+Cumulative run-time=26.41 seconds
+
+Initiating PH iteration=73
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83988374.3561 Max-Min=10341046.34
+Converger=Normalized term diff value is         0.1260 - threshold reached=False
+Cumulative run-time=26.78 seconds
+
+Initiating PH iteration=74
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83324094.9541 Max-Min=8419292.57
+Converger=Normalized term diff value is         0.1256 - threshold reached=False
+Cumulative run-time=27.17 seconds
+
+Initiating PH iteration=75
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83261650.8155 Max-Min=8318761.47
+Converger=Normalized term diff value is         0.1237 - threshold reached=False
+Cumulative run-time=27.52 seconds
+
+Initiating PH iteration=76
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83556975.5178 Max-Min=9186935.81
+Converger=Normalized term diff value is         0.1249 - threshold reached=False
+Cumulative run-time=27.86 seconds
+
+Initiating PH iteration=77
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83387413.2011 Max-Min=8752199.22
+Converger=Normalized term diff value is         0.1236 - threshold reached=False
+Cumulative run-time=28.19 seconds
+
+Initiating PH iteration=78
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83284620.4885 Max-Min=8358244.09
+Converger=Normalized term diff value is         0.1251 - threshold reached=False
+Cumulative run-time=28.55 seconds
+
+Initiating PH iteration=79
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83474118.4093 Max-Min=8959317.56
+Converger=Normalized term diff value is         0.1260 - threshold reached=False
+Cumulative run-time=28.90 seconds
+
+Initiating PH iteration=80
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83682740.3104 Max-Min=9577693.59
+Converger=Normalized term diff value is         0.1285 - threshold reached=False
+Cumulative run-time=29.23 seconds
+
+Initiating PH iteration=81
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83365482.3713 Max-Min=8519223.23
+Converger=Normalized term diff value is         0.1348 - threshold reached=False
+Cumulative run-time=29.56 seconds
+
+Initiating PH iteration=82
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83405871.4703 Max-Min=8731884.13
+Converger=Normalized term diff value is         0.1313 - threshold reached=False
+Cumulative run-time=29.89 seconds
+
+Initiating PH iteration=83
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83534116.4240 Max-Min=9057209.24
+Converger=Normalized term diff value is         0.1292 - threshold reached=False
+Cumulative run-time=30.22 seconds
+
+Initiating PH iteration=84
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83551647.3940 Max-Min=9168006.33
+Converger=Normalized term diff value is         0.1299 - threshold reached=False
+Cumulative run-time=30.56 seconds
+
+Initiating PH iteration=85
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83372135.8229 Max-Min=8584425.06
+Converger=Normalized term diff value is         0.1305 - threshold reached=False
+Cumulative run-time=30.89 seconds
+
+Initiating PH iteration=86
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83567805.4064 Max-Min=9004035.16
+Converger=Normalized term diff value is         0.1286 - threshold reached=False
+Cumulative run-time=31.22 seconds
+
+Initiating PH iteration=87
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83601631.4510 Max-Min=9062513.19
+Converger=Normalized term diff value is         0.1312 - threshold reached=False
+Cumulative run-time=31.74 seconds
+
+Initiating PH iteration=88
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83421895.7263 Max-Min=8575242.12
+Converger=Normalized term diff value is         0.1310 - threshold reached=False
+Cumulative run-time=32.06 seconds
+
+Initiating PH iteration=89
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83558462.2112 Max-Min=8885272.13
+Converger=Normalized term diff value is         0.1317 - threshold reached=False
+Cumulative run-time=32.40 seconds
+
+Initiating PH iteration=90
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83465370.3508 Max-Min=8685213.00
+Converger=Normalized term diff value is         0.1301 - threshold reached=False
+Cumulative run-time=32.73 seconds
+
+Initiating PH iteration=91
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83582965.8830 Max-Min=8951914.23
+Converger=Normalized term diff value is         0.1330 - threshold reached=False
+Cumulative run-time=33.08 seconds
+
+Initiating PH iteration=92
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83631417.2636 Max-Min=9066170.89
+Converger=Normalized term diff value is         0.1296 - threshold reached=False
+Cumulative run-time=33.42 seconds
+
+Initiating PH iteration=93
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83618162.4743 Max-Min=9160626.91
+Converger=Normalized term diff value is         0.1285 - threshold reached=False
+Cumulative run-time=33.77 seconds
+
+Initiating PH iteration=94
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83511011.3587 Max-Min=8793597.21
+Converger=Normalized term diff value is         0.1306 - threshold reached=False
+Cumulative run-time=34.11 seconds
+
+Initiating PH iteration=95
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83424021.1968 Max-Min=8583826.76
+Converger=Normalized term diff value is         0.1301 - threshold reached=False
+Cumulative run-time=34.44 seconds
+
+Initiating PH iteration=96
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83349891.2519 Max-Min=8266047.86
+Converger=Normalized term diff value is         0.1340 - threshold reached=False
+Cumulative run-time=34.77 seconds
+
+Initiating PH iteration=97
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83250398.3477 Max-Min=8049478.24
+Converger=Normalized term diff value is         0.1295 - threshold reached=False
+Cumulative run-time=35.12 seconds
+
+Initiating PH iteration=98
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83403756.4071 Max-Min=8450300.60
+Converger=Normalized term diff value is         0.1297 - threshold reached=False
+Cumulative run-time=35.49 seconds
+
+Initiating PH iteration=99
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83434146.2047 Max-Min=8598052.96
+Converger=Normalized term diff value is         0.1314 - threshold reached=False
+Cumulative run-time=35.84 seconds
+
+Initiating PH iteration=100
+Number of discrete variables fixed=0 (total=0)
+Number of continuous variables fixed=0 (total=85)
+First stage cost avg=83372519.6568 Max-Min=8218412.66
+Converger=Normalized term diff value is         0.1303 - threshold reached=False
+Cumulative run-time=36.17 seconds
+Halting PH - reached maximal iteration count=100
+
+Number of discrete variables fixed before final plugin calls=0 (total=0)
+Number of continuous variables fixed before final plugin calls=0 (total=85)
+PH complete
+
+Convergence history:
+Converger=Normalized term diff
+Iteration    Metric Value
+     0               0.1725
+     1               0.1824
+     2               0.1743
+     3               0.1700
+     4               0.1708
+     5               0.1695
+     6               0.1532
+     7               0.1528
+     8               0.1526
+     9               0.1650
+    10               0.1563
+    11               0.1405
+    12               0.1366
+    13               0.1331
+    14               0.1392
+    15               0.1378
+    16               0.1394
+    17               0.1387
+    18               0.1385
+    19               0.1344
+    20               0.1307
+    21               0.1520
+    22               0.1451
+    23               0.1520
+    24               0.1602
+    25               0.1366
+    26               0.1413
+    27               0.1406
+    28               0.1375
+    29               0.1360
+    30               0.1431
+    31               0.1433
+    32               0.1425
+    33               0.1339
+    34               0.1426
+    35               0.1379
+    36               0.1239
+    37               0.1295
+    38               0.1291
+    39               0.1330
+    40               0.1328
+    41               0.1302
+    42               0.1316
+    43               0.1308
+    44               0.1296
+    45               0.1286
+    46               0.1270
+    47               0.1262
+    48               0.1275
+    49               0.1121
+    50               0.1111
+    51               0.1105
+    52               0.0942
+    53               0.0792
+    54               0.0813
+    55               0.0800
+    56               0.0927
+    57               0.0944
+    58               0.0928
+    59               0.0939
+    60               0.1030
+    61               0.1183
+    62               0.1163
+    63               0.1177
+    64               0.1270
+    65               0.1320
+    66               0.1288
+    67               0.1316
+    68               0.1304
+    69               0.1269
+    70               0.1299
+    71               0.1319
+    72               0.1283
+    73               0.1260
+    74               0.1256
+    75               0.1237
+    76               0.1249
+    77               0.1236
+    78               0.1251
+    79               0.1260
+    80               0.1285
+    81               0.1348
+    82               0.1313
+    83               0.1292
+    84               0.1299
+    85               0.1305
+    86               0.1286
+    87               0.1312
+    88               0.1310
+    89               0.1317
+    90               0.1301
+    91               0.1330
+    92               0.1296
+    93               0.1285
+    94               0.1306
+    95               0.1301
+    96               0.1340
+    97               0.1295
+    98               0.1297
+    99               0.1314
+   100               0.1303
+
+
+Final number of discrete variables fixed=0 (total=0)
+Final number of continuous variables fixed=0 (total=85)
+
+Computing objective inner bound at xhat solution
+
+Computed objective upper bound=135398225.8915
+
+X-hat variable values:
+
+   Stage: Investment
+          (Scenarios: Scenario_LowFuelCosts  Scenario_MediumFuelCosts  Scenario_HighFuelCosts  )
+      Variable: BuildGen
+         Index:     [C-Central_PV-1,2020]       Values:        1.8789      1.8789      1.8789
+
+         Index:     [C-Central_PV-2,2020]       Values:        0.1802      0.1802      0.1802
+
+         Index:          [C-Coal_ST,1985]       Values:        2.0000      2.0000      2.0000
+
+         Index:            [C-NG_CC,2005]       Values:        2.0000      2.0000      2.0000
+
+         Index:            [C-NG_CC,2020]       Values:        0.5221      0.5221      0.5221
+
+         Index:            [C-NG_CC,2030]       Values:        7.2900      7.2900      7.2900
+
+         Index:            [C-NG_GT,2005]       Values:        2.0000      2.0000      2.0000
+
+         Index:           [C-Wind-1,2020]       Values:        0.2693      0.2693      0.2693
+
+         Index:           [C-Wind-1,2030]       Values:        3.7307      3.7307      3.7307
+
+         Index:           [C-Wind-2,2020]       Values:        0.0687      0.0687      0.0687
+
+         Index:           [C-Wind-2,2030]       Values:        2.9313      2.9313      2.9313
+
+         Index:          [N-Coal_ST,1995]       Values:        2.0000      2.0000      2.0000
+
+         Index:       [N-Geothermal,2000]       Values:        1.0000      1.0000      1.0000
+
+         Index:            [N-NG_CC,2008]       Values:        2.0000      2.0000      2.0000
+
+         Index:            [N-NG_CC,2020]       Values:        0.0781      0.0781      0.0781
+
+         Index:            [N-NG_GT,2009]       Values:        2.0000      2.0000      2.0000
+
+         Index:           [N-Wind-1,2030]       Values:        3.6699      3.6699      3.6699
+
+         Index:           [N-Wind-2,2020]       Values:        1.0000      1.0000      1.0000
+
+         Index:       [S-Geothermal,1998]       Values:        3.0000      3.0000      3.0000
+
+         Index:            [S-NG_CC,2000]       Values:        5.0000      5.0000      5.0000
+
+         Index:            [S-NG_CC,2030]       Values:        0.3067      0.3067      0.3067
+
+         Index:            [S-NG_GT,1990]       Values:        3.0000      3.0000      3.0000
+
+         Index:            [S-NG_GT,2002]       Values:        2.0000      2.0000      2.0000
+
+          (Scenarios: Scenario_LowFuelCosts  Scenario_MediumFuelCosts  Scenario_HighFuelCosts  )
+      Variable: BuildLocalTD
+         Index: [Central,2020]  Values:        0.7239      0.7239      0.7239
+
+         Index: [Central,2030]  Values:        2.1119      2.1119      2.1119
+
+         Index:   [North,2020]  Values:        0.8358      0.8358      0.8358
+
+         Index:   [North,2030]  Values:        2.1119      2.1119      2.1119
+
+         Index:   [South,2020]  Values:        1.0597      1.0597      1.0597
+
+         Index:   [South,2030]  Values:        2.1119      2.1119      2.1119
+
+          (Scenarios: Scenario_LowFuelCosts  Scenario_MediumFuelCosts  Scenario_HighFuelCosts  )
+      Variable: BuildTx
+         Index: [C-S,2030]      Values:        2.3975      2.3975      2.3975
+
+      Cost Variable: InvestmentCost
+         Tree Node: RootNode      (Scenarios:  Scenario_LowFuelCosts Scenario_MediumFuelCosts Scenario_HighFuelCosts )
+         Values:  88817984.795988817984.795988817984.7959    Max-Min:        0.0000   Avg:  88817984.7959
+
+X-hat costs:
+
+Scenario Tree Costs
+----------------------------------------------------
+Tree Nodes:
+
+        Name=HighFuelCosts
+        Stage=Operation
+        Parent=RootNode
+        Conditional probability=0.3333
+        Children:
+                None
+        Scenarios:
+                Scenario_HighFuelCosts
+        Expected cost of (sub)tree rooted at node=61643438.6029
+
+        Name=LowFuelCosts
+        Stage=Operation
+        Parent=RootNode
+        Conditional probability=0.3333
+        Children:
+                None
+        Scenarios:
+                Scenario_LowFuelCosts
+        Expected cost of (sub)tree rooted at node=29198834.5956
+
+        Name=MediumFuelCosts
+        Stage=Operation
+        Parent=RootNode
+        Conditional probability=0.3333
+        Children:
+                None
+        Scenarios:
+                Scenario_MediumFuelCosts
+        Expected cost of (sub)tree rooted at node=48898450.0884
+
+        Name=RootNode
+        Stage=Investment
+        Parent=None
+        Conditional probability=1.0000
+        Children:
+                HighFuelCosts
+                LowFuelCosts
+                MediumFuelCosts
+        Scenarios:
+                Scenario_HighFuelCosts
+                Scenario_LowFuelCosts
+                Scenario_MediumFuelCosts
+        Expected cost of (sub)tree rooted at node=135398225.8915
+
+----------------------------------------------------
+Scenarios:
+
+        Name=Scenario_HighFuelCosts
+        Probability=0.3333
+        Leaf Node=HighFuelCosts
+        Tree node sequence:
+                RootNode
+                HighFuelCosts
+        Stage=          Investment     Cost=88817984.7959
+        Stage=           Operation     Cost=61643438.6029
+        Total scenario cost=150461423.3987
+
+        Name=Scenario_LowFuelCosts
+        Probability=0.3333
+        Leaf Node=LowFuelCosts
+        Tree node sequence:
+                RootNode
+                LowFuelCosts
+        Stage=          Investment     Cost=88817984.7959
+        Stage=           Operation     Cost=29198834.5956
+        Total scenario cost=118016819.3915
+
+        Name=Scenario_MediumFuelCosts
+        Probability=0.3333
+        Leaf Node=MediumFuelCosts
+        Tree node sequence:
+                RootNode
+                MediumFuelCosts
+        Stage=          Investment     Cost=88817984.7959
+        Stage=           Operation     Cost=48898450.0884
+        Total scenario cost=137716434.8843
+
+----------------------------------------------------
+
+X-hat solution (scenario tree format):
+----------------------------------------------------
+Tree Nodes:
+
+        Name=HighFuelCosts
+        Stage=Operation
+        Parent=RootNode
+        Variables:
+                DispatchGen[C-Central_PV-1,2]=1.1232111122262
+                DispatchGen[C-Central_PV-1,4]=1.17845100299142
+                DispatchGen[C-Central_PV-1,6]=1.45465045681753
+                DispatchGen[C-Central_PV-1,7]=0.718118579947896
+                DispatchGen[C-Central_PV-2,2]=0.113022314239018
+                DispatchGen[C-Central_PV-2,4]=0.120086208878957
+                DispatchGen[C-Central_PV-2,6]=0.127150103518896
+                DispatchGen[C-Central_PV-2,7]=0.0724049200593712
+                DispatchGen[C-Coal_ST,1]=1.8
+                DispatchGen[C-Coal_ST,2]=1.8
+                DispatchGen[C-Coal_ST,3]=1.8
+                DispatchGen[C-Coal_ST,4]=1.8
+                DispatchGen[C-Coal_ST,5]=1.8
+                DispatchGen[C-Coal_ST,6]=1.8
+                DispatchGen[C-NG_CC,1]=1.88805211916896
+                DispatchGen[C-NG_CC,3]=1.7609845220623
+                DispatchGen[C-NG_CC,4]=0.219521385031848
+                DispatchGen[C-NG_CC,5]=2.1951742922202
+                DispatchGen[C-NG_CC,6]=2.3707777922695
+                DispatchGen[C-NG_CC,7]=7.34333555231072
+                DispatchGen[C-Wind-1,1]=0.176689417849261
+                DispatchGen[C-Wind-1,2]=0.107084495666219
+                DispatchGen[C-Wind-1,3]=0.195429204590849
+                DispatchGen[C-Wind-1,4]=0.133855619582774
+                DispatchGen[C-Wind-1,5]=0.0588964726164204
+                DispatchGen[C-Wind-1,6]=0.0133855619582774
+                DispatchGen[C-Wind-1,7]=3.1808000000000005
+                DispatchGen[C-Wind-2,1]=0.0423334365826231
+                DispatchGen[C-Wind-2,2]=0.0245807051124908
+                DispatchGen[C-Wind-2,3]=0.0450646260395665
+                DispatchGen[C-Wind-2,4]=0.0327742734833211
+                DispatchGen[C-Wind-2,5]=0.00955916309930198
+                DispatchGen[C-Wind-2,6]=0.00341398682117928
+                DispatchGen[C-Wind-2,7]=2.56452
+                DispatchGen[N-Coal_ST,1]=1.8
+                DispatchGen[N-Coal_ST,2]=1.8
+                DispatchGen[N-Coal_ST,3]=1.8
+                DispatchGen[N-Coal_ST,4]=1.8
+                DispatchGen[N-Coal_ST,5]=1.8
+                DispatchGen[N-Coal_ST,6]=1.8
+                DispatchGen[N-Geothermal,1]=0.96858075
+                DispatchGen[N-Geothermal,2]=0.96858075
+                DispatchGen[N-Geothermal,3]=0.96858075
+                DispatchGen[N-Geothermal,4]=0.96858075
+                DispatchGen[N-Geothermal,5]=0.96858075
+                DispatchGen[N-Geothermal,6]=0.96858075
+                DispatchGen[N-NG_CC,1]=1.83533029540655
+                DispatchGen[N-NG_CC,2]=1.12726408632524
+                DispatchGen[N-NG_CC,3]=1.27752719086589
+                DispatchGen[N-NG_CC,4]=1.2092373281415
+                DispatchGen[N-NG_CC,5]=1.28630408632524
+                DispatchGen[N-NG_CC,6]=1.9534086968361002
+                DispatchGen[N-NG_CC,7]=1.9534086968361002
+                DispatchGen[N-NG_GT,6]=1.09766446432228
+                DispatchGen[N-Wind-1,7]=2.91829862720672
+                DispatchGen[N-Wind-2,1]=0.67592
+                DispatchGen[N-Wind-2,2]=0.32802
+                DispatchGen[N-Wind-2,3]=0.70574
+                DispatchGen[N-Wind-2,4]=0.457240000000001
+                DispatchGen[N-Wind-2,5]=0.16898
+                DispatchGen[N-Wind-2,6]=0.12922
+                DispatchGen[N-Wind-2,7]=0.86478
+                DispatchGen[S-Geothermal,1]=2.90574225
+                DispatchGen[S-Geothermal,2]=2.90574225
+                DispatchGen[S-Geothermal,3]=2.90574225
+                DispatchGen[S-Geothermal,4]=2.90574225
+                DispatchGen[S-Geothermal,5]=2.90574225
+                DispatchGen[S-Geothermal,6]=2.90574225
+                DispatchGen[S-Geothermal,7]=2.90574225
+                DispatchGen[S-NG_CC,1]=3.43005500448786
+                DispatchGen[S-NG_CC,2]=4.48602121356917
+                DispatchGen[S-NG_CC,3]=3.9580381090285104
+                DispatchGen[S-NG_CC,4]=4.69721445538543
+                DispatchGen[S-NG_CC,5]=4.7
+                DispatchGen[S-NG_CC,6]=4.7
+                DispatchGen[S-NG_CC,7]=0.288296831136514
+                DispatchGen[S-NG_GT,6]=1.88
+                GenFuelUseRate[C-Coal_ST,1,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,2,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,3,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,4,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,5,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,6,Coal]=17.1
+                GenFuelUseRate[C-NG_CC,1,NaturalGas]=12.6593894590279
+                GenFuelUseRate[C-NG_CC,3,NaturalGas]=11.8074012204277
+                GenFuelUseRate[C-NG_CC,4,NaturalGas]=1.47189088663854
+                GenFuelUseRate[C-NG_CC,5,NaturalGas]=14.7186436293365
+                GenFuelUseRate[C-NG_CC,6,NaturalGas]=15.896065097167
+                GenFuelUseRate[C-NG_CC,7,NaturalGas]=49.2370648782434
+                GenFuelUseRate[N-Coal_ST,1,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,2,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,3,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,4,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,5,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,6,Coal]=16.2
+                GenFuelUseRate[N-NG_CC,1,NaturalGas]=12.3058896307009
+                GenFuelUseRate[N-NG_CC,2,NaturalGas]=7.55830569881074
+                GenFuelUseRate[N-NG_CC,3,NaturalGas]=8.56581981475581
+                GenFuelUseRate[N-NG_CC,4,NaturalGas]=8.10793628518875
+                GenFuelUseRate[N-NG_CC,5,NaturalGas]=8.62466889881072
+                GenFuelUseRate[N-NG_CC,6,NaturalGas]=13.097605312286102
+                GenFuelUseRate[N-NG_CC,7,NaturalGas]=13.097605312286102
+                GenFuelUseRate[N-NG_GT,6,NaturalGas]=11.4047337843084
+                GenFuelUseRate[S-NG_CC,1,NaturalGas]=22.9985188050911
+                GenFuelUseRate[S-NG_CC,2,NaturalGas]=30.0787722369813
+                GenFuelUseRate[S-NG_CC,3,NaturalGas]=26.5386455210362
+                GenFuelUseRate[S-NG_CC,4,NaturalGas]=31.4948229233593
+                GenFuelUseRate[S-NG_CC,5,NaturalGas]=31.513500000000004
+                GenFuelUseRate[S-NG_CC,6,NaturalGas]=31.513500000000004
+                GenFuelUseRate[S-NG_CC,7,NaturalGas]=1.93303025277032
+                GenFuelUseRate[S-NG_GT,6,NaturalGas]=19.5332
+
+        Name=LowFuelCosts
+        Stage=Operation
+        Parent=RootNode
+        Variables:
+                DispatchGen[C-Central_PV-1,2]=1.1232111122262
+                DispatchGen[C-Central_PV-1,4]=1.17845100299142
+                DispatchGen[C-Central_PV-1,6]=1.45465045681753
+                DispatchGen[C-Central_PV-1,7]=0.718118579947896
+                DispatchGen[C-Central_PV-2,2]=0.113022314239018
+                DispatchGen[C-Central_PV-2,4]=0.120086208878957
+                DispatchGen[C-Central_PV-2,6]=0.127150103518896
+                DispatchGen[C-Central_PV-2,7]=0.0724049200593712
+                DispatchGen[C-Coal_ST,1]=1.8
+                DispatchGen[C-Coal_ST,2]=1.8
+                DispatchGen[C-Coal_ST,3]=1.8
+                DispatchGen[C-Coal_ST,4]=1.8
+                DispatchGen[C-Coal_ST,5]=1.8
+                DispatchGen[C-Coal_ST,6]=1.8
+                DispatchGen[C-NG_CC,1]=2.3707777922695
+                DispatchGen[C-NG_CC,3]=1.7609845220622997
+                DispatchGen[C-NG_CC,4]=0.21952138503184798
+                DispatchGen[C-NG_CC,5]=2.1951742922202
+                DispatchGen[C-NG_CC,6]=2.3707777922695
+                DispatchGen[C-NG_CC,7]=6.719054374763819
+                DispatchGen[C-Wind-1,1]=0.176689417849261
+                DispatchGen[C-Wind-1,2]=0.10708449566621898
+                DispatchGen[C-Wind-1,3]=0.195429204590849
+                DispatchGen[C-Wind-1,4]=0.133855619582774
+                DispatchGen[C-Wind-1,5]=0.0588964726164204
+                DispatchGen[C-Wind-1,6]=0.013385561958277399
+                DispatchGen[C-Wind-1,7]=3.1808
+                DispatchGen[C-Wind-2,1]=0.0423334365826231
+                DispatchGen[C-Wind-2,2]=0.0245807051124908
+                DispatchGen[C-Wind-2,3]=0.0450646260395665
+                DispatchGen[C-Wind-2,4]=0.0327742734833211
+                DispatchGen[C-Wind-2,5]=0.00955916309930198
+                DispatchGen[C-Wind-2,6]=0.0034139868211792795
+                DispatchGen[C-Wind-2,7]=2.56452
+                DispatchGen[N-Coal_ST,1]=1.8
+                DispatchGen[N-Coal_ST,2]=1.8
+                DispatchGen[N-Coal_ST,3]=1.8
+                DispatchGen[N-Coal_ST,4]=1.8
+                DispatchGen[N-Coal_ST,5]=1.8
+                DispatchGen[N-Coal_ST,6]=1.8
+                DispatchGen[N-Coal_ST,7]=1.8
+                DispatchGen[N-Geothermal,1]=0.3870857023939289
+                DispatchGen[N-Geothermal,2]=0.3870857023939289
+                DispatchGen[N-Geothermal,3]=0.3870857023939289
+                DispatchGen[N-Geothermal,4]=0.3870857023939289
+                DispatchGen[N-Geothermal,5]=0.3870857023939289
+                DispatchGen[N-Geothermal,6]=0.3870857023939289
+                DispatchGen[N-NG_CC,1]=1.9534086968361
+                DispatchGen[N-NG_CC,2]=1.70875913393131
+                DispatchGen[N-NG_CC,3]=1.8590222384719597
+                DispatchGen[N-NG_CC,4]=1.79073237574757
+                DispatchGen[N-NG_CC,5]=1.86779913393131
+                DispatchGen[N-NG_CC,6]=1.9534086968361
+                DispatchGen[N-NG_CC,7]=0.7527186272811329
+                DispatchGen[N-NG_GT,6]=1.67915951192835
+                DispatchGen[N-Wind-1,7]=2.91829862720672
+                DispatchGen[N-Wind-2,1]=0.67592
+                DispatchGen[N-Wind-2,2]=0.32802
+                DispatchGen[N-Wind-2,3]=0.70574
+                DispatchGen[N-Wind-2,4]=0.457240000000001
+                DispatchGen[N-Wind-2,5]=0.16898
+                DispatchGen[N-Wind-2,6]=0.12922
+                DispatchGen[N-Wind-2,7]=0.8647799999999999
+                DispatchGen[S-Geothermal,1]=2.90574225
+                DispatchGen[S-Geothermal,2]=2.90574225
+                DispatchGen[S-Geothermal,3]=2.90574225
+                DispatchGen[S-Geothermal,4]=2.90574225
+                DispatchGen[S-Geothermal,5]=2.90574225
+                DispatchGen[S-Geothermal,6]=2.90574225
+                DispatchGen[S-Geothermal,7]=2.90574225
+                DispatchGen[S-NG_CC,1]=3.4300550044878597
+                DispatchGen[S-NG_CC,2]=4.48602121356917
+                DispatchGen[S-NG_CC,3]=3.95803810902851
+                DispatchGen[S-NG_CC,4]=4.69721445538543
+                DispatchGen[S-NG_CC,5]=4.7
+                DispatchGen[S-NG_CC,6]=4.7
+                DispatchGen[S-NG_CC,7]=0.288296831136514
+                DispatchGen[S-NG_GT,6]=1.88
+                GenFuelUseRate[C-Coal_ST,1,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,2,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,3,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,4,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,5,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,6,Coal]=17.1
+                GenFuelUseRate[C-NG_CC,1,NaturalGas]=15.896065097166998
+                GenFuelUseRate[C-NG_CC,3,NaturalGas]=11.8074012204277
+                GenFuelUseRate[C-NG_CC,4,NaturalGas]=1.47189088663854
+                GenFuelUseRate[C-NG_CC,5,NaturalGas]=14.7186436293365
+                GenFuelUseRate[C-NG_CC,6,NaturalGas]=15.896065097166998
+                GenFuelUseRate[C-NG_CC,7,NaturalGas]=45.0512595827914
+                GenFuelUseRate[N-Coal_ST,1,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,2,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,3,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,4,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,5,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,6,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,7,Coal]=16.2
+                GenFuelUseRate[N-NG_CC,1,NaturalGas]=13.0976053122861
+                GenFuelUseRate[N-NG_CC,2,NaturalGas]=11.4572299930094
+                GenFuelUseRate[N-NG_CC,3,NaturalGas]=12.464744108954498
+                GenFuelUseRate[N-NG_CC,4,NaturalGas]=12.006860579387498
+                GenFuelUseRate[N-NG_CC,5,NaturalGas]=12.5235931930094
+                GenFuelUseRate[N-NG_CC,6,NaturalGas]=13.0976053122861
+                GenFuelUseRate[N-NG_CC,7,NaturalGas]=5.04697839592
+                GenFuelUseRate[N-NG_GT,6,NaturalGas]=17.4464673289355
+                GenFuelUseRate[S-NG_CC,1,NaturalGas]=22.9985188050911
+                GenFuelUseRate[S-NG_CC,2,NaturalGas]=30.0787722369813
+                GenFuelUseRate[S-NG_CC,3,NaturalGas]=26.538645521036198
+                GenFuelUseRate[S-NG_CC,4,NaturalGas]=31.4948229233593
+                GenFuelUseRate[S-NG_CC,5,NaturalGas]=31.5135
+                GenFuelUseRate[S-NG_CC,6,NaturalGas]=31.5135
+                GenFuelUseRate[S-NG_CC,7,NaturalGas]=1.9330302527703198
+                GenFuelUseRate[S-NG_GT,6,NaturalGas]=19.5332
+
+        Name=MediumFuelCosts
+        Stage=Operation
+        Parent=RootNode
+        Variables:
+                DispatchGen[C-Central_PV-1,2]=1.1232111122262
+                DispatchGen[C-Central_PV-1,4]=1.17845100299142
+                DispatchGen[C-Central_PV-1,6]=1.45465045681753
+                DispatchGen[C-Central_PV-1,7]=0.718118579947897
+                DispatchGen[C-Central_PV-2,2]=0.113022314239018
+                DispatchGen[C-Central_PV-2,4]=0.120086208878957
+                DispatchGen[C-Central_PV-2,6]=0.127150103518896
+                DispatchGen[C-Central_PV-2,7]=0.0724049200593712
+                DispatchGen[C-Coal_ST,1]=1.8
+                DispatchGen[C-Coal_ST,2]=1.8
+                DispatchGen[C-Coal_ST,3]=1.8
+                DispatchGen[C-Coal_ST,4]=1.8
+                DispatchGen[C-Coal_ST,5]=1.8
+                DispatchGen[C-Coal_ST,6]=1.8
+                DispatchGen[C-NG_CC,1]=1.8880521191689599
+                DispatchGen[C-NG_CC,3]=1.7609845220622997
+                DispatchGen[C-NG_CC,4]=0.21952138503184798
+                DispatchGen[C-NG_CC,5]=2.1951742922202
+                DispatchGen[C-NG_CC,6]=2.3707777922695
+                DispatchGen[C-NG_CC,7]=6.51182673695371
+                DispatchGen[C-Wind-1,1]=0.176689417849261
+                DispatchGen[C-Wind-1,2]=0.10708449566621898
+                DispatchGen[C-Wind-1,3]=0.195429204590849
+                DispatchGen[C-Wind-1,4]=0.133855619582774
+                DispatchGen[C-Wind-1,5]=0.0588964726164204
+                DispatchGen[C-Wind-1,6]=0.013385561958277399
+                DispatchGen[C-Wind-1,7]=3.1808
+                DispatchGen[C-Wind-2,1]=0.0423334365826231
+                DispatchGen[C-Wind-2,2]=0.0245807051124908
+                DispatchGen[C-Wind-2,3]=0.0450646260395665
+                DispatchGen[C-Wind-2,4]=0.0327742734833211
+                DispatchGen[C-Wind-2,5]=0.00955916309930198
+                DispatchGen[C-Wind-2,6]=0.0034139868211792795
+                DispatchGen[C-Wind-2,7]=2.56452
+                DispatchGen[N-Coal_ST,1]=1.8
+                DispatchGen[N-Coal_ST,2]=1.8
+                DispatchGen[N-Coal_ST,3]=1.8
+                DispatchGen[N-Coal_ST,4]=1.8
+                DispatchGen[N-Coal_ST,5]=1.8
+                DispatchGen[N-Coal_ST,6]=1.8
+                DispatchGen[N-Coal_ST,7]=1.8
+                DispatchGen[N-Geothermal,1]=0.9685807499999999
+                DispatchGen[N-Geothermal,2]=0.9685807499999999
+                DispatchGen[N-Geothermal,3]=0.9685807499999999
+                DispatchGen[N-Geothermal,4]=0.9685807499999999
+                DispatchGen[N-Geothermal,5]=0.9685807499999999
+                DispatchGen[N-Geothermal,6]=0.9685807499999999
+                DispatchGen[N-Geothermal,7]=0.9685807499999999
+                DispatchGen[N-NG_CC,1]=1.8353302954065498
+                DispatchGen[N-NG_CC,2]=1.12726408632524
+                DispatchGen[N-NG_CC,3]=1.27752719086589
+                DispatchGen[N-NG_CC,4]=1.2092373281415
+                DispatchGen[N-NG_CC,5]=1.28630408632524
+                DispatchGen[N-NG_CC,6]=1.9534086968361
+                DispatchGen[N-NG_GT,6]=1.09766446432228
+                DispatchGen[N-Wind-1,7]=2.91829862720672
+                DispatchGen[N-Wind-2,1]=0.67592
+                DispatchGen[N-Wind-2,2]=0.32802
+                DispatchGen[N-Wind-2,3]=0.70574
+                DispatchGen[N-Wind-2,4]=0.457240000000001
+                DispatchGen[N-Wind-2,5]=0.16898
+                DispatchGen[N-Wind-2,6]=0.12922
+                DispatchGen[N-Wind-2,7]=0.8647799999999999
+                DispatchGen[S-Geothermal,1]=2.90574225
+                DispatchGen[S-Geothermal,2]=2.90574225
+                DispatchGen[S-Geothermal,3]=2.90574225
+                DispatchGen[S-Geothermal,4]=2.90574225
+                DispatchGen[S-Geothermal,5]=2.90574225
+                DispatchGen[S-Geothermal,6]=2.90574225
+                DispatchGen[S-Geothermal,7]=2.90574225
+                DispatchGen[S-NG_CC,1]=3.4300550044878597
+                DispatchGen[S-NG_CC,2]=4.48602121356917
+                DispatchGen[S-NG_CC,3]=3.95803810902851
+                DispatchGen[S-NG_CC,4]=4.69721445538543
+                DispatchGen[S-NG_CC,5]=4.7
+                DispatchGen[S-NG_CC,6]=4.7
+                DispatchGen[S-NG_CC,7]=0.288296831136514
+                DispatchGen[S-NG_GT,6]=1.88
+                GenFuelUseRate[C-Coal_ST,1,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,2,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,3,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,4,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,5,Coal]=17.1
+                GenFuelUseRate[C-Coal_ST,6,Coal]=17.1
+                GenFuelUseRate[C-NG_CC,1,NaturalGas]=12.659389459027897
+                GenFuelUseRate[C-NG_CC,3,NaturalGas]=11.8074012204277
+                GenFuelUseRate[C-NG_CC,4,NaturalGas]=1.47189088663854
+                GenFuelUseRate[C-NG_CC,5,NaturalGas]=14.7186436293365
+                GenFuelUseRate[C-NG_CC,6,NaturalGas]=15.896065097166998
+                GenFuelUseRate[C-NG_CC,7,NaturalGas]=43.6617982712746
+                GenFuelUseRate[N-Coal_ST,1,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,2,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,3,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,4,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,5,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,6,Coal]=16.2
+                GenFuelUseRate[N-Coal_ST,7,Coal]=16.2
+                GenFuelUseRate[N-NG_CC,1,NaturalGas]=12.305889630700898
+                GenFuelUseRate[N-NG_CC,2,NaturalGas]=7.558305698810739
+                GenFuelUseRate[N-NG_CC,3,NaturalGas]=8.56581981475581
+                GenFuelUseRate[N-NG_CC,4,NaturalGas]=8.10793628518875
+                GenFuelUseRate[N-NG_CC,5,NaturalGas]=8.62466889881072
+                GenFuelUseRate[N-NG_CC,6,NaturalGas]=13.0976053122861
+                GenFuelUseRate[N-NG_GT,6,NaturalGas]=11.4047337843084
+                GenFuelUseRate[S-NG_CC,1,NaturalGas]=22.9985188050911
+                GenFuelUseRate[S-NG_CC,2,NaturalGas]=30.0787722369813
+                GenFuelUseRate[S-NG_CC,3,NaturalGas]=26.538645521036198
+                GenFuelUseRate[S-NG_CC,4,NaturalGas]=31.4948229233593
+                GenFuelUseRate[S-NG_CC,5,NaturalGas]=31.5135
+                GenFuelUseRate[S-NG_CC,6,NaturalGas]=31.5135
+                GenFuelUseRate[S-NG_CC,7,NaturalGas]=1.9330302527703198
+                GenFuelUseRate[S-NG_GT,6,NaturalGas]=19.5332
+
+        Name=RootNode
+        Stage=Investment
+        Parent=None
+        Variables:
+                BuildGen[C-Central_PV-1,2020]=1.87890784915724
+                BuildGen[C-Central_PV-2,2020]=0.180201393875986
+                BuildGen[C-Coal_ST,1985]=2.0
+                BuildGen[C-NG_CC,2005]=2.0
+                BuildGen[C-NG_CC,2020]=0.522104034329255
+                BuildGen[C-NG_CC,2030]=7.28995506387364
+                BuildGen[C-NG_GT,2005]=2.0
+                BuildGen[C-Wind-1,2020]=0.269327202379826
+                BuildGen[C-Wind-1,2030]=3.73067279762017
+                BuildGen[C-Wind-2,2020]=0.0686918877500861
+                BuildGen[C-Wind-2,2030]=2.93130811224991
+                BuildGen[N-Coal_ST,1995]=2.0
+                BuildGen[N-Geothermal,2000]=1.0
+                BuildGen[N-NG_CC,2008]=2.0
+                BuildGen[N-NG_CC,2020]=0.078094358336279
+                BuildGen[N-NG_GT,2009]=2.0
+                BuildGen[N-Wind-1,2030]=3.6698926398474905
+                BuildGen[N-Wind-2,2020]=1.0
+                BuildGen[S-Geothermal,1998]=3.0
+                BuildGen[S-NG_CC,2000]=5.0
+                BuildGen[S-NG_CC,2030]=0.306698756528206
+                BuildGen[S-NG_GT,1990]=3.0
+                BuildGen[S-NG_GT,2002]=2.0
+                BuildLocalTD[Central,2020]=0.723864836325238
+                BuildLocalTD[Central,2030]=2.11193241816262
+                BuildLocalTD[North,2020]=0.8357972544878569
+                BuildLocalTD[North,2030]=2.11193241816262
+                BuildLocalTD[South,2020]=1.05966209081309
+                BuildLocalTD[South,2030]=2.11193241816262
+                BuildTx[C-S,2030]=2.39745331299706
+
+
+
+Total PH execution time=36.48 seconds
+
+Scenario tree solution written to file=ph.csv
+Scenario stage costs written to file=ph_StageCostDetail.csv
+
+Total execution time=37.32 seconds

@@ -137,7 +137,7 @@ def define_hydrogen_components(mod):
     parameter defaults to 0.03 based on 2009 WREZ transmission model
     transmission data costs for existing transmission maintenance.
 
-    pip_cost_hourly[tx PIPELINES] is the cost of building
+    pip_cost_hourly[PIPELINES] is the cost of building
     transmission lines in units of $BASE_YEAR / MW- transfer-capacity /
     hour. This derived parameter is based on the total annualized
     capital and fixed O&M costs, then divides that by hours per year to
@@ -155,12 +155,12 @@ def define_hydrogen_components(mod):
     pip_d_line[pip_d] is the transmission line associated with this
     directional path.
 
-    TX_BUILDS_IN_PERIOD[p in PERIODS] is an indexed set that
+    PIP_BUILDS_IN_PERIOD[p in PERIODS] is an indexed set that
     describes which transmission builds will be operational in a given
     period. Currently, transmission lines are kept online indefinitely,
     with parts being replaced as they wear out.
 
-    TX_BUILDS_IN_PERIOD[p] will return a subset of  (pip, bld_yr)
+    PIP_BUILDS_IN_PERIOD[p] will return a subset of  (pip, bld_yr)
     in BLD_YRS_FOR_PIP.
 
     --- Delayed implementation ---
@@ -205,7 +205,7 @@ def define_hydrogen_components(mod):
     # (e.g., island interconnect scenarios). However, presence of this column will still be
     # checked by load_data_aug.
     mod.min_data_check('pip_lz1', 'pip_lz2')
-    mod.pip_dbid = Param(mod.PIPELINES, default=lambda m, tx: pip, within=Any, input_file="h2_pipelines.csv")
+    mod.pip_dbid = Param(mod.PIPELINES, default=lambda m, pip:: pip, within=Any, input_file="h2_pipelines.csv")
     mod.pip_length_km = Param(mod.PIPELINES, within=NonNegativeReals, input_file="h2_pipelines.csv")
     mod.pip_efficiency = Param(
         mod.PIPELINES,
@@ -261,7 +261,7 @@ def define_hydrogen_components(mod):
     mod.pip_cost_annual = Param(
         mod.PIPELINES,
         within=NonNegativeReals,
-        initialize=lambda m, tx: (
+        initialize=lambda m, pip: (
             m.pip_capital_cost_per_mw_km * m.pip_terrain_multiplier[pip] *
             m.pip_length_km[pip] * (crf(m.interest_rate, m.pip_lifetime_yrs) +
                 m.pip_fixed_om_fraction)))
@@ -282,15 +282,15 @@ def define_hydrogen_components(mod):
     mod.Cost_Components_Per_Period.append('PipFixedCosts')
 
     def init_DIRECTIONAL _PIP(model):
-        tx_dir = set()
+        pip_dir = set()
         for pip in model.PIPELINES:
-            tx_dir.add((model.pip_lz1[pip], model.pip_lz2[pip]))
-            tx_dir.add((model.pip_lz2[pip], model.pip_lz1[pip]))
-        return tx_dir
+            pip_dir.add((model.pip_lz1[pip], model.pip_lz2[pip]))
+            pip_dir.add((model.pip_lz2[pip], model.pip_lz1[pip]))
+        return pip_dir
     mod.DIRECTIONAL _PIP = Set(
         dimen=2,
         initialize=init_DIRECTIONAL _PIP)
-    mod.TX_CONNECTIONS_TO_ZONE = Set(
+    mod.PIP_CONNECTIONS_TO_ZONE = Set(
         mod.LOAD_ZONES,
         ordered=False,
         initialize=lambda m, lz: set(
@@ -309,7 +309,7 @@ def define_hydrogen_components(mod):
 
 def post_solve(instance, outdir):
     mod = instance
-    tx_build_df = pd.DataFrame([
+    pip_build_df = pd.DataFrame([
         {
             "TRANSMISSION_LINE": pip,
             "PERIOD": p,
@@ -326,8 +326,8 @@ def post_solve(instance, outdir):
             "TotalAnnualCost": value(mod.PipelineCosts[pip, p])
         } for pip, p in mod.PIPELINES * mod.PERIODS
     ])
-    tx_build_df.set_index(["TRANSMISSION_LINE", "PERIOD"], inplace=True)
-    write_table(instance, df=tx_build_df, output_file=os.path.join(outdir, "transmission.csv"))
+    pip_build_df.set_index(["TRANSMISSION_LINE", "PERIOD"], inplace=True)
+    write_table(instance, df=pip_build_df, output_file=os.path.join(outdir, "transmission.csv"))
 
 @graph(
     "transmission_capacity",

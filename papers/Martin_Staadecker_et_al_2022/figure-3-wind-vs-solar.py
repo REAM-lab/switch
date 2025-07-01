@@ -1,0 +1,141 @@
+# %% IMPORT + CREATE tools
+from matplotlib import pyplot as plt
+
+from switch_model.tools.graph.main import GraphTools
+
+from papers.Martin_Staadecker_et_al_2022.util import (
+    set_style,
+    get_scenario,
+    save_figure,
+    save_df
+)
+
+tools_solar = GraphTools(
+    [get_scenario("WS10", "91% Solar to 9% Wind")], set_style=False
+)
+tools_solar.pre_graphing(multi_scenario=False)
+
+tools_wind = GraphTools(
+    [get_scenario("WS066", "40% Solar to 60% Wind")], set_style=False
+)
+tools_wind.pre_graphing(multi_scenario=False)
+
+ROLLING_AVERAGE_DAYS = 7
+
+# %% CREATE PLOT FRAME
+set_style()
+plt.close()
+fig = plt.figure()
+ax1 = fig.add_subplot(1, 2, 1, projection=tools_solar.maps.get_projection())
+ax2 = fig.add_subplot(1, 2, 2, projection=tools_wind.maps.get_projection())
+
+# CALC BOTTOM PANEL DATA
+def get_data(tools):
+    # Get data for mapping code
+    capacity = tools.get_dataframe("gen_cap.csv").rename(
+        {"GenCapacity": "value"}, axis=1
+    )
+    capacity = tools.transform.gen_type(capacity)
+    capacity = capacity.groupby(["gen_type", "gen_load_zone"], as_index=False)[
+        "value"
+    ].sum()
+    # capacity = capacity[capacity.value > 1e-3]  # Must have at least 1 kW of capacity
+    capacity.value *= 1e-3  # Convert to GW
+
+    transmission = tools.get_dataframe(
+        "transmission.csv", convert_dot_to_na=True
+    ).fillna(0)
+    transmission = transmission[transmission["PERIOD"] == 2050]
+    transmission = transmission.rename(
+        {"trans_lz1": "from", "trans_lz2": "to"}, axis=1
+    )
+    newtx = transmission.copy()
+    transmission["value"] = transmission["TxCapacityNameplate"] - transmission["BuildTx"]
+
+    transmission = transmission[["from", "to", "value"]]
+    transmission = transmission[transmission.value != 0]
+    transmission.value *= 1e-3  # Convert to GW
+
+    newtx = newtx.rename(
+        { "BuildTx": "value"}, axis=1
+    )
+    newtx = newtx[["from", "to", "value"]]
+    newtx = newtx[newtx.value != 0]
+    newtx.value *= 1e-3  # Convert to GW
+
+    duration = tools.get_dataframe(
+        "storage_capacity.csv",
+        usecols=[
+            "load_zone",
+            "OnlineEnergyCapacityMWh",
+            "OnlinePowerCapacityMW",
+            "period",
+        ],
+    ).rename({"load_zone": "gen_load_zone"}, axis=1)
+    duration = duration[duration["period"] == 2050].drop(columns="period")
+    duration = duration.groupby("gen_load_zone", as_index=False).sum()
+    duration["value"] = (
+        duration["OnlineEnergyCapacityMWh"] / duration["OnlinePowerCapacityMW"]
+    )
+    duration = duration[["gen_load_zone", "value"]]
+    return transmission, newtx, capacity, duration
+
+def plot(tools, ax, data, legend=True, hint=""):
+    transmission, newtx, capacity, duration = data
+    tools.maps.draw_base_map(ax)
+    # tools.maps.graph_transmission_capacity(
+    #     transmission,
+    #     ax=ax,
+    #     legend=legend,
+    #     color="green",
+    #     bbox_to_anchor=(1, 0.65),
+    #     title="Existing Tx Capacity (GW)",
+    # )
+    # tools.maps.graph_transmission_capacity(
+    #     newtx,
+    #     ax=ax,
+    #     legend=legend,
+    #     color="red",
+    #     bbox_to_anchor=(1, 0.44),
+    #     title="New Tx Capacity (GW)",
+    # )
+
+    skew_factor = 0.15
+    transmission["from_to"] = transmission["from"] + transmission["to"]
+    newtx["from_to"] = newtx["from"] + newtx["to"]
+    transmission_no_skew = transmission[~transmission.from_to.isin(newtx.from_to)]
+    transmission_with_skew = transmission[transmission.from_to.isin(newtx.from_to)]
+
+    tools.maps.graph_transmission_capacity(transmission_with_skew, ax=ax, legend=legend, color="green",
+                                           bbox_to_anchor=(1, 0.65),
+                                           title="Existing Tx Capacity (GW)", skew_factor=-skew_factor)
+    tools.maps.graph_transmission_capacity(transmission_no_skew, ax=ax, legend=False, color="green", skew_factor=0)
+    tools.maps.graph_transmission_capacity(newtx, ax=ax, legend=legend, color="red", bbox_to_anchor=(1, 0.44),
+                                           title="New Tx Capacity (GW)", skew_factor=skew_factor)
+    save_df(transmission, f"figure-3-{hint}-existing_tx.csv")
+    save_df(newtx, f"figure-3-{hint}-new_tx.csv")
+    tools.maps.graph_pie_chart(capacity, ax=ax, legend=legend, labelspacing=1)
+    save_df(capacity, f"figure-3-{hint}-gen-capacity.csv")
+    tools.maps.graph_duration(
+        duration, ax=ax, legend=legend, bins=(0, 6, 10, 20, float("inf"))
+    )
+    save_df(duration, f"figure-3-{hint}-storage-duration.csv")
+    ax.set_title(tools.scenarios[0].name)
+
+
+# PLOT BOTTOM PANEL
+plot(tools_wind, ax2, get_data(tools_wind), hint="wind-dominant")
+
+# PLOT LEFT PANEL
+plot(tools_solar, ax1, get_data(tools_solar), legend=False, hint="solar-dominant")
+
+ax1.text(0, 1.025, "a", weight="bold", transform=ax1.transAxes, horizontalalignment='left',
+        verticalalignment='bottom')
+ax2.text(0, 1.025, "b", weight="bold", transform=ax2.transAxes, horizontalalignment='left',
+        verticalalignment='bottom')
+
+
+plt.tight_layout()
+plt.tight_layout()  # Twice to ensure it works properly, it's a bit weird at times'
+# 
+save_figure("figure-3-wind-vs-solar.pdf")
