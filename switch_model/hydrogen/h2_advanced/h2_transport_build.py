@@ -30,7 +30,7 @@ from switch_model.financials import capital_recovery_factor as crf
 import pandas as pd
 from switch_model.reporting import write_table
 
-dependencies = 'switch_model.timescales', 'switch_model.hydrogen.h2_advanced.h2_timescales',\
+dependencies = 'switch_model.timescales', \
     'switch_model.financials','switch_model.balancing.load_zones',
 
 def define_components(mod):

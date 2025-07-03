@@ -12,8 +12,8 @@ INPUT FILE FORMAT
         PRODUCTION_PROJECT, prod_tech, prod_energy_source, prod_load_zone,
         prod_max_age, prod_variable_om_per_kg
     Optional columns are:
-        h2_color, prod_scheduled_outage_rate, prod_forced_outage_rate,
-        prod_capacity_limit_mw, prod_ccs_energy_load, prod_ccs_capture_efficiency
+        h2_color, prod_av_outage_rate, prod_capacity_limit_mw, 
+        prod_ccs_energy_load, prod_ccs_capture_efficiency
 
     The following file lists existing builds of H2 production projects, and is
     optional for simulations where there is no existing capacity:
@@ -221,11 +221,8 @@ def define_hydrogen_components(m):
     m.prod_max_age = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
     						within=PositiveIntegers)
 
-    m.prod_scheduled_outage_rate = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
+    m.prod_av_outage_rate = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
                                           within=PercentFraction, default=0)
-
-    m.prod_forced_outage_rate = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-                                       within=PercentFraction, default=0)
 
     m.min_data_check('PRODUCTION_PROJECTS', 'prod_tech', 'prod_energy_source',
                        'prod_load_zone', 'prod_max_age')

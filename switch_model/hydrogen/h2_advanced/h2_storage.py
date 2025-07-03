@@ -9,16 +9,9 @@ INPUT FILE FORMAT
     Import storage parameters. Optional columns are noted with a *.
 
     h2_storage.csv
-        H2_STOR_ID, h2_stor_type, stor_load_zone, stor_capital_cost_per_kg, 
-        stor_fixed_om_per_kg, stor_maximum_size_kg, stor_life_years
-
-    gen_build_costs.csv
-        GENERATION_PROJECT, build_year, ...
-        gen_storage_energy_overnight_cost
-
-    gen_build_predetermined.csv
-        GENERATION_PROJECT, build_year, ...,
-        gen_predetermined_storage_energy_mwh*
+        H2_STORAGE_PROJECT, build_year, h2stor_load_zone, h2stor_life_years, h2stor_maximum_size_kg, 
+        h2stor_is_predetermined, h2stor_predetermined_cap_kg, h2_leakage_rate,
+        h2stor_capital_cost_per_kg, h2stor_fixed_om_per_kg, h2stor_type
 
 """
 import math
@@ -30,6 +23,7 @@ from pyomo.environ import *
 import os, collections
 from switch_model.financials import capital_recovery_factor as crf
 from switch_model.tools.graph import graph
+from switch_model.utilities.scaling import get_assign_default_value_rule
 
 dependencies = (
     "switch_model.timescales",
@@ -48,7 +42,7 @@ def define_components(mod):
 def define_hydrogen_components(mod):
     """
 
-    H2_STOR is the set of H2 storage candidate projects, which are of different types 
+    H2_STORAGE_PROJECT is the set of H2 storage candidate projects, which are of different types 
     (liquid_hydrogen_tank, gas_hydrogen_tank, hard_rock, salt_cavern).
 
     STORAGE_PROD_BLD_YRS is the subset of PROD_BLD_YRS, restricted
@@ -124,54 +118,167 @@ def define_hydrogen_components(mod):
     LandUseRate[g, period] is an expression for the amount of land used
     in meters squared for a given storage project during a given period.
     """
+    mod.H2_STORAGE_PROJECTS = Set(dimen=1, input_file="h2_storage.csv")
+    mod.h2stor_load_zone = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
+                              within=mod.LOAD_ZONES)
+    mod.h2stor_life_years = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
+                            within=PositiveIntegers)
+    mod.h2_leakage_rate = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
+                            within=PercentFraction)
+    mod.CAPACITY_LIMITED_H2_STOR = Set(within=mod.H2_STORAGE_PROJECTS)
+    mod.h2stor_maximum_size_kg = Param(
+        mod.CAPACITY_LIMITED_H2_STOR, input_file="h2_storage.csv",
+        input_optional=True, within=NonNegativeReals)
 
-    mod.H2_STOR = Set(within=mod.GENERATION_PROJECTS, dimen=1)
-    mod.STORAGE_GEN_PERIODS = Set(
-        within=mod.GEN_PERIODS,
-        initialize=lambda m: [
-            (g, p) for g in m.H2_STOR for p in m.PERIODS_FOR_GEN[g]
-        ],
+    mod.H2_STOR_BLD_YRS = Set(dimen=2, input_file="h2_storage.csv")
+    mod.h2stor_is_predetermined = Param(mod.H2_STOR_BLD_YRS,
+                                    input_file="h2_storage.csv",
+                                    within=Boolean)
+    def init_predetermined_h2_stor_bld_yrs(m):
+    return [
+        (s, bld_yr)
+        for (s, bld_yr) in m.H2_STOR_BLD_YRS
+        if m.h2stor_is_predetermined[s, bld_yr]
+    ]
+	mod.PREDETERMINED_H2_STOR_BLD_YRS = Set(
+	    dimen=2,
+	    initialize=init_predetermined_h2_stor_bld_yrs
+	)
+	mod.h2stor_predetermined_cap_kg = Param(
+        mod.PREDETERMINED_H2_STOR_BLD_YRS,
+        input_file="h2_storage.csv",
+        within=NonNegativeReals)
+    mod.BLD_YRS_FOR_H2_STOR = Set(
+        mod.H2_STORAGE_PROJECTS,
+        ordered=False,
+        initialize=lambda m, s: set(
+            bld_yr for (h2stor, bld_yr) in m.H2_STOR_BLD_YRS if h2stor == s
+        )
     )
-    mod.gen_storage_efficiency = Param(
-        mod.H2_STOR,
-        input_file="generation_projects_info.csv",
-        within=PercentFraction,
+    mod.NEW_H2_STOR_BLD_YRS = Set(
+        dimen=2,
+        initialize=lambda m: m.H2_STOR_BLD_YRS - m.PREDETERMINED_H2_STOR_BLD_YRS)
+    mod.h2stor_predetermined_cap_kg = Param(
+        mod.PREDETERMINED_H2_STOR_BLD_YRS,
+        input_file="h2_storage.csv",
+        within=NonNegativeReals)
+
+    def h2stor_build_can_operate_in_period(m, s, build_year, period):
+        # If a period has the same name as a predetermined build year then we have a problem.
+        # For example, consider what happens if we have both a period named 2020
+        # and a predetermined build in 2020. In this case, "build_year in m.PERIODS"
+        # will be True even if the project is a 2020 predetermined build.
+        # This will result in the "online" variable being the start of the period rather
+        # than the prebuild year which can cause issues such as the project retiring too soon.
+        # To prevent this we've added the h2stor_no_predetermined_bld_yr_vs_period_conflict BuildCheck below.
+        if build_year in m.PERIODS:
+            online = m.period_start[build_year]
+        else:
+            online = build_year
+        retirement = online + m.h2stor_life_years[s]
+        # Previously the code read return online <= m.period_start[period] < retirement
+        # However using the midpoint of the period as the "cutoff" seems more correct so
+        # we've made the switch.
+        return online <= m.period_start[period] + 0.5 * m.period_length_years[period] < retirement
+
+    # This verifies that a predetermined build year doesn't conflict with a period since if that's the case
+    # gen_build_can_operate_in_period will mistaken the prebuild for an investment build
+    # (see note in h2stor_build_can_operate_in_period)
+    mod.h2stor_no_predetermined_bld_yr_vs_period_conflict = BuildCheck(
+        mod.PREDETERMINED_H2_STOR_BLD_YRS, mod.PERIODS,
+        rule=lambda m, bld_yr, p: bld_yr != p
     )
-    mod.gen_discharge_efficiency = Param(
-        mod.H2_STOR,
-        within=PercentFraction,
-        default=1,
-        input_file="generation_projects_info.csv",
-        doc="The percent of stored energy that reaches the grid during discharging",
+
+    # The set of build years that could be online in the given period
+    # for the given H2 storage project.
+    mod.BLD_YRS_FOR_H2_STOR_PERIOD = Set(
+        mod.H2_STORAGE_PROJECTS, mod.PERIODS,
+        ordered=False,
+        initialize=lambda m, s, period: set(
+            bld_yr for bld_yr in m.BLD_YRS_FOR_H2_STOR[s]
+            if h2stor_build_can_operate_in_period(m, s, bld_yr, period)))
+    # The set of periods when a H2 storage tech is available to use
+    mod.PERIODS_FOR_H2_STOR = Set(
+        mod.H2_STORAGE_PROJECTS,
+        initialize=lambda m, s: [p for p in m.PERIODS if len(m.BLD_YRS_FOR_H2_STOR_PERIOD[s, p]) > 0]
     )
+    
+    def bounds_BuildH2Stor(model, s, bld_yr):
+        if((s, bld_yr) in model.PREDETERMINED_H2_STOR_BLD_YRS):
+            return (model.h2stor_predetermined_cap_kg[s, bld_yr],
+                    model.h2stor_predetermined_cap_kg[s, bld_yr])
+        elif(s in model.CAPACITY_LIMITED_H2_STOR):
+            # This does not replace Max_Build_Potential because
+            # Max_Build_Potential applies across all build years.
+            return (0, model.h2stor_maximum_size_kg[s])
+        else:
+            return (0, None)
+    mod.BuildH2Stor = Var(
+        mod.H2_STOR_BLD_YRS,
+        within=NonNegativeReals,
+        bounds=bounds_BuildGen)
+    # Some projects are retired before the first study period, so they
+    # don't appear in the objective function or any constraints.
+    # In this case, pyomo may leave the variable value undefined even
+    # after a solve, instead of assigning a value within the allowed
+    # range. This causes errors in the Progressive Hedging code, which
+    # expects every variable to have a value after the solve. So as a
+    # starting point we assign an appropriate value to all the existing
+    # projects here.
+    mod.BuildH2Stor_assign_default_value = BuildAction(
+        mod.PREDETERMINED_H2_STOR_BLD_YRS,
+        rule=get_assign_default_value_rule("BuildH2Stor", "h2stor_predetermined_cap_kg"))
+
+    mod.H2_STOR_PERIODS = Set(
+        dimen=2,
+        initialize=lambda m:
+            [(s, p) for s in m.H2_STORAGE_PROJECTS for p in m.PERIODS_FOR_H2_STOR[s]])
+
+    mod.H2StorCapacity = Expression(
+        mod.H2_STORAGE_PROJECTS, mod.PERIODS,
+        rule=lambda m, s, period: sum(
+            m.BuildH2Stor[s, bld_yr]
+            for bld_yr in m.BLD_YRS_FOR_H2_STOR_PERIOD[s, period]))
+
+    # We use a scaling factor to improve the numerical properties
+    # of the model. The scaling factor was determined using trial
+    # and error and this tool https://github.com/staadecker/lp-analyzer.
+    # Learn more by reading the documentation on Numerical Issues.
+    max_build_potential_scaling_factor = 1e-1
+    mod.Max_H2Stor_Build_Potential = Constraint(
+        mod.CAPACITY_LIMITED_H2_STOR, mod.PERIODS,
+        rule=lambda m, s, p: (
+                m.h2stor_maximum_size_kg[s] * max_build_potential_scaling_factor >= m.H2StorCapacity[
+            s, p] * max_build_potential_scaling_factor))
+# STOPPED EDITING HERE
     # TODO: rename to gen_charge_to_discharge_ratio?
     mod.gen_store_to_release_ratio = Param(
-        mod.H2_STOR,
+        mod.H2_STORAGE_PROJECTS,
         within=NonNegativeReals,
         input_file="generation_projects_info.csv",
         default=1.0,
     )
     mod.gen_storage_energy_to_power_ratio = Param(
-        mod.H2_STOR,
+        mod.H2_STORAGE_PROJECTS,
         input_file="generation_projects_info.csv",
         within=NonNegativeReals,
         default=float("inf"),
     )  # inf is a flag that no value is specified (nan and None don't work)
     mod.gen_storage_max_cycles_per_year = Param(
-        mod.H2_STOR,
+        mod.H2_STORAGE_PROJECTS,
         within=NonNegativeReals,
         input_file="generation_projects_info.csv",
         default=float("inf"),
     )
     mod.gen_self_discharge_rate = Param(
-        mod.H2_STOR,
+        mod.H2_STORAGE_PROJECTS,
         within=PercentFraction,
         default=0,
         input_file="generation_projects_info.csv",
         doc="Percent of stored energy lost per day.",
     )
     mod.gen_land_use_rate = Param(
-        mod.H2_STOR,
+        mod.H2_STORAGE_PROJECTS,
         within=NonNegativeReals,
         default=0,
         input_file="generation_projects_info.csv",
@@ -262,7 +369,7 @@ def define_hydrogen_components(mod):
     #            for (g, bld_yr) in m.STORAGE_PROD_BLD_YRS))
 
     mod.StorageEnergyCapacity = Expression(
-        mod.H2_STOR,
+        mod.H2_STORAGE_PROJECTS,
         mod.PERIODS,
         rule=lambda m, g, period: sum(
             m.BuildStorageEnergy[g, bld_yr]
@@ -271,7 +378,7 @@ def define_hydrogen_components(mod):
     )
 
     mod.LandUse = Expression(
-        mod.H2_STOR,
+        mod.H2_STORAGE_PROJECTS,
         mod.PERIODS,
         rule=lambda m, g, p: m.gen_land_use_rate[g] * m.StorageEnergyCapacity[g, p],
     )
@@ -467,310 +574,4 @@ def post_solve(instance, outdir):
             m.DispatchGen[g, t],
             m.StateOfCharge[g, t],
         ),
-    )
-
-
-@graph(
-    "state_of_charge",
-    title="State of Charge Throughout the Year",
-    supports_multi_scenario=True,
-    note="The daily charge/discharge amount is calculated as"
-    " the difference between the maximum and minimum"
-    " state of charge in a 1-day rolling window.\n"
-    "The black line is the 14-day rolling mean of the state of charge.",
-)
-def graph_state_of_charge(tools):
-    # Each panel is a period and scenario
-    panel_group = ["period", "scenario_name"]
-    rolling_mean_window_size = "14D"
-
-    # Get the total state of charge per timepoint and scenario
-    soc = tools.get_dataframe("storage_dispatch.csv").rename(
-        {"StateOfCharge": "value"}, axis=1
-    )
-    soc = soc.groupby(["timepoint", "scenario_name"], as_index=False).value.sum()
-    # Convert values to TWh
-    soc.value /= 1e6
-    # Add datetime information
-    soc = tools.transform.timestamp(soc, key_col="timepoint")[
-        panel_group + ["datetime", "value"]
-    ]
-    # Count num rows
-    num_periods = len(soc["period"].unique())
-
-    # Used later
-    grouped_soc = soc.set_index("datetime").groupby(panel_group, as_index=False)
-
-    # Calculate the weekly SOC
-    weekly_soc = (
-        grouped_soc.rolling(rolling_mean_window_size, center=True)
-        .value.mean()
-        .reset_index()
-    )
-
-    # Get the total capacity per period and scenario
-    capacity = tools.get_dataframe("storage_capacity.csv")
-    capacity = (
-        capacity.groupby(panel_group, as_index=False)["OnlineEnergyCapacityMWh"]
-        .sum()
-        .rename({"OnlineEnergyCapacityMWh": "value"}, axis=1)
-    )
-    capacity.value /= 1e6
-    capacity["type"] = "Total Energy Capacity"
-
-    # Add information regarding the diurnal cycle to the dataframe
-    # Find the difference between the min and max for every day of the year
-    group = grouped_soc.rolling("D", center=True).value
-    daily_size = (
-        (group.max() - group.min()).reset_index().groupby(panel_group, as_index=False)
-    )
-    # Find the mean between the difference of the min and max
-    avg_daily_size = daily_size.mean()[panel_group + ["value"]]
-    avg_daily_size["type"] = "Mean Daily Charge/Discharge"
-    max_daily_size = daily_size.max()[panel_group + ["value"]]
-    max_daily_size["type"] = "Maximum Daily Charge/Discharge"
-
-    # Determine information for the labels
-    y_axis_max = capacity.value.max()
-    label_x_pos = soc["datetime"].median()
-
-    hlines = pd.concat([capacity, avg_daily_size, max_daily_size])
-
-    # For the max label
-    hlines["label_pos"] = hlines.value + y_axis_max * 0.05
-    hlines["label"] = hlines.value.round(decimals=2)
-
-    # Plot with plotnine
-    pn = tools.pn
-    plot = (
-        pn.ggplot(soc, pn.aes(x="datetime", y="value"))
-        + pn.geom_line(color="gray")
-        + pn.geom_line(data=weekly_soc, color="black")
-        + pn.labs(y="State of Charge (TWh)", x="Time of Year")
-        + pn.geom_hline(
-            pn.aes(yintercept="value", label="label", color="type"),
-            data=hlines,
-            linetype="dashed",
-        )
-        + pn.geom_text(
-            pn.aes(label="label", x=label_x_pos, y="label_pos"),
-            data=hlines,
-            fontweight="light",
-            size="10",
-        )
-    )
-    tools.save_figure(by_scenario_and_period(tools, plot, num_periods).draw())
-
-
-@graph(
-    "state_of_charge_per_duration",
-    title="State of Charge Throughout the Year by Duration",
-    supports_multi_scenario=True,
-)
-def graph_state_of_charge_per_duration(tools):
-    # Read the capacity of each project and label they by duration
-    capacity = tools.get_dataframe("storage_capacity.csv")
-    capacity["duration"] = (
-        capacity["OnlineEnergyCapacityMWh"] / capacity["OnlinePowerCapacityMW"]
-    )
-    capacity["duration"] = tools.pd.cut(
-        capacity["duration"],
-        bins=(0, 10, 25, 300, 365),
-        precision=0,
-    )
-
-    # Get the total state of charge at each timepoint for each project
-    df = tools.get_dataframe("storage_dispatch")[
-        ["generation_project", "timepoint", "StateOfCharge", "scenario_name"]
-    ]
-    df = tools.transform.timestamp(df, key_col="timepoint")
-
-    # Add the capacity information to the state of charge information
-    df = df.merge(
-        capacity,
-        on=["generation_project", "period", "scenario_name"],
-        validate="many_to_one",
-    )
-    # Aggregate projects in the same duration group
-    df = df.groupby(
-        ["duration", "scenario_name", "datetime", "period"], as_index=False
-    )[["StateOfCharge", "OnlineEnergyCapacityMWh"]].sum()
-    # Convert to GWh
-    # df["StateOfCharge"] /= 1e3
-    # Convert to percent
-    df["StateOfCharge"] /= df["OnlineEnergyCapacityMWh"]
-
-    # Plot with plotnine
-    pn = tools.pn
-    plot = (
-        pn.ggplot(df, pn.aes(x="datetime", y="StateOfCharge", color="duration"))
-        + pn.geom_line(alpha=0.5)
-        + pn.labs(
-            y="State of Charge (GWh)", x="Time of Year", color="Storage Duration (h)"
-        )
-    )
-
-    tools.save_figure(
-        by_scenario_and_period(tools, plot, len(df["period"].unique())).draw()
-    )
-
-
-@graph(
-    "storage_dispatch_frequency",
-)
-def graph_dispatch_cycles(tools):
-    df = tools.get_dataframe("storage_dispatch")
-    # Aggregate by timepoint
-    df = df.groupby("timepoint", as_index=False).sum()
-    # Add datetime column
-    df = tools.transform.timestamp(df, key_col="timepoint")
-    # Find charge in GWh
-    df["StateOfCharge"] /= 1e3
-
-    # Storage Frequency graph
-    df = df.set_index("datetime")
-    df = df.sort_index()
-    charge = df["StateOfCharge"].values
-    # TODO don't hardcode
-    timestep = (df.index[1] - df.index[0]).seconds / 3600
-    N = len(charge)
-    yfreq = tools.np.abs(fft.fft(charge, norm="forward"))
-    xfreq = fft.fftfreq(N, timestep)
-
-    # Drop negative frequencies and first value (0)
-    yfreq = yfreq[1 : N // 2] * 2
-    xfreq = xfreq[1 : N // 2]
-
-    # Plot
-    ax = tools.get_axes(
-        "storage_dispatch_frequency", title="Fourier transform of State of Charge"
-    )
-    ax.plot(xfreq, yfreq)
-    ax.set_xlabel("Cycles per hour")
-
-    # Plot
-    ax = tools.get_axes(
-        "storage_dispatch_cycle_duration",
-        title="Storage cycle duration based on fourier transform" " of state of charge",
-    )
-    ax.semilogx(1 / xfreq, yfreq)
-    # Plot some key cycle lengths
-    ax.axvline(24, linestyle="dotted", label="24 hours", color="red")  # A day
-    ax.axvline(24 * 21, linestyle="dotted", label="3 weeks", color="green")  # 3 weeks
-    ax.axvline(24 * 182.5, linestyle="dotted", label="1/2 Year", color="purple")
-    ax.set_xlabel("Hours per cycle")
-    ax.legend()
-    ax.grid(True, which="both", axis="x")
-
-
-@graph("graph_buildout", supports_multi_scenario=True)
-def graph_buildout(tools):
-    """
-    Create graphs relating to the storage that has been built
-    """
-    df = tools.get_dataframe("storage_builds.csv")
-    df = tools.transform.load_zone(df)
-    # Filter out rows where there's no power built
-    df = df[df["IncrementalPowerCapacityMW"] != 0]
-    df["duration"] = (
-        df["IncrementalEnergyCapacityMWh"] / df["IncrementalPowerCapacityMW"]
-    )
-    df["power"] = df["IncrementalPowerCapacityMW"] / 1e3
-    df["energy"] = df["IncrementalEnergyCapacityMWh"] / 1e3
-    df = tools.transform.build_year(df)
-    pn = tools.pn
-    num_regions = len(df["region"].unique())
-    plot = (
-        pn.ggplot(df, pn.aes(x="duration", y="power", color="build_year"))
-        + pn.geom_point()
-        + pn.labs(
-            title="Storage Buildout",
-            color="Build Year",
-            x="Duration (h)",
-            y="Power Capacity (GW)",
-        )
-    )
-
-    tools.save_figure(by_scenario(tools, plot).draw(), "storage_duration")
-    tools.save_figure(
-        by_scenario_and_region(tools, plot, num_regions).draw(),
-        "storage_duration_by_region",
-    )
-
-    plot = (
-        pn.ggplot(df, pn.aes(x="duration"))
-        + pn.geom_histogram(pn.aes(weight="power"), binwidth=5)
-        + pn.labs(
-            title="Storage Duration Histogram",
-            x="Duration (h)",
-            y="Power Capacity (GW)",
-        )
-    )
-
-    tools.save_figure(by_scenario(tools, plot).draw(), "storage_duration_histogram")
-    tools.save_figure(
-        by_scenario_and_region(tools, plot, num_regions).draw(),
-        "storage_duration_histogram_by_region",
-    )
-
-    plot = (
-        pn.ggplot(df, pn.aes(x="duration"))
-        + pn.geom_histogram(pn.aes(weight="energy"), binwidth=5)
-        + pn.labs(
-            title="Storage Duration Histogram",
-            x="Duration (h)",
-            y="Energy Capacity (GWh)",
-        )
-    )
-
-    tools.save_figure(
-        by_scenario(tools, plot).draw(), "storage_duration_histogram_by_energy"
-    )
-    tools.save_figure(
-        by_scenario_and_region(tools, plot, num_regions).draw(),
-        "storage_duration_histogram_by_region_and_energy",
-    )
-
-
-def by_scenario(tools, plot):
-    pn = tools.pn
-    return (
-        plot
-        + pn.facet_grid(". ~ scenario_name")
-        + pn.theme(
-            figure_size=(
-                pn.options.figure_size[0] * tools.num_scenarios,
-                pn.options.figure_size[1],
-            )
-        )
-    )
-
-
-def by_scenario_and_period(tools, plot, num_periods):
-    pn = tools.pn
-    num_periods = min(num_periods, 3)
-    return (
-        plot
-        + pn.facet_grid("period ~ scenario_name")
-        + pn.theme(
-            figure_size=(
-                pn.options.figure_size[0] * tools.num_scenarios,
-                pn.options.figure_size[1] * num_periods,
-            )
-        )
-    )
-
-
-def by_scenario_and_region(tools, plot, num_regions):
-    pn = tools.pn
-    num_regions = min(num_regions, 5)
-    return (
-        plot
-        + pn.facet_grid("scenario_name ~ region")
-        + pn.theme(
-            figure_size=(
-                pn.options.figure_size[0] * num_regions,
-                pn.options.figure_size[1] * tools.num_scenarios,
-            )
-        )
     )
