@@ -45,63 +45,56 @@ def define_hydrogen_components(mod):
     H2_STORAGE_PROJECT is the set of H2 storage candidate projects, which are of different types 
     (liquid_hydrogen_tank, gas_hydrogen_tank, hard_rock, salt_cavern).
 
-    STORAGE_PROD_BLD_YRS is the subset of PROD_BLD_YRS, restricted
-    to H2 storage projects.
+    H2_STORAGE_BLD_YRS is the set of H2 storage projects and years which they may be built 
+    (investment periods and predetermined build years).
 
-    gen_storage_energy_to_power_ratio[H2_STOR], if specified, restricts
-    the storage capacity (in MWh) to be a fixed multiple of the output
-    power (in MW), i.e., specifies a particular number of hours of
-    storage capacity. Omit this column or specify "." to allow Switch
-    to choose the energy/power ratio. (Note: gen_storage_energy_overnight_cost
-    or gen_overnight_cost should often be set to 0 when using this.)
-
-    gen_storage_max_cycles_per_year[H2_STOR], if specified, restricts
-    the number of charge/discharge cycles each storage project can perform
+    h2_storage_max_cycles_per_year[H2_STOR], if specified, restricts
+    the number of charge/discharge cycles each H2 storage project can perform
     per year; one cycle is defined as discharging an amount of energy
-    equal to the storage capacity of the project.
+    equal to the H2 storage capacity of the project.
 
-    gen_self_discharge_rate[H2_STOR] is the fraction of the charge that is lost
-    over a day. This is used for certain types of storage such as thermal energy
-    storage that slowly loses its charge over time. Default is 0 (no self discharge).
-
-    gen_land_use_rate[H2_STOR] is the amount of land used in square meters per MWh
+    h2_storage_land_use_rate[H2_STOR] is the amount of land used in square meters per MWh
     of storage for the given storage technology. Defaults to 0.
 
-    gen_storage_energy_overnight_cost[(g, bld_yr) in
-    STORAGE_PROD_BLD_YRS] is the overnight capital cost per MWh of
-    energy capacity for building the given storage technology installed in the
-    given investment period. This is only defined for storage technologies.
-    Note that this describes the energy component and the overnight_cost
-    describes the power component.
+    h2_storage_overnight_cost_per_kg[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the overnight 
+    capital cost per kg of hydrogen capacity for building the given storage technology 
+    installed in the given investment period.
+    
+    h2_storage_fixed_om_per_kg[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the fixed O&M cost
+    per kg of hydrogen capacity for building the given storage technology installed in 
+    the given investment period.
 
-    gen_predetermined_storage_energy_mwh[(g, bld_yr) in
-    PREDETERMINED_PROD_BLD_YRS] is the amount of storage that has either been
-    installed previously, or is slated for installation and is not a free
-    decision variable. This is analogous to gen_predetermined_cap, but in
-    units of energy of storage capacity (MWh) rather than power (MW).
+    h2_storage_predetermined_kg[(s, bld_yr) in
+    PREDETERMINED_H2_STORAGE_BLD_YRS] is the amount of H2 storage that has either been
+    installed previously, or is slated for installation and is not a free decision 
+    variable. This is analogous to gen_predetermined_cap, but in units of hydrogen 
+    storage capacity (kg) rather than power (MW).
 
-    BuildStorageEnergy[(g, bld_yr) in STORAGE_PROD_BLD_YRS]
-    is a decision of how much energy capacity to build onto a storage
-    project. This is analogous to BuildGen, but for energy rather than power.
+    BuildH2Storage[(s, bld_yr) in H2_STORAGE_BLD_YRS]
+    is a decision of how much energy capacity to build onto a storage project. This
+    is analogous to BuildGen, but for kg of hydrogen rather than power.
 
-    StorageEnergyInstallCosts[PERIODS] is an expression of the
-    annual costs incurred by the BuildStorageEnergy decision.
+    H2StorageEnergyInstallCosts[PERIODS] is an expression of the
+    annual costs incurred by the BuildH2Storage decision.
 
-    StorageEnergyCapacity[g, period] is an expression describing the
-    cumulative available energy capacity of BuildStorageEnergy. This is
+    H2StorageEnergyCapacity[s, period] is an expression describing the
+    cumulative available energy capacity of BuildH2Storage. This is
     analogous to GenCapacity.
+    
+    HGTS is defined in the switch_model.hydrogen.h2_advanced.h2_timescales module as
+    the hydrogen_timeseries, which corresponds to the maximum frequency at which 
+    hydrogen will be stored or withdrawn from storage. 
+    TPS_IN_HGTS is also defined in the switch_model.hydrogen.h2_advanced.h2_timescales 
+    module as the set of timepoints within each HGTS, indexed by HGTS.
 
-    STORAGE_GEN_TPS is the subset of GEN_TPS,
-    restricted to storage projects.
+    FillStorage[(s, tp) for tp in m.TPS_IN_HGTS[hgts]] is a dispatch decision of how 
+    much to fill a hydrogen storage project in each timepoint.
 
-    ChargeStorage[(g, t) in STORAGE_GEN_TPS] is a dispatch
-    decision of how much to charge a storage project in each timepoint.
+    StorageNetFill[LOAD_ZONE, TIMEPOINT] is an expression describing the net/
+    aggregate impact of FillStorage in each load zone and timepoint.
 
-    StorageNetCharge[LOAD_ZONE, TIMEPOINT] is an expression describing the
-    aggregate impact of ChargeStorage in each load zone and timepoint.
-
-    Charge_Storage_Upper_Limit[(g, t) in STORAGE_GEN_TPS]
-    constrains ChargeStorage to available power capacity (accounting for
+    Fill_Storage_Upper_Limit[(s, t) in STORAGE_GEN_TPS]
+    constrains FillStorage to available power capacity (accounting for
     gen_store_to_release_ratio)
 
     StateOfCharge[(g, t) in STORAGE_GEN_TPS] is a variable
@@ -110,7 +103,7 @@ def define_hydrogen_components(mod):
 
     Track_State_Of_Charge[(g, t) in STORAGE_GEN_TPS] constrains
     StateOfCharge based on the StateOfCharge in the previous timepoint,
-    ChargeStorage and DispatchGen.
+    FillStorage and DispatchGen.
 
     State_Of_Charge_Upper_Limit[(g, t) in STORAGE_GEN_TPS]
     constrains StateOfCharge based on installed energy capacity.
@@ -144,7 +137,7 @@ def define_hydrogen_components(mod):
 	    dimen=2,
 	    initialize=init_predetermined_h2_stor_bld_yrs
 	)
-	mod.h2stor_predetermined_cap_kg = Param(
+	mod.h2_storage_predetermined_kg = Param(
         mod.PREDETERMINED_H2_STOR_BLD_YRS,
         input_file="h2_storage.csv",
         within=NonNegativeReals)
@@ -158,10 +151,6 @@ def define_hydrogen_components(mod):
     mod.NEW_H2_STOR_BLD_YRS = Set(
         dimen=2,
         initialize=lambda m: m.H2_STOR_BLD_YRS - m.PREDETERMINED_H2_STOR_BLD_YRS)
-    mod.h2stor_predetermined_cap_kg = Param(
-        mod.PREDETERMINED_H2_STOR_BLD_YRS,
-        input_file="h2_storage.csv",
-        within=NonNegativeReals)
 
     def h2stor_build_can_operate_in_period(m, s, build_year, period):
         # If a period has the same name as a predetermined build year then we have a problem.
@@ -250,99 +239,34 @@ def define_hydrogen_components(mod):
         rule=lambda m, s, p: (
                 m.h2stor_maximum_size_kg[s] * max_build_potential_scaling_factor >= m.H2StorCapacity[
             s, p] * max_build_potential_scaling_factor))
-# STOPPED EDITING HERE
-    # TODO: rename to gen_charge_to_discharge_ratio?
-    mod.gen_store_to_release_ratio = Param(
+
+    mod.h2_storage_max_cycles_per_year = Param(
         mod.H2_STORAGE_PROJECTS,
         within=NonNegativeReals,
-        input_file="generation_projects_info.csv",
-        default=1.0,
-    )
-    mod.gen_storage_energy_to_power_ratio = Param(
-        mod.H2_STORAGE_PROJECTS,
-        input_file="generation_projects_info.csv",
-        within=NonNegativeReals,
-        default=float("inf"),
-    )  # inf is a flag that no value is specified (nan and None don't work)
-    mod.gen_storage_max_cycles_per_year = Param(
-        mod.H2_STORAGE_PROJECTS,
-        within=NonNegativeReals,
-        input_file="generation_projects_info.csv",
+        input_file="h2_storage.csv",
         default=float("inf"),
     )
-    mod.gen_self_discharge_rate = Param(
-        mod.H2_STORAGE_PROJECTS,
-        within=PercentFraction,
-        default=0,
-        input_file="generation_projects_info.csv",
-        doc="Percent of stored energy lost per day.",
-    )
-    mod.gen_land_use_rate = Param(
+    mod.h2_storage_land_use_rate = Param(
         mod.H2_STORAGE_PROJECTS,
         within=NonNegativeReals,
         default=0,
-        input_file="generation_projects_info.csv",
+        input_file="h2_storage.csv",
         doc="Meters squared of land used per MWh of storage",
     )
 
-    mod.STORAGE_PROD_BLD_YRS = Set(
+    mod.H2_STORAGE_BLD_YRS = Set(
         dimen=2,
         initialize=lambda m: [
-            (g, bld_yr) for g in m.H2_STOR for bld_yr in m.BLD_YRS_FOR_GEN[g]
+            (s, bld_yr) for s in m.H2_STORAGE_PROJECTS for bld_yr in m.BLD_YRS_FOR_H2_STOR[s]
         ],
     )
-    mod.gen_storage_energy_overnight_cost = Param(
-        mod.STORAGE_PROD_BLD_YRS,
-        input_file="gen_build_costs.csv",
+    mod.h2_storage_overnight_cost_per_kg = Param(
+        mod.H2_STORAGE_BLD_YRS,
+        input_file="h2_storage.csv",
         within=NonNegativeReals,
     )
-    mod.min_data_check("gen_storage_energy_overnight_cost")
-    mod.gen_predetermined_storage_energy_mwh = Param(
-        mod.PREDETERMINED_PROD_BLD_YRS,
-        input_file="gen_build_predetermined.csv",
-        within=NonNegativeReals,
-    )
-    mod.PREDETERMINED_STORAGE_PROD_BLD_YRS = Set(
-        initialize=mod.PREDETERMINED_PROD_BLD_YRS,
-        filter=lambda m, g, bld_yr: (g, bld_yr)
-        in m.gen_predetermined_storage_energy_mwh,
-    )
-
-    def bounds_BuildStorageEnergy(m, g, bld_yr):
-        if (g, bld_yr) in m.PREDETERMINED_STORAGE_PROD_BLD_YRS:
-            return (
-                m.gen_predetermined_storage_energy_mwh[g, bld_yr],
-                m.gen_predetermined_storage_energy_mwh[g, bld_yr],
-            )
-        else:
-            return (0, None)
-
-    mod.BuildStorageEnergy = Var(
-        mod.STORAGE_PROD_BLD_YRS,
-        within=NonNegativeReals,
-        bounds=bounds_BuildStorageEnergy,
-    )
-
-    # Some projects are retired before the first study period, so they
-    # don't appear in the objective function or any constraints.
-    # In this case, pyomo may leave the variable value undefined even
-    # after a solve, instead of assigning a value within the allowed
-    # range. This causes errors in the Progressive Hedging code, which
-    # expects every variable to have a value after the solve. So as a
-    # starting point we assign an appropriate value to all the existing
-    # projects here.
-    # TODO Don't include projects that are retired in the first study period in
-    #   the model in the first place. Same thing in build.py with BuildGen.
-    def BuildStorageEnergy_assign_default_value(m, g, bld_yr):
-        m.BuildStorageEnergy[g, bld_yr] = m.gen_predetermined_storage_energy_mwh[
-            g, bld_yr
-        ]
-
-    mod.BuildStorageEnergy_assign_default_value = BuildAction(
-        mod.PREDETERMINED_STORAGE_PROD_BLD_YRS,
-        rule=BuildStorageEnergy_assign_default_value,
-    )
-
+    mod.min_data_check("h2_storage_overnight_cost_per_kg")
+# STOPPED EDITING HERE
     # Summarize capital costs of energy storage for the objective function
     # Note: A bug in to 2.0.0b3 - 2.0.5, assigned costs that were several times
     # too high
@@ -382,15 +306,23 @@ def define_hydrogen_components(mod):
         mod.PERIODS,
         rule=lambda m, g, p: m.gen_land_use_rate[g] * m.StorageEnergyCapacity[g, p],
     )
+    
+    mod.TPS_FOR_H2_STOR = Set(
+        mod.H2_STORAGE_PROJECTS,
+        within=mod.TIMEPOINTS,
+        initialize=lambda m, s: (
+            tp for p in m.PERIODS_FOR_H2_STOR[s] for tp in m.TPS_IN_PERIOD[p]
+        )
+    )
 
     mod.STORAGE_GEN_TPS = Set(
         dimen=2,
         initialize=lambda m: (
-            (g, tp) for g in m.H2_STOR for tp in m.TPS_FOR_GEN[g]
+            (g, tp) for g in m.H2_STOR for tp in m.TPS_FOR_H2_STOR[s]
         ),
     )
 
-    mod.ChargeStorage = Var(mod.STORAGE_GEN_TPS, within=NonNegativeReals)
+    mod.FillStorage = Var(mod.STORAGE_GEN_TPS, within=NonNegativeReals)
 
     # Summarize storage charging for the energy balance equations
     # TODO: rename this StorageTotalCharging or similar (to indicate it's a
@@ -404,27 +336,16 @@ def define_hydrogen_components(mod):
                 m.Storage_Charge_Summation_dict[z2, t2].add(g)
         # Use pop to free memory
         relevant_projects = m.Storage_Charge_Summation_dict.pop((z, t), {})
-        return sum(m.ChargeStorage[g, t] for g in relevant_projects)
+        return sum(m.FillStorage[g, t] for g in relevant_projects)
 
     mod.StorageNetCharge = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule)
     # Register net charging with zonal energy balance. Discharging is already
     # covered by DispatchGen.
     mod.Zone_Power_Withdrawals.append("StorageNetCharge")
 
-    # use fixed energy/power ratio (# hours of capacity) when specified
-    mod.Enforce_Fixed_Energy_Storage_Ratio = Constraint(
-        mod.STORAGE_PROD_BLD_YRS,
-        rule=lambda m, g, y: Constraint.Skip
-        if m.gen_storage_energy_to_power_ratio[g] == float("inf")  # no value specified
-        else (
-            m.BuildStorageEnergy[g, y]
-            == m.gen_storage_energy_to_power_ratio[g] * m.BuildGen[g, y]
-        ),
-    )
-
     def Charge_Storage_Upper_Limit_rule(m, g, t):
         return (
-            m.ChargeStorage[g, t]
+            m.FillStorage[g, t]
             <= m.DispatchUpperLimit[g, t] * m.gen_store_to_release_ratio[g]
         )
 
@@ -436,7 +357,7 @@ def define_hydrogen_components(mod):
 
     mod.StorageFlow = Expression(
         mod.STORAGE_GEN_TPS,
-        rule=lambda m, g, t: m.ChargeStorage[g, t] * m.gen_storage_efficiency[g]
+        rule=lambda m, g, t: m.FillStorage[g, t] * m.gen_storage_efficiency[g]
         - m.DispatchGen[g, t] / m.gen_discharge_efficiency[g],
     )
 
@@ -570,7 +491,7 @@ def post_solve(instance, outdir):
             g,
             m.tp_timestamp[t],
             m.gen_load_zone[g],
-            m.ChargeStorage[g, t],
+            m.FillStorage[g, t],
             m.DispatchGen[g, t],
             m.StateOfCharge[g, t],
         ),

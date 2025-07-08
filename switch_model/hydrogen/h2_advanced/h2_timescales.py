@@ -22,55 +22,57 @@ def define_components(m):
 
 def define_hydrogen_components(m):
     """
-    Users can use the hydrogen_timepoints.csv, hydrogen_timeseries.csv and
-    hydrogen_periods.csv files to customize the hydrogen storage duration and cycle.
+    Users can use the h2_timepoints.csv, h2_timeseries.csv and
+    h2_periods.csv files to customize the hydrogen storage duration and cycle.
 
     ------------------------------------------
-    hydrogen_timepoints.csv:
-    The hydrogen_timepoints.csv input file must include all the timepoint_ids in the 
+    h2_timepoints.csv:
+    The h2_timepoints.csv input file must include all the timepoint_ids in the 
     switch timepoints.csv input file. The hydrogen_timeseries column contains the new
     timeseries names that correspond to the maximum frequency at which hydrogen will 
     be stored or withdrawn from liquid storage. For example, if hydrogen can be stored 
     daily (but not hourly) to the tank, timepoints would be grouped into daily time 
     series regardless of how long the main time series are in the switch timeseries.csv 
     input file. The only requirement is that the hydrogen timeseries (hgts) must be
-    equal to or of a longer duration than the timepoints it includes. 
-    hydrogen_timepoints.csv
-        timepoint_id, hydrogen_timeseries
+    equal to or of a longer duration than the timepoints it includes. The "timestamp"
+    column does not get used in the formulation, but it is included to give meaning to
+    the timepoint_id values for data analysis purposes, formatted YYYMMDDHH.
+    h2_timepoints.csv
+        timepoint_id, timestamp, hydrogen_timeseries
 
     ------------------------------------------
-    hydrogen_timeseries.csv:
-    The hydrogen_timeseries.csv input file allows users to further describe the hydrogen timeseries
-    defined in hydrogen_timepoints.csv and specify a new HYDROGEN PERIOD (hgp) that corresponds to how
+    h2_timeseries.csv:
+    The h2_timeseries.csv input file allows users to further describe the hydrogen timeseries
+    defined in h2_timepoints.csv and specify a new HYDROGEN PERIOD (hgp) that corresponds to how
     often hydrogen storage is cycled. For example, if hydrogen should not be stored for longer than 1
     month, then each hgp would represent a one month period. Hydrogen storage is constrained to have 
     zero net hydrogen stored from one hgp to the next hgp (H2 at hgp start - H2 at hgp end = 0). 
     The hydrogen_timseries.csv input file must include the following:
-        HYDROGEN_TIMESERIES: the exact same hydrogen timeseries names defined in hydrogen_timepoints.csv
+        HYDROGEN_TIMESERIES: the exact same hydrogen timeseries names defined in h2_timepoints.csv
         hgts_period: the PERIOD (from the switch timeseries.csv input file) containing the hydrogen timeseries in col 1
         hgts_hydrogen_period: the NEW HYDROGEN PERIOD containing the hydrogen timeseries in col 1
         hgts_duration_of_tp: the duration in hours of the timepoints in the hgts in col 1. Must match the
         ts_duration_of_tp for the corresponding timeseries in switch
         hgts_scale_to_hgp: the number of times that the hgts in col 1 occurs in the hgp
     The file format is as follows. 
-    hydrogen_timeseries.csv
+    h2_timeseries.csv
         HYDROGEN_TIMESERIES,hgts_period,hgts_hydrogen_period,hgts_duration_of_tp,ts_duration_of_tp,
         hgts_scale_to_hgp
 
     ------------------------------------------
-    hydrogen_periods.csv:
-    The hydrogen_periods.csv input file maps hydrogen periods to the switch model periods. 
+    h2_periods.csv:
+    The h2_periods.csv input file maps hydrogen periods to the switch model periods. 
     It must include the following:
-    hydrogen_periods.csv
+    h2_periods.csv
         hydrogen_period, period
-    where hydrogen_period exactly matches the hgp in hydrogen_timeseries.csv and period exactly matches
+    where hydrogen_period exactly matches the hgp in h2_timeseries.csv and period exactly matches
     the periods in periods.csv.
     """
     
     # HYDROGEN TIMESCALES DETAILS
     m.tp_to_hgts = Param(
         m.TIMEPOINTS,
-        input_file='hydrogen_timepoints.csv',
+        input_file='h2_timepoints.csv',
         input_column='hydrogen_timeseries',
         default=lambda m, tp: m.tp_ts[tp], #default is to use the main model time series 
         doc="Mapping of timepoints to a hydrogen timeseries.",
@@ -85,14 +87,14 @@ def define_hydrogen_components(m):
 
     m.hgts_period = Param(
         m.HGTS,
-        input_file='hydrogen_timeseries.csv',
+        input_file='h2_timeseries.csv',
         input_column='hgts_period',
         doc="Mapping of hydrogen time series to the main model periods.",
         within=m.PERIODS
     )
     m.hgts_hg_period = Param(
         m.HGTS,
-        input_file='hydrogen_timeseries.csv',
+        input_file='h2_timeseries.csv',
         input_column='hgts_hydrogen_period',
         doc="Mapping of hydrogen time series to the hydrogen periods.",
         within=Any
@@ -128,21 +130,21 @@ def define_hydrogen_components(m):
     m.hgts_duration_of_tp = Param(
         m.HGTS,
         within=PositiveReals,
-        input_file='hydrogen_timeseries.csv',
+        input_file='h2_timeseries.csv',
         input_column='hgts_duration_of_tp',
         doc="Duration in hours of the timepoints in each hydrogen time series"
     )
     m.hgts_scale_to_hgp = Param(
         m.HGTS,
         within=PositiveReals,
-        input_file='hydrogen_timeseries.csv',
+        input_file='h2_timeseries.csv',
         input_column='hgts_scale_to_hgp',
         doc="Number of times a hydrogen time series occurs in its hydrogen period"
     )
     m.hgp_p = Param(
         m.HGP,
         within=m.PERIODS,
-        input_file="hydrogen_periods.csv",
+        input_file="h2_periods.csv",
         input_column="period",
         doc="Mapping of hydrogen periods to normal model periods."
     )

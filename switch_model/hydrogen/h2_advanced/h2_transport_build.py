@@ -21,7 +21,7 @@ INPUT FILE FORMAT
 
     h2_pipeline_params.csv
         pip_capital_cost_per_mw_km, pip_capital_cost_y_int_per_km, 
-        pip_lifetime_yrs, pip_fixed_om_per_km
+        pip_lifetime_yrs, pip_fixed_om_pc
 """
 
 import os
@@ -125,10 +125,10 @@ def define_hydrogen_components(mod):
     (pip_capital_cost_per_mw_km * BuildPip + pip_capital_cost_y_int_per_km) * pip_length_km,
     where BuildPip is in MW of H2. See the 1st paragraph above for details on MW_H2.
     
-    pip_fixed_om_per_km describes the fixed Operations and
-    Maintenance costs of pipelines per km of pipeline. This is optional 
-    and defaults to $6,900/km, which comes from 
-    https://www.sciencedirect.com/science/article/pii/S0360319919338625.
+    pip_fixed_om_pc describes the fixed Operations and
+    Maintenance costs of pipelines as a percent of capital costs. This is optional 
+    and defaults to 5%, which comes from the ReEDS model and
+    https://iopscience.iop.org/article/10.1088/1748-9326/acacb5.
 
     pip_lifetime_yrs is the number of years in which a capital
     construction loan for a new pipeline is repaid. This
@@ -195,9 +195,9 @@ def define_hydrogen_components(mod):
     mod.pip_lifetime_yrs = Param(
         within=NonNegativeReals,
         default=40, input_file="h2_pipeline_params.csv")
-    mod.pip_fixed_om_per_km = Param(
-        within=NonNegativeReals,
-        default=6900, input_file="h2_pipeline_params.csv")
+    mod.pip_fixed_om_pc = Param(
+        within=PercentFraction,
+        default=0.05, input_file="h2_pipeline_params.csv")
     mod.PIP_BLD_YRS = Set(
         dimen=2,
         initialize=mod.PIPELINES * mod.PERIODS,
@@ -221,17 +221,23 @@ def define_hydrogen_components(mod):
     # base_year Net Present Value in $base_year real dollars. Multiply capital 
     # costs by capital recover factor to get annual payments. Add annual
     # fixed O&M that are expressed per km of pipeline.
-    mod.PipelineCosts = Expression(
+    mod.PipelineCapitalCosts = Expression(
         mod.PIPELINES, mod.PERIODS,
         rule=lambda m, pip, p: 
         (m.NewPipCapacity[pip, p] * m.pip_capital_cost_per_mw_km + pip_capital_cost_y_int_per_km) 
         * m.pip_length_km[pip] * m.pip_terrain_multiplier[pip] * (crf(m.interest_rate, m.pip_lifetime_yrs)
-        + m.pip_fixed_om_per_km * m.pip_length_km[pip] if (pip, p) in m.PIP_BLD_YRS else 0
+        if (pip, p) in m.PIP_BLD_YRS else 0
+    )
+    mod.PipelineFixedOMCosts = Expression(
+        mod.PIPELINES, mod.PERIODS,
+        rule=lambda m, pip, p: 
+        m.PipelineCapitalCosts[pip, p] * m.pip_fixed_om_pc 
+        if (pip, p) in m.PIP_BLD_YRS else 0
     )
     mod.PipFixedCosts = Expression(
         mod.PERIODS,
         rule=lambda m, p: sum(
-            m.PipelineCosts[pip, p] for pip in m.PIPELINES
+            m.PipelineCapitalCosts[pip, p] + m.PipelineFixedOMCosts[pip, p] for pip in m.PIPELINES
         )
     )
     mod.Cost_Components_Per_Period.append('PipFixedCosts')
