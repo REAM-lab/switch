@@ -126,7 +126,6 @@ def define_hydrogen_components(m):
         initialize=lambda m, p: set(hgts for hgts in m.HGTS if m.hgts_period[hgts] == p),
         doc="Set of hydrogen time series in each main model period."
     )
-
     m.hgts_duration_of_tp = Param(
         m.HGTS,
         within=PositiveReals,
