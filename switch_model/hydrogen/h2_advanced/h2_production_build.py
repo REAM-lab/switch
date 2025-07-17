@@ -12,8 +12,7 @@ INPUT FILE FORMAT
         PRODUCTION_PROJECT, prod_tech, prod_energy_source, prod_load_zone,
         prod_max_age, prod_variable_om_per_kg
     Optional columns are:
-        h2_color, prod_av_outage_rate, prod_capacity_limit_mw, 
-        prod_ccs_energy_load, prod_ccs_capture_efficiency
+        prod_av_outage_rate, prod_capacity_limit_mw, prod_ccs_equipped
 
     The following file lists existing builds of H2 production projects, and is
     optional for simulations where there is no existing capacity:
@@ -25,7 +24,7 @@ INPUT FILE FORMAT
     both existing and new project buildouts:
 
     h2_prod_build_costs.csv
-        PRODUCTION_PROJECT, build_year, prod_overnight_cost_per_mw, prod_fixed_om_per_mw
+        PRODUCTION_PROJECT, build_year, prod_overnight_cost_per_mw, prod_fixed_om_per_mw_yr
 """
 
 from __future__ import division
@@ -54,12 +53,12 @@ def define_hydrogen_components(m):
     	4. H2 system components- liquefier (and compressors?)
     	5. H2 system dispatch- production and demand balance
     	
-    *Note: Electrolyzers are rated in MW, where MW is the max power input that the electrolyzer can take. 
-    Fuel-based H2 production technologies are also rated by MW in this model, but MW refers to MW of hydrogen, 
-    which is a measure of its maximum production capacity in kg of H2 per hour, converted to MW using the LHV 
-    of H2 of 33.3 kWh/kg from https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html
-    (Example: Say an SMR plant is rated for 300 kg of H2 per hour. Then we have:
-    300 kg_H2/hr * 33.3 kWh/kg * 1 MW/1,000 kW = 9.99 MW of H2)
+    *Note: H2 production projects are all rated by MW of hydrogen, which is a measure of
+    its maximum production capacity in kg of H2 per hour, converted to MW using the LHV 
+    of H2 of 33.32 kWh/kg from https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html
+    and https://sci-hub.kvnp.top/10.1016/j.ijhydene.2019.10.080. 
+    (Example: Say a project is rated for 8.34 kg of H2 per s. Then we have:
+    8.34 kg_H2/s * 33.32 kWh/kg * 1 MW/1,000 kW * 3,600 s/hr =~ 1,000 MW of H2 or 1 GW of H2)
     
     ------------------------------------------
     
@@ -85,10 +84,21 @@ def define_hydrogen_components(m):
     on increasing capacity or replacing capacity as it is retired based on 
     permits or local air quality regulations.
 
-    prod_capacity_limit_mw[h] is defined for H2 production technologies that are
+    prod_capacity_limit_mw[h] is defined for H2 production projects that are
     capacity limited. This describes the maximum possible capacity of an H2 
     production project in units of megawatts or megawatts of H2. See the *note 
     above for more information on the capacity units.
+    
+    mmbtu_fuel_per_kg_h2[h] is defined for fuel-based H2 production projects. 
+    This describes the amount of fuel in mmbtu needed to produced 1 kg of H2.
+    The default value is 0.
+    
+    mwh_per_kg_h2[h] is defined for all H2 production projects. This describes 
+    the amount of electricity in MWh needed to produced 1 kg of H2.
+    The default value is 0. For electrolyzers, this is the primary energy 
+    source. For fuel-based hydrogen production technologies, this value is
+    usually non-zero, as it represents the electrical load needed to operate 
+    the hydrogen production facility.
 
     -- CONSTRUCTION --
 
@@ -169,9 +179,12 @@ def define_hydrogen_components(m):
     "installed in the given period", I mean that it comes online at the
     beginning of the given period and construction starts before that.
 
-    prod_fixed_om_per_mw[h, build_year] is the annual fixed Operations and
+    prod_fixed_om_per_mw_yr[h, build_year] is the annual fixed Operations and
     Maintenance costs (O&M) per MW of capacity for given project that
     was installed in the given period.
+    
+    prod_variable_om_per_kg[h] is the variable Operations and Maintenance
+    costs (O&M) per kg of H2 produced for a given H2 production project.
 
     -- Derived cost parameters --
 
@@ -215,9 +228,6 @@ def define_hydrogen_components(m):
                                   input_file="h2_production_projects_info.csv",
                                   validate=lambda m, val, p: val in m.ENERGY_SOURCES or val == "multiple")
 
-    m.h2_color = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-                            input_optional=True, within=Strs)
-
     m.prod_max_age = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
     						within=PositiveIntegers)
 
@@ -252,12 +262,9 @@ def define_hydrogen_components(m):
         input_optional=True, within=NonNegativeReals)
     
     m.CCS_EQUIPPED_PROD Set(within=m.PRODUCTION_PROJECTS)
-    m.prod_ccs_capture_efficiency = Param(
+    m.prod_ccs_equipped = Param(
         m.CCS_EQUIPPED_PROD, input_file="h2_production_projects_info.csv",
-        input_optional=True, within=PercentFraction)
-    m.prod_ccs_energy_load = Param(
-        m.CCS_EQUIPPED_PROD, input_file="h2_production_projects_info.csv",
-        input_optional=True, within=PercentFraction)
+        input_optional=True, within=Boolean)
 
     m.prod_uses_fuel = Param(
         m.PRODUCTION_PROJECTS,
@@ -271,12 +278,11 @@ def define_hydrogen_components(m):
         initialize=m.PRODUCTION_PROJECTS,
         filter=lambda m, h: m.prod_uses_fuel[h])
     
-    #default value of 3.5 based on SMR, from Q6 in https://seshydrogen.com/en/frequently-asked-questions-about-hydrogen-3/
-    m.kg_h2_per_kg_fuel = Param(m.FUEL_BASED_PROD, input_file="h2_production_projects_info.csv",
-                                          within=NonNegativeReals, default=3.5)
+    m.mmbtu_fuel_per_kg_h2 = Param(m.FUEL_BASED_PROD, input_file="h2_production_projects_info.csv",
+                                          within=NonNegativeReals, default=0)
 
-    m.kg_h2_per_mwh = Param(m.NON_FUEL_BASED_PROD, input_file="h2_production_projects_info.csv",
-                                          within=NonNegativeReals, default=30)
+    m.mwh_per_kg_h2 = Param(m.PRODUCTION_TECHNOLOGIES, input_file="h2_production_projects_info.csv",
+                                          within=NonNegativeReals, default=0)
 
     m.FUELS_FOR_PROD = Set(m.FUEL_BASED_PROD,
         initialize=lambda m, h: [m.prod_energy_source[h]])
@@ -451,11 +457,11 @@ def define_hydrogen_components(m):
         m.PROD_BLD_YRS,
         input_file="h2_prod_build_costs.csv",
         within=NonNegativeReals)
-    m.prod_fixed_om_per_mw = Param(
+    m.prod_fixed_om_per_mw_yr = Param(
         m.PROD_BLD_YRS,
         input_file="h2_prod_build_costs.csv",
         within=NonNegativeReals)
-    m.min_data_check('prod_overnight_cost_per_mw', 'prod_fixed_om_per_mw')
+    m.min_data_check('prod_overnight_cost_per_mw', 'prod_fixed_om_per_mw_yr')
 
     # Derived annual costs
     m.prod_capital_cost_annual = Param(
@@ -472,7 +478,7 @@ def define_hydrogen_components(m):
     m.ProdFixedOMCosts = Expression(
         m.PRODUCTION_PROJECTS, m.PERIODS,
         rule=lambda m, h, p: sum(
-            m.BuildProd[h, bld_yr] * m.prod_fixed_om_per_mw[h, bld_yr]
+            m.BuildProd[h, bld_yr] * m.prod_fixed_om_per_mw_yr[h, bld_yr]
             for bld_yr in m.BLD_YRS_FOR_PROD_PERIOD[h, p]))
     # Summarize costs for the objective function. Units should be total
     # annual future costs in $base_year real dollars. The objective
@@ -494,7 +500,7 @@ def load_inputs(m, switch_data, inputs_dir):
             None: list(switch_data.data(name='prod_capacity_limit_mw').keys())}
     if 'prod_ccs_capture_efficiency' in switch_data.data():
         switch_data.data()['CCS_EQUIPPED_PROD'] = {
-            None: list(switch_data.data(name='prod_ccs_capture_efficiency').keys())}
+            None: list(switch_data.data(name='prod_ccs_equipped').keys())}
 
 def post_solve(m, outdir):
     write_table(
@@ -503,11 +509,11 @@ def post_solve(m, outdir):
         output_file=os.path.join(outdir, "h2_prod_cap.csv"),
         headings=(
             "PRODUCTION_PROJECT", "PERIOD",
-            "prod_tech", "prod_load_zone", "prod_energy_source", "h2_color",
+            "prod_tech", "prod_load_zone", "prod_energy_source",
             "ProdCapacity", "ProdCapitalCosts", "ProdFixedOMCosts"),
         # Indexes are provided as a tuple, so put (h, p) in parentheses to
         # access the two components of the index individually.
         values=lambda m, h, p: (
             h, p,
-            m.prod_tech[h], m.prod_load_zone[h], m.prod_energy_source[h], m.h2_color[h]
+            m.prod_tech[h], m.prod_load_zone[h], m.prod_energy_source[h],
             m.ProdCapacity[h, p], m.ProdCapitalCosts[h, p], m.ProdFixedOMCosts[h, p]))
