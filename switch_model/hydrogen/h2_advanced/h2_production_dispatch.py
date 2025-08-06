@@ -17,7 +17,7 @@ INPUT FILE FORMAT
     per kg of h2 produced
 
     h2_emissions_factors.csv
-        prod_tech, kg_co2_per_kg_h2, kg_ch4_per_kg_h2, kg_no2_per_kg_h2, kg_so2_per_kg_h2, kg_nox_per_kg_h2, kg_pm10_per_kg_h2
+        prod_tech, kg_co2_per_kg_h2, kg_ch4_per_kg_h2, kg_n2o_per_kg_h2, kg_so2_per_kg_h2, kg_nox_per_kg_h2, kg_pm10_per_kg_h2
 
 """
 from __future__ import division
@@ -240,6 +240,12 @@ def define_hydrogen_components(m):
             (h, t, f)
                 for (h, t) in m.FUEL_BASED_PROD_TPS
                     for f in m.FUEL_FOR_PROD[h]))
+    mod.PROD_TP_PROD_TECH = Set(
+        dimen=3,
+        initialize=lambda m: (
+            (h, t, tech)
+                for (h, t) in m.FUEL_BASED_PROD_TPS
+                    for tech in m.prod_tech[h]))
 
     mod.ProdCapacityInTP = Expression(
         mod.PROD_TPS,
@@ -248,7 +254,7 @@ def define_hydrogen_components(m):
         mod.PROD_TPS,
         within=NonNegativeReals)
 
-    # Define DispatchProdByFuel to equal the total dispatch (no multi-fuel capabilities).
+    # Define DispatchProdByFuel to simply equal the total dispatch (no multi-fuel capabilities).
     mod.DispatchProdByFuel = Expression(
         mod.PROD_TP_FUELS,
         rule=lambda m, h, t, f: m.DispatchProd[h, t]
@@ -279,91 +285,107 @@ def define_hydrogen_components(m):
     mod.ProdFuelUseRate = Var(
         mod.PROD_TP_FUELS,
         within=NonNegativeReals,
-        doc=("Other modules constrain this variable based on DispatchProdByFuel."))
+        doc=("[MMBTU/h] Other modules constrain this variable based on DispatchProdByFuel."))
 
-    # GREENHOUSE GASES
-    mod.kg_co2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals, input_file="h2_emissions_factors.csv",
-                                input_column="kg_co2_per_kg_h2")
-    mod.kg_ch4_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=Reals, input_file="h2_emissions_factors.csv",
-                                         input_column="kg_ch4_per_kg_h2", default=0)
-    mod.kg_no2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals, default=0, input_file="h2_emissions_factors.csv",
-                                input_column="kg_no2_per_kg_h2")
-    #CRITERIA AIR POLLUTANTS
-    mod.kg_so2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals, default=0, input_file="h2_emissions_factors.csv",
-                                input_column="kg_so2_per_kg_h2")
-    mod.kg_nox_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals, default=0, input_file="h2_emissions_factors.csv",
-                                input_column="kg_nox_per_kg_h2")
-    mod.kg_pm10_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals, default=0, input_file="h2_emissions_factors.csv",
-                                input_column="kg_pm10_per_kg_h2")
+    # GREENHOUSE GASES (LHV of H2 = 33.32 kWh/kg)
+	mod.kg_co2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
+		input_file="h2_emissions_factors.csv", input_column="kg_co2_per_kg_h2")
+	mod.kg_ch4_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=Reals,
+		default=0, input_file="h2_emissions_factors.csv", input_column="kg_ch4_per_kg_h2")
+	mod.kg_n2o_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
+		default=0, input_file="h2_emissions_factors.csv", input_column="kg_n2o_per_kg_h2")
+	
+	# CRITERIA AIR POLLUTANTS (LHV of H2 = 33.32 kWh/kg)
+	mod.kg_so2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
+		default=0, input_file="h2_emissions_factors.csv", input_column="kg_so2_per_kg_h2")
+	mod.kg_nox_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
+		default=0, input_file="h2_emissions_factors.csv", input_column="kg_nox_per_kg_h2")
+	mod.kg_pm10_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
+		default=0, input_file="h2_emissions_factors.csv", input_column="kg_pm10_per_kg_h2")
+	
+	# EMISSIONS EXPRESSIONS (metric tonnes = kg * 1e-3)
+	
+	def ProdDispatchEmissions_rule_co2(m, h, t, f):
+		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_co2_per_kg_h2[prod_tech[h]] * 1e-3)
+	mod.ProdDispatchEmissionsCO2 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_co2)
+	
+	def ProdDispatchEmissions_rule_ch4(m, h, t, f):
+		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_ch4_per_kg_h2[prod_tech[h]] * 1e-3)
+	mod.ProdDispatchEmissionsCH4 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_ch4)
+	
+	def ProdDispatchEmissions_rule_n2o(m, h, t, f):
+		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_n2o_per_kg_h2[prod_tech[h]] * 1e-3)
+	mod.ProdDispatchEmissionsN2O = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_n2o)
+	
+	def ProdDispatchEmissions_rule_so2(m, h, t, f):
+		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_so2_per_kg_h2[prod_tech[h]] * 1e-3)
+	mod.ProdDispatchEmissionsSO2 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_so2)
+	
+	def ProdDispatchEmissions_rule_nox(m, h, t, f):
+		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_nox_per_kg_h2[prod_tech[h]] * 1e-3)
+	mod.ProdDispatchEmissionsNOx = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_nox)
+	
+	def ProdDispatchEmissions_rule_pm10(m, h, t, f):
+		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_pm10_per_kg_h2[prod_tech[h]] * 1e-3)
+	mod.ProdDispatchEmissionsPM10 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_pm10)
 
-    def ProdDispatchEmissions_rule(m, h, t, f):
-        return (m.ProdFuelUseRate[h, t, f] * (m.f_co2_intensity[f] + m.f_upstream_co2_intensity[f]))
+	mod.ProdAnnualEmissionsCO2 = Expression(mod.PERIODS,
+		rule=lambda m, period: sum(
+			m.ProdDispatchEmissionsCO2[h, t, f] * m.tp_weight_in_year[t]
+			for (h, t, f) in m.PROD_TP_FUELS
+			if m.tp_period[t] == period),
+		doc="The system's annual CO2 emissions, in metric tonnes per year.")
+	
+	mod.ProdAnnualEmissionsCH4 = Expression(mod.PERIODS,
+		rule=lambda m, period: sum(
+			m.ProdDispatchEmissionsCH4[h, t, f] * m.tp_weight_in_year[t]
+			for (h, t, f) in m.PROD_TP_FUELS
+			if m.tp_period[t] == period),
+		doc="The system's annual CH4 emissions, in metric tonnes per year.")
+	
+	mod.ProdAnnualEmissionsN2O = Expression(mod.PERIODS,
+		rule=lambda m, period: sum(
+			m.ProdDispatchEmissionsN2O[h, t, f] * m.tp_weight_in_year[t]
+			for (h, t, f) in m.PROD_TP_FUELS
+			if m.tp_period[t] == period),
+		doc="The system's annual N2O emissions, in metric tonnes per year.")
+	
+	mod.ProdAnnualEmissionsSO2 = Expression(mod.PERIODS,
+		rule=lambda m, period: sum(
+			m.ProdDispatchEmissionsSO2[h, t, f] * m.tp_weight_in_year[t]
+			for (h, t, f) in m.PROD_TP_FUELS
+			if m.tp_period[t] == period),
+		doc="The system's annual SO2 emissions, in metric tonnes per year.")
+	
+	mod.ProdAnnualEmissionsNOx = Expression(mod.PERIODS,
+		rule=lambda m, period: sum(
+			m.ProdDispatchEmissionsNOx[h, t, f] * m.tp_weight_in_year[t]
+			for (h, t, f) in m.PROD_TP_FUELS
+			if m.tp_period[t] == period),
+		doc="The system's annual NOx emissions, in metric tonnes per year.")
+	
+	mod.ProdAnnualEmissionsPM10 = Expression(mod.PERIODS,
+		rule=lambda m, period: sum(
+			m.ProdDispatchEmissionsPM10[h, t, f] * m.tp_weight_in_year[t]
+			for (h, t, f) in m.PROD_TP_FUELS
+			if m.tp_period[t] == period),
+		doc="The system's annual PM10 emissions, in metric tonnes per year.")
 
-    mod.ProdDispatchEmissions = Expression(
-        mod.PROD_TP_FUELS,
-        rule=ProdDispatchEmissions_rule)
+	# DispatchProd tells us the average production in units of MW of H2 produced in each timepoint. 
+	# This value is multiplied by the duration of the timepoint in hours to determine the amount of 
+	# H2 produced by a project over the duration of timepoint t in units of MWh. This is converted 
+	# to kg of H2 using the LHV of H2 (33.32 kWh/kg) and the conversion factor of 1000 kWh/MWh.
 
-    mod.ProdDispatchEmissionsNOx = Expression(
-        mod.PROD_TP_FUELS,
-        rule=(lambda m, h, t, f: m.DispatchProdByFuel[h, t, f] * m.f_nox_intensity[f]))
-
-    mod.ProdDispatchEmissionsSO2 = Expression(
-        mod.PROD_TP_FUELS,
-        rule=(lambda m, h, t, f: m.DispatchProdByFuel[h, t, f] * m.f_so2_intensity[f]))
-
-    mod.ProdDispatchEmissionsCH4 = Expression(
-        mod.PROD_TP_FUELS,
-        rule=(lambda m, h, t, f: m.DispatchProdByFuel[h, t, f] * m.f_ch4_intensity[f]))
-
-    mod.ProdAnnualEmissions = Expression(mod.PERIODS,
-        rule=lambda m, period: sum(
-            m.ProdDispatchEmissions[h, t, f] * m.tp_weight_in_year[t]
-            for (h, t, f) in m.PROD_TP_FUELS
-            if m.tp_period[t] == period),
-        doc="The system's annual CO2 emissions, in metric tonnes of CO2 per year.")
-
-    mod.ProdAnnualEmissionsNOx = Expression(
-        mod.PERIODS,
-        rule=lambda m, period: sum(
-            m.ProdDispatchEmissionsNOx[h, t, f] * m.tp_weight_in_year[t]
-            for (h, t, f) in m.PROD_TP_FUELS
-            if m.tp_period[t] == period),
-        doc="The system's annual NOx emissions, in metric tonnes of NOx per year.")
-
-    mod.ProdAnnualEmissionsSO2 = Expression(
-        mod.PERIODS,
-        rule=lambda m, period: sum(
-            m.ProdDispatchEmissionsSO2[h, t, f] * m.tp_weight_in_year[t]
-            for (h, t, f) in m.PROD_TP_FUELS
-            if m.tp_period[t] == period),
-        doc="The system's annual SO2 emissions, in metric tonnes of SO2 per year.")
-
-    mod.ProdAnnualEmissionsCH4 = Expression(
-        mod.PERIODS,
-        rule=lambda m, period: sum(
-            m.ProdDispatchEmissionsCH4[h, t, f] * m.tp_weight_in_year[t]
-            for (h, t, f) in m.PROD_TP_FUELS
-            if m.tp_period[t] == period),
-        doc="The system's annual CH4 emissions, in metric tonnes of CH4 per year.")
-
-    mod.ProdVariableOMCostsInTP = Expression(
-        mod.TIMEPOINTS,
-        rule=lambda m, t: sum(
-            m.DispatchProd[h, t] * m.prod_variable_om_per_kg[h]
-            for h in m.PROD_IN_PERIOD[m.tp_period[t]]),
-        doc="Summarize costs for the objective function")
-    mod.Cost_Components_Per_TP.append('ProdVariableOMCostsInTP')
-
-    mod.BASELOAD_PROD_PERIODS = Set(
-        dimen=2,
-        initialize=lambda m:
-            [(g, p) for g in m.BASELOAD_PROD for p in m.PERIODS_FOR_PROD[g]])
-    mod.BASELOAD_GEN_TPS = Set(
-        dimen=2,
-        initialize=lambda m:
-            [(h, t) for g, p in m.BASELOAD_PROD_PERIODS for t in m.TPS_IN_PERIOD[p]])
-
-    mod.DispatchBaseloadByPeriod = Var(mod.BASELOAD_PROD_PERIODS)
+    mod.ProdVariableOMCostsInPeriod = Expression(
+		mod.PERIODS,
+		rule=lambda m, p: sum(
+			m.DispatchProd[h, t] * m.tp_weight_in_year[t] * (1000 / 33.32) * m.prod_variable_om_per_kg[h]
+			for t in m.TPS_IN_PERIOD[p]
+			for h in m.PROD_IN_PERIOD[m.tp_period[t]]
+		),
+		doc="Summarize variable OM costs per kg of H2 produced in each period for the objective function"
+	)
+	mod.Cost_Components_Per_Period.append('ProdVariableOMCostsInPeriod')
 
     mod.DispatchUpperLimit = Expression(
         mod.GEN_TPS,
