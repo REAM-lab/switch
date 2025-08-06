@@ -67,8 +67,8 @@ def define_hydrogen_components(m):
     of H2 production technology, load zone and location. A particular build-out
     of a project should also include the year in which construction was
     complete and additional capacity came online. Members of this set are
-    abbreviated as prod in parameter names and h in indexes (think of the mnemonic: h for H2).
-    Use of p instead of g is discouraged because p is reserved for period.
+    abbreviated as prod in parameter names and h in indexes (think of the mnemonic: 
+    h for H2). Use of p instead of g is discouraged because p is reserved for period.
 
     prod_tech[h] describes what kind of technology an H2 production project is
     using (electrolyzer, SMR, etc.).
@@ -99,7 +99,14 @@ def define_hydrogen_components(m):
     source. For fuel-based hydrogen production technologies, this value is
     usually non-zero, as it represents the electrical load needed to operate 
     the hydrogen production facility.
-
+    
+    CCS_EQUIPPED_PROD is the subset of PRODUCTION_PROJECTS that are equipped 
+    with Carbon Capture and Sequestration (CCS). Note we do not define a CCS
+    capture efficiency or energy penalty like we do for electricity generators with
+    CCS. This is because we instead use a heating value that already accounts for
+    the energy penalty from the CCS and a CO2 emission factor that already accounts 
+    for the capture efficiency of the CCS for each CCS-eqipped H2 production project.
+    
     -- CONSTRUCTION --
 
     PROD_BLD_YRS is a two-dimensional set of H2 production projects and the
@@ -271,7 +278,7 @@ def define_hydrogen_components(m):
         initialize=lambda m, h: (
             m.prod_energy_source[h] in m.FUELS
                 or m.prod_energy_source[h] == "multiple"))
-    m.NON_FUEL_BASED_PROD = Set(
+    m.ELECTRICITY_BASED_PROD = Set(
         initialize=m.PRODUCTION_PROJECTS,
         filter=lambda m, h: not m.prod_uses_fuel[h])
     m.FUEL_BASED_PROD = Set(
@@ -284,7 +291,7 @@ def define_hydrogen_components(m):
     m.mwh_per_kg_h2 = Param(m.PRODUCTION_TECHNOLOGIES, input_file="h2_production_projects_info.csv",
                                           within=NonNegativeReals, default=0)
 
-    m.FUELS_FOR_PROD = Set(m.FUEL_BASED_PROD,
+    m.FUEL_FOR_PROD = Set(m.FUEL_BASED_PROD,
         initialize=lambda m, h: [m.prod_energy_source[h]])
 
     def PROD_BY_ENERGY_SOURCE_init(m, e):
@@ -292,7 +299,7 @@ def define_hydrogen_components(m):
             m.PROD_BY_ENERGY_dict = {_e: [] for _e in m.ENERGY_SOURCES}
             for h in m.PRODUCTION_PROJECTS:
                 if p in m.FUEL_BASED_PROD:
-                    for f in m.FUELS_FOR_PROD[h]:
+                    for f in m.FUEL_FOR_PROD[h]:
                         m.PROD_BY_ENERGY_dict[f].append(p)
                 else:
                     m.PROD_BY_ENERGY_dict[m.prod_energy_source[h]].append(p)
@@ -498,9 +505,6 @@ def load_inputs(m, switch_data, inputs_dir):
     if 'prod_capacity_limit_mw' in switch_data.data():
         switch_data.data()['CAPACITY_LIMITED_PROD'] = {
             None: list(switch_data.data(name='prod_capacity_limit_mw').keys())}
-    if 'prod_ccs_capture_efficiency' in switch_data.data():
-        switch_data.data()['CCS_EQUIPPED_PROD'] = {
-            None: list(switch_data.data(name='prod_ccs_equipped').keys())}
 
 def post_solve(m, outdir):
     write_table(
