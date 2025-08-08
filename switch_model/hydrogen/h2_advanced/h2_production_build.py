@@ -276,8 +276,7 @@ def define_hydrogen_components(m):
     m.prod_uses_fuel = Param(
         m.PRODUCTION_PROJECTS,
         initialize=lambda m, h: (
-            m.prod_energy_source[h] in m.FUELS
-                or m.prod_energy_source[h] == "multiple"))
+            m.prod_energy_source[h] in m.FUELS))
     m.ELECTRICITY_BASED_PROD = Set(
         initialize=m.PRODUCTION_PROJECTS,
         filter=lambda m, h: not m.prod_uses_fuel[h])

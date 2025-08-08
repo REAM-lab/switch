@@ -343,6 +343,28 @@ def define_components(mod):
         mod.REGIONAL_FUEL_MARKETS, mod.PERIODS,
         initialize=GENS_FOR_RFM_PERIOD_rule
     )
+    # If the model also has fuel use from hydrogen production (ProdFuelUseRate), then construct PRODS_FOR_RFM_PERIOD
+    if hasattr(mod, "ProdFuelUseRate"):
+		def PRODS_FOR_RFM_PERIOD_rule(m, rfm, p):
+			try:
+				d = m.PRODS_FOR_RFM_PERIOD_dict
+			except AttributeError:
+				d = m.PRODS_FOR_RFM_PERIOD_dict = dict()
+				for h in m.FUEL_BASED_PROD:
+					for f in m.FUEL_FOR_PROD[h]:
+						for p_ in m.PERIODS_FOR_PROD[h]:
+							d.setdefault((m.prod_load_zone[h], f, p_), []).append(h)
+			relevant_prods = [
+				h
+				for z in m.ZONES_IN_RFM[rfm]
+				for h in d.pop((z, m.rfm_fuel[rfm], p), [])
+			]
+			return relevant_prods
+	
+		mod.PRODS_FOR_RFM_PERIOD = Set(
+			mod.REGIONAL_FUEL_MARKETS, mod.PERIODS,
+			initialize=PRODS_FOR_RFM_PERIOD_rule
+		)
 
     # We use a scaling factor to improve the numerical properties
     # of the model. The scaling factor was determined using trial
@@ -354,6 +376,11 @@ def define_components(mod):
         lhs = m.FuelConsumptionInMarket[rfm, p] * enforce_fuel_consumption_scaling_factor
         rhs = enforce_fuel_consumption_scaling_factor * sum(
             m.GenFuelUseRate[g, t, m.rfm_fuel[rfm]] * m.tp_weight_in_year[t] for g in m.GENS_FOR_RFM_PERIOD[rfm, p] for
+            t in m.TPS_IN_PERIOD[p])
+        # If the model also has fuel use from hydrogen production (ProdFuelUseRate), then consider that in the fuel use constraint
+        if hasattr(m, "ProdFuelUseRate"):
+        	rhs += enforce_fuel_consumption_scaling_factor * sum(
+            m.ProdFuelUseRate[h, t, m.rfm_fuel[rfm]] * m.tp_weight_in_year[t] for h in m.PRODS_FOR_RFM_PERIOD[rfm, p] for
             t in m.TPS_IN_PERIOD[p])
         # If we have only positive costs, FuelConsumptionInMarket will automatically
         # try to be minimized in which case we can use a one-sided constraint

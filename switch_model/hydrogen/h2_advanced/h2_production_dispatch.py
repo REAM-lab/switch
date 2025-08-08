@@ -63,7 +63,7 @@ def define_hydrogen_components(m):
 
     TPS_FOR_PROD[h] is a set array showing all timepoints when a
     project is active. These are the timepoints corresponding to
-    PERIODS_FOR_GEN. This is the same data as PROD_TPS,
+    PERIODS_FOR_PROD. This is the same data as PROD_TPS,
     but split into separate sets for each project.
 
     TPS_FOR_PROD_IN_PERIOD[h, period] is the same as
@@ -132,10 +132,10 @@ def define_hydrogen_components(m):
     project.unitcommit module implements unit commitment decisions with
     startup fuel requirements and a marginal heat rate.
 
-    ProdDispatchEmissions[(h, t, f) in PROD_TP_FUELS] is the CO2
+    ProdDispatchEmissionsCO2[(h, t, f) in PROD_TP_FUELS] is the CO2
     emissions produced by dispatching a fuel-based project in units of
     metric tonnes CO2 per hour. This is derived from the fuel
-    consumption ProdFuelUseRate and the fuel's direct carbon intensity. 
+    consumption ProdFuelUseRate and the prod_tech's direct carbon intensity. 
     This does not yet support multi-fuel generators.
 
     ProdDispatchEmissionsNOx[(h, t, f) in PROD_TP_FUELS],
@@ -146,7 +146,7 @@ def define_hydrogen_components(m):
     derived using DispatchProdByFuel and the emissions factors associated
     with each prod_tech.
 
-    ProdAnnualEmissions[p in PERIODS]:The hydrogen system's annual CO2 emissions, 
+    ProdAnnualEmissionsCO2[p in PERIODS]:The hydrogen system's annual CO2 emissions, 
     in metric tonnes of CO2 per year.
 
     ProdAnnualEmissionsNOx[p in PERIODS], ProdAnnualEmissionsSO2[p in PERIODS] and
@@ -157,7 +157,7 @@ def define_hydrogen_components(m):
     
     Constraining dispatch decisions subject to available capacity:
 
-    ProdDispatchUpperLimit[(h, t) in PROD_TPS] is an
+    ProdProdDispatchUpperLimit[(h, t) in PROD_TPS] is an
     expression that defines the upper bounds of dispatch subject to
     installed capacity and average expected outage rates.
 
@@ -169,13 +169,13 @@ def define_hydrogen_components(m):
     constraints that limit DispatchProd to the upper and lower bounds
     defined above.
 
-        ProdDispatchLowerLimit <= DispatchProd <= ProdDispatchUpperLimit
+        ProdDispatchLowerLimit <= DispatchProd <= ProdProdDispatchUpperLimit
 
     ProdFuelUseRate_Calculate[(h, t, f) in PROD_TP_FUELS]
     calculates fuel consumption for the variable ProdFuelUseRate as
     DispatchProdByFuel * mmbtu_fuel_per_kg_h2. Using the LHV of H2 
     (33.32 kWh/kg of H2) and a conversion factor (1000 kWh/MWh), the units become:
-    MW of H2 * (MMBtu / kg of H2) * (kg of H2 / kWh) * (kWh / MWh) = MMBTU / h
+    [MW of H2] * [MMBtu / kg of H2] * [kg of H2 /33.32 kWh] * [1000 kWh / MWh] = MMBTU / h
 
     """
 
@@ -275,7 +275,7 @@ def define_hydrogen_components(m):
         doc="Total H2 from H2 production projects per zone at each timepoint.")
     mod.Zone_H2_Injections.append('ZoneTotalCentralH2Dispatch')
 
-    def init_prod_availability(m, g):
+    def init_prod_availability(m, h):
         return (1 - m.prod_av_outage_rate[h])
     mod.prod_availability = Param(
         mod.PRODUCTION_PROJECTS,
@@ -303,8 +303,7 @@ def define_hydrogen_components(m):
 	mod.kg_pm10_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_pm10_per_kg_h2")
 	
-	# EMISSIONS EXPRESSIONS (metric tonnes = kg * 1e-3)
-	
+	# EMISSIONS EXPRESSIONS (metric tonnes = kg * 1e-3) [metric tonnes per hour]
 	def ProdDispatchEmissions_rule_co2(m, h, t, f):
 		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_co2_per_kg_h2[prod_tech[h]] * 1e-3)
 	mod.ProdDispatchEmissionsCO2 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_co2)
@@ -329,41 +328,42 @@ def define_hydrogen_components(m):
 		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_pm10_per_kg_h2[prod_tech[h]] * 1e-3)
 	mod.ProdDispatchEmissionsPM10 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_pm10)
 
+	# [metric tonnes per year]
 	mod.ProdAnnualEmissionsCO2 = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsCO2[h, t, f] * m.tp_weight_in_year[t]
 			for (h, t, f) in m.PROD_TP_FUELS
 			if m.tp_period[t] == period),
 		doc="The system's annual CO2 emissions, in metric tonnes per year.")
-	
+
 	mod.ProdAnnualEmissionsCH4 = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsCH4[h, t, f] * m.tp_weight_in_year[t]
 			for (h, t, f) in m.PROD_TP_FUELS
 			if m.tp_period[t] == period),
 		doc="The system's annual CH4 emissions, in metric tonnes per year.")
-	
+
 	mod.ProdAnnualEmissionsN2O = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsN2O[h, t, f] * m.tp_weight_in_year[t]
 			for (h, t, f) in m.PROD_TP_FUELS
 			if m.tp_period[t] == period),
 		doc="The system's annual N2O emissions, in metric tonnes per year.")
-	
+
 	mod.ProdAnnualEmissionsSO2 = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsSO2[h, t, f] * m.tp_weight_in_year[t]
 			for (h, t, f) in m.PROD_TP_FUELS
 			if m.tp_period[t] == period),
 		doc="The system's annual SO2 emissions, in metric tonnes per year.")
-	
+
 	mod.ProdAnnualEmissionsNOx = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsNOx[h, t, f] * m.tp_weight_in_year[t]
 			for (h, t, f) in m.PROD_TP_FUELS
 			if m.tp_period[t] == period),
 		doc="The system's annual NOx emissions, in metric tonnes per year.")
-	
+
 	mod.ProdAnnualEmissionsPM10 = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsPM10[h, t, f] * m.tp_weight_in_year[t]
@@ -387,62 +387,52 @@ def define_hydrogen_components(m):
 	)
 	mod.Cost_Components_Per_Period.append('ProdVariableOMCostsInPeriod')
 
-    mod.DispatchUpperLimit = Expression(
-        mod.GEN_TPS,
-        rule=lambda m, h, t: m.ProdCapacityInTP[h, t] * m.gen_availability[g] * (
-            m.gen_max_capacity_factor[h, t] if m.gen_is_variable[g] else 1
-        ))
-
-    mod.Enforce_Dispatch_Baseload_Flat = Constraint(
-        mod.BASELOAD_GEN_TPS,
-        rule=lambda m, h, t:
-            m.DispatchGen[h, t] == m.DispatchBaseloadByPeriod[g, m.tp_period[t]])
+    mod.ProdDispatchUpperLimit = Expression(
+        mod.PROD_TPS,
+        rule=lambda m, h, t: m.ProdCapacityInTP[h, t] * m.prod_availability[h])
 
     # We use a scaling factor to improve the numerical properties
     # of the model. The scaling factor was determined using trial
     # and error and this tool https://github.com/staadecker/lp-analyzer.
     # Learn more by reading the documentation on Numerical Issues.
-    mod.Enforce_Dispatch_Upper_Limit = Constraint(
-        mod.GEN_TPS,
+    mod.Enforce_Prod_Dispatch_Upper_Limit = Constraint(
+        mod.PROD_TPS,
         rule=lambda m, h, t:
-        m.DispatchGen[h, t] * 1e4 <= 1e4 * m.DispatchUpperLimit[h, t]
+        m.DispatchProd[h, t] * 1e4 <= 1e4 * m.ProdDispatchUpperLimit[h, t]
     )
-
-    mod.GenFuelUseRate_Calculate = Constraint(
-        mod.GEN_TP_FUELS,
-        rule=lambda m, h, t, f: m.GenFuelUseRate[g,t,f] == m.DispatchGenByFuel[g,t,f] * m.gen_full_load_heat_rate[g]
+	# [MW of H2] * [MMBtu / kg of H2] * [kg of H2 /33.32 kWh] * [1000 kWh / MWh] = MMBTU / h
+    mod.ProdFuelUseRate_Calculate = Constraint(
+        mod.PROD_TP_FUELS,
+        rule=lambda m, h, t, f: m.ProdFuelUseRate[h, t, f] == m.DispatchProdByFuel[h, t, f] * m.mmbtu_fuel_per_kg_h2[h] * (1000 / 33.32)
     )
-
 
 def post_solve(instance, outdir):
     """
     Exported files:
 
-    dispatch-wide.csv - Dispatch results timepoints in "wide" format with
+    h2-prod-dispatch-wide.csv - Dispatch results timepoints in "wide" format with
     timepoints as rows, production projects as columns, and dispatch level
     as values
 
-    dispatch.csv - Dispatch results in normalized form where each row
+    h2_prod_dispatch.csv - Dispatch results in normalized form where each row
     describes the dispatch of a production project in one timepoint.
 
-    dispatch_annual_summary.csv - Similar to dispatch.csv, but summarized
+    h2_prod_dispatch_annual_summary.csv - Similar to h2_prod_dispatch.csv, but summarized
     by production technology and period.
 
-    dispatch_zonal_annual_summary.csv - Similar to dispatch_annual_summary.csv
+    h2_prod_dispatch_zonal_annual_summary.csv - Similar to h2_prod_dispatch_annual_summary.csv
     but broken out by load zone.
 
-    dispatch_annual_summary.pdf - A figure of annual summary data. Only written
-    if the ggplot python library is installed.
     """
     sorted_prod = sorted_robust(instance.PRODUCTION_PROJECTS)
     write_table(
         instance, instance.TIMEPOINTS,
-        output_file=os.path.join(outdir, "dispatch-wide.csv"),
+        output_file=os.path.join(outdir, "h2-prod-dispatch-wide.csv"),
         headings=("timestamp",) + tuple(sorted_prod),
         values=lambda m, t: (m.tp_timestamp[t],) + tuple(
-            m.DispatchProd[p, t] if (p, t) in m.PROD_TPS
+            m.DispatchProd[h, t] if (h, t) in m.PROD_TPS
             else 0.0
-            for p in sorted_prod
+            for h in sorted_prod
         )
     )
     del sorted_prod
@@ -453,67 +443,79 @@ def post_solve(instance, outdir):
     # Note we've refactored to create the Dataframe in one
     # line to reduce the overall memory consumption during
     # the most intensive part of post-solve (this function)
-    dispatch_full_df = pd.DataFrame({
-        "production_project": c(lambda h, t: g),
-        "gen_dbid": c(lambda h, t: instance.gen_dbid[h]),
-        "gen_tech": c(lambda h, t: instance.gen_tech[h]),
-        "gen_load_zone": c(lambda h, t: instance.gen_load_zone[h]),
-        "gen_energy_source": c(lambda h, t: instance.gen_energy_source[h]),
+    prod_dispatch_full_df = pd.DataFrame({
+        "production_project": c(lambda h, t: h),
+        "prod_tech": c(lambda h, t: instance.prod_tech[h]),
+        "prod_load_zone": c(lambda h, t: instance.prod_load_zone[h]),
+        "prod_energy_source": c(lambda h, t: instance.prod_energy_source[h]),
         "timestamp": c(lambda h, t: instance.tp_timestamp[t]),
         "tp_weight_in_year_hrs": c(lambda h, t: instance.tp_weight_in_year[t]),
         "period": c(lambda h, t: instance.tp_period[t]),
-        "is_renewable": c(lambda h, t: g in instance.VARIABLE_PROD),
-        "DispatchProd_MW": c(lambda h, t: instance.DispatchProd[h, t]),
-        "Curtailment_MW": c(lambda h, t:
-                            value(instance.DispatchUpperLimit[h, t]) - value(instance.DispatchProd[h, t])),
-        "Energy_GWh_typical_yr": c(lambda h, t:
-                                   instance.DispatchProd[h, t] * instance.tp_weight_in_year[t] / 1000),
-        "VariableOMCost_per_yr": c(lambda h, t:
-                                   instance.DispatchProd[h, t] * instance.prod_variable_om_per_kg[h] *
-                                   instance.tp_weight_in_year[t]),
+        "DispatchProd_MW_H2": c(lambda h, t: instance.DispatchProd[h, t]),
+        "Curtailment_MW_H2": c(lambda h, t:
+                            value(instance.ProdDispatchUpperLimit[h, t]) - value(instance.DispatchProd[h, t])),
+        "H2_produced_tonne_typical_yr": c(lambda h, t:
+                                   instance.DispatchProd[h, t] * instance.tp_weight_in_year[t] / 33.32),
+        "ProdVariableOMCost_per_yr": c(lambda h, t:
+                                   instance.DispatchProd[h, t] * instance.tp_weight_in_year[t] * (1000 / 33.32) *
+                                   instance.prod_variable_om_per_kg[h]),
         "ProdDispatchEmissions_tCO2_per_typical_yr": c(lambda h, t:
                                                    sum(
-                                                       instance.ProdDispatchEmissions[h, t, f] *
+                                                       instance.ProdDispatchEmissionsCO2[h, t, f] *
                                                        instance.tp_weight_in_year[t]
                                                        for f in instance.FUEL_FOR_PROD[h]
-                                                   ) if instance.gen_uses_fuel[h] else 0),
-        "ProdDispatchEmissions_tNOx_per_typical_yr": c(lambda h, t:
-                                                   sum(
-                                                       instance.ProdDispatchEmissionsNOx[h, t, f] *
-                                                       instance.tp_weight_in_year[t]
-                                                       for f in instance.FUEL_FOR_PROD[h]
-                                                   ) if instance.gen_uses_fuel[h] else 0),
-        "ProdDispatchEmissions_tSO2_per_typical_yr": c(lambda h, t:
-                                                   sum(
-                                                       instance.ProdDispatchEmissionsSO2[h, t, f] *
-                                                       instance.tp_weight_in_year[t]
-                                                       for f in instance.FUEL_FOR_PROD[h]
-                                                   ) if instance.gen_uses_fuel[h] else 0),
+                                                   ) if instance.prod_uses_fuel[h] else 0),
         "ProdDispatchEmissions_tCH4_per_typical_yr": c(lambda h, t:
                                                    sum(
                                                        instance.ProdDispatchEmissionsCH4[h, t, f] *
                                                        instance.tp_weight_in_year[t]
                                                        for f in instance.FUEL_FOR_PROD[h]
-                                                   ) if instance.gen_uses_fuel[h] else 0)
+                                                   ) if instance.prod_uses_fuel[h] else 0),
+        "ProdDispatchEmissions_tN2O_per_typical_yr": c(lambda h, t:
+                                                   sum(
+                                                       instance.ProdDispatchEmissionsN2O[h, t, f] *
+                                                       instance.tp_weight_in_year[t]
+                                                       for f in instance.FUEL_FOR_PROD[h]
+                                                   ) if instance.prod_uses_fuel[h] else 0),
+        "ProdDispatchEmissions_tSO2_per_typical_yr": c(lambda h, t:
+                                                   sum(
+                                                       instance.ProdDispatchEmissionsSO2[h, t, f] *
+                                                       instance.tp_weight_in_year[t]
+                                                       for f in instance.FUEL_FOR_PROD[h]
+                                                   ) if instance.prod_uses_fuel[h] else 0),
+        "ProdDispatchEmissions_tNOx_per_typical_yr": c(lambda h, t:
+                                                   sum(
+                                                       instance.ProdDispatchEmissionsNOx[h, t, f] *
+                                                       instance.tp_weight_in_year[t]
+                                                       for f in instance.FUEL_FOR_PROD[h]
+                                                   ) if instance.prod_uses_fuel[h] else 0),
+        "ProdDispatchEmissions_tPM10_per_typical_yr": c(lambda h, t:
+                                                   sum(
+                                                       instance.ProdDispatchEmissionsPM10[h, t, f] *
+                                                       instance.tp_weight_in_year[t]
+                                                       for f in instance.FUEL_FOR_PROD[h]
+                                                   ) if instance.prod_uses_fuel[h] else 0)
     })
-    dispatch_full_df.set_index(["production_project", "timestamp"], inplace=True)
-    write_table(instance, output_file=os.path.join(outdir, "dispatch.csv"), df=dispatch_full_df)
+    prod_dispatch_full_df.set_index(["production_project", "timestamp"], inplace=True)
+    write_table(instance, output_file=os.path.join(outdir, "h2_prod_dispatch.csv"), df=prod_dispatch_full_df)
 
-    annual_summary = dispatch_full_df.groupby(['gen_tech', "gen_energy_source", "period"]).sum()
-    write_table(instance, output_file=os.path.join(outdir, "dispatch_annual_summary.csv"),
-                df=annual_summary,
-                columns=["Energy_GWh_typical_yr", "VariableOMCost_per_yr",
-                         "ProdDispatchEmissions_tCO2_per_typical_yr", "ProdDispatchEmissions_tNOx_per_typical_yr",
-                         "ProdDispatchEmissions_tSO2_per_typical_yr", "ProdDispatchEmissions_tCH4_per_typical_yr"])
+    prod_annual_summary = prod_dispatch_full_df.groupby(['prod_tech', "prod_energy_source", "period"]).sum()
+    write_table(instance, output_file=os.path.join(outdir, "h2_prod_dispatch_annual_summary.csv"),
+                df=prod_annual_summary,
+                columns=["H2_produced_tonne_typical_yr", "ProdVariableOMCost_per_yr",
+                         "ProdDispatchEmissions_tCO2_per_typical_yr", "ProdDispatchEmissions_tCH4_per_typical_yr",
+                         "ProdDispatchEmissions_tN2O_per_typical_yr", "ProdDispatchEmissions_tSO2_per_typical_yr",
+                         "ProdDispatchEmissions_tNOx_per_typical_yr", "ProdDispatchEmissions_tPM10_per_typical_yr"])
 
-    zonal_annual_summary = dispatch_full_df.groupby(
-        ['gen_tech', "gen_load_zone", "gen_energy_source", "period"]
+    prod_zonal_annual_summary = prod_dispatch_full_df.groupby(
+        ['prod_tech', "prod_load_zone", "prod_energy_source", "period"]
     ).sum()
     write_table(
         instance,
-        output_file=os.path.join(outdir, "dispatch_zonal_annual_summary.csv"),
-        df=zonal_annual_summary,
-        columns=["Energy_GWh_typical_yr", "VariableOMCost_per_yr",
-                 "ProdDispatchEmissions_tCO2_per_typical_yr", "ProdDispatchEmissions_tNOx_per_typical_yr",
-                 "ProdDispatchEmissions_tSO2_per_typical_yr", "ProdDispatchEmissions_tCH4_per_typical_yr"]
+        output_file=os.path.join(outdir, "h2_prod_dispatch_zonal_annual_summary.csv"),
+        df=prod_zonal_annual_summary,
+        columns=["H2_produced_tonne_typical_yr", "ProdVariableOMCost_per_yr",
+                 "ProdDispatchEmissions_tCO2_per_typical_yr", "ProdDispatchEmissions_tCH4_per_typical_yr",
+                 "ProdDispatchEmissions_tN2O_per_typical_yr", "ProdDispatchEmissions_tSO2_per_typical_yr",
+                 "ProdDispatchEmissions_tNOx_per_typical_yr", "ProdDispatchEmissions_tPM10_per_typical_yr"]
     )
