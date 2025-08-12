@@ -37,9 +37,30 @@ from switch_model.utilities.scaling import get_assign_default_value_rule
 dependencies = 'switch_model.timescales', 'switch_model.balancing.load_zones',\
     'switch_model.financials', 'switch_model.energy_sources.properties.properties'
 
-def define_components(m):
-    if not m.options.no_hydrogen:
-        define_hydrogen_components(m)
+def define_dynamic_hydrogen_components(mod):
+    """
+    Adds components to a Pyomo abstract model object to enforce the
+    first law of thermodynamics at the level of load zone buses. Unless
+    otherwise stated, all terms describing power are in units of MW and
+    all terms describing energy are in units of MWh.
+
+    Zone_Energy_Balance[load_zone, timepoint] is a constraint that mandates
+    conservation of energy in every load zone and timepoint. This constraint
+    sums the model components in the lists Zone_Power_Injections and
+    Zone_Power_Withdrawals - each of which is indexed by (z, t) and
+    has units of MW - and ensures they are equal. The term tp_duration_hrs
+    is factored out of the equation for brevity.
+    """
+
+    mod.Zone_Energy_Balance = Constraint(
+        mod.ZONE_TIMEPOINTS,
+        rule=lambda m, z, t: (
+            sum(
+                getattr(m, component)[z, t]
+                for component in m.Zone_Power_Injections
+            ) == sum(
+                getattr(m, component)[z, t]
+                for component in m.Zone_Power_Withdrawals)))
 
 def define_hydrogen_components(m):
     """
@@ -139,16 +160,16 @@ def define_hydrogen_components(m):
     prod_predetermined_cap_mw[(h, build_year) in PREDETERMINED_PROD_BLD_YRS] is
     a parameter that describes how much capacity was built in the past
     for existing projects, or is planned to be built for future projects, in MW of
-    electricity for electrolyzers or MW of H2 for fuel-based H2 production projects.
+    H2 for all H2 production projects.
 
     BuildProd[h, build_year] is a decision variable that describes
     how much capacity of a project to install in a given period. This also
     stores the amount of capacity that was installed in existing projects
-    that are still online.
+    that are still online [MW of H2].
 
     ProdCapacity[h, period] is an expression that returns the total
     capacity online in a given period. This is the sum of installed capacity
-    minus all retirements.
+    minus all retirements [MW of H2].
 
     Max_Prod_Build_Potential[h] is a constraint defined for each project
     that enforces maximum capacity limits for resource-limited projects.
@@ -277,9 +298,6 @@ def define_hydrogen_components(m):
         m.PRODUCTION_PROJECTS,
         initialize=lambda m, h: (
             m.prod_energy_source[h] in m.FUELS))
-    m.ELECTRICITY_BASED_PROD = Set(
-        initialize=m.PRODUCTION_PROJECTS,
-        filter=lambda m, h: not m.prod_uses_fuel[h])
     m.FUEL_BASED_PROD = Set(
         initialize=m.PRODUCTION_PROJECTS,
         filter=lambda m, h: m.prod_uses_fuel[h])

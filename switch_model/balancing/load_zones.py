@@ -43,30 +43,8 @@ def define_dynamic_lists(mod):
     often include Expressions to summarize decision variables on a zonal basis.
     """
     mod.Zone_Power_Injections = []
-    mod.Zone_Power_Withdrawals = []
-    
-    if not mod.options.no_hydrogen:
-        define_hydrogen_dynamic_lists(mod)
+    mod.Zone_Power_Withdrawals = [] 
 
-def define_hydrogen_dynamic_lists(mod):
-    """
-    Zone_H2_Injections and Zone_H2_Withdrawals are lists of
-    components that contribute to load-zone level H2 balance equations.
-    sum(Zone_H2_Injections[z,t]) == sum(Zone_H2_Withdrawals[z,t])
-        for all z,t
-    Other modules may append to either list, as long as the components they
-    add are indexed by [zone, timepoint] and have units of MW of H2. Other modules
-    often include Expressions to summarize decision variables on a zonal basis.
-    
-    *Note: MW of hydrogen is a measure of H2 production (typically thought of in terms of kg of H2 per hour)
-    converted to MW using the LHV of H2 of 33.32 kWh/kg from 
-    https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html
-    and https://sci-hub.kvnp.top/10.1016/j.ijhydene.2019.10.080. 
-    (Example: Say a H2 production project dispatches 30,012 kg of H2 per hour at a particular tp. Then we have:
-    30,012 kg_H2/h * 33.32 kWh/kg * 1 MW/1,000 kW =~ 1,000 MW of H2 or 1 GW of H2)
-    """
-    mod.Zone_H2_Injections = []
-    mod.Zone_H2_Withdrawals = []
 
 def define_components(mod):
     """

@@ -400,7 +400,15 @@ def define_components(mod):
     mod.Enforce_Fuel_Unavailability = Constraint(
         mod.GEN_TP_FUELS_UNAVAILABLE,
         rule=lambda m, g, t, f: m.GenFuelUseRate[g, t, f] == 0)
-
+    if hasattr(m, "ProdFuelUseRate"):
+        mod.PROD_TP_FUELS_UNAVAILABLE = Set(
+			dimen=3,
+			initialize=mod.PROD_TP_FUELS,
+			filter=lambda m, h, t, f: \
+				(m.prod_load_zone[h], f) not in m.ZONE_FUELS)
+		mod.Enforce_Prod_Fuel_Unavailability = Constraint(
+			mod.PROD_TP_FUELS_UNAVAILABLE,
+			rule=lambda m, h, t, f: m.ProdFuelUseRate[h, t, f] == 0)
 
     # Calculate average fuel costs to allow post-optimization inspection
     # and cost allocation.

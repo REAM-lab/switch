@@ -11,7 +11,7 @@ INPUT FILE FORMAT
     h2_storage.csv
         H2_STORAGE_PROJECT, build_year, h2stor_load_zone, h2stor_life_years, h2stor_maximum_size_kg, 
         h2stor_is_predetermined, h2stor_predetermined_kg, h2stor_leakage_rate,
-        h2stor_capital_cost_per_kg, h2stor_fixed_om_per_kg, h2stor_type
+        h2stor_capital_cost_per_kg, h2stor_fixed_om_per_kg, h2stor_max_cycles_per_year, h2stor_type
 
 """
 import math
@@ -50,15 +50,12 @@ def define_hydrogen_components(mod):
 
     h2stor_max_cycles_per_year[H2_STOR], if specified, restricts
     the number of charge/discharge cycles each H2 storage project can perform
-    per year; one cycle is defined as discharging an amount of energy
+    per year; one cycle is defined as discharging an amount of H2
     equal to the H2 storage capacity of the project.
-
-    h2stor_land_use_rate[H2_STOR] is the amount of land used in square meters per MWh
-    of storage for the given storage technology. Defaults to 0.
     
     h2stor_leakage_rate[H2_STOR] is the rate (as a percent fraction) in which H2 leaks out
-    of storage. This is tracked in the H2TotalLeakage expression, which sums H2 leakage
-    across all H2 system components.
+    of storage as a percentage. This is tracked in the H2SystemLeakage dynamic list, which 
+    sums H2 leakage across all H2 system components.
 
     h2stor_overnight_cost_per_kg[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the overnight 
     capital cost per kg of hydrogen capacity for building the given storage technology 
@@ -68,22 +65,21 @@ def define_hydrogen_components(mod):
     per kg of hydrogen capacity per year for building the given storage technology installed 
     in the given investment period.
 
-    h2stor_predetermined_kg[(s, bld_yr) in
-    PREDETERMINED_H2_STORAGE_BLD_YRS] is the amount of H2 storage that has either been
-    installed previously, or is slated for installation and is not a free decision 
-    variable. This is analogous to gen_predetermined_cap, but in units of hydrogen 
-    storage capacity (kg) rather than power (MW).
+    h2stor_predetermined_kg[(s, bld_yr) in PREDETERMINED_H2_STORAGE_BLD_YRS] is the 
+    amount of H2 storage that has either been installed previously, or is slated for 
+    installation and is not a free decision variable. This is analogous to 
+    gen_predetermined_cap, but in units of hydrogen storage capacity (kg) rather than power (MW).
 
     BuildH2Storage[(s, bld_yr) in H2_STORAGE_BLD_YRS]
-    is a decision of how much energy capacity to build onto a storage project. This
+    is a decision of how much H2 capacity to build onto a storage project. This
     is analogous to BuildGen, but for kg of hydrogen rather than power.
 
     H2StorageEnergyInstallCosts[PERIODS] is an expression of the
     annual costs incurred by the BuildH2Storage decision.
 
     H2StorageCapacity[s, period] is an expression describing the
-    cumulative available energy capacity of BuildH2Storage. This is
-    analogous to GenCapacity.
+    cumulative available H2 capacity of BuildH2Storage. This is
+    analogous to GenCapacity, but in units of kg of hydrogen.
     
     HGTS is defined in the switch_model.hydrogen.h2_advanced.h2_timescales module as
     the hydrogen_timeseries, which corresponds to the maximum frequency at which 
@@ -92,28 +88,28 @@ def define_hydrogen_components(mod):
     module as the set of timepoints within each HGTS, indexed by HGTS.
 
     FillH2Storage[(s, tp) for tp in m.TPS_IN_HGTS[hgts]] is a dispatch decision of how 
-    much to fill a hydrogen storage project in each timepoint.
+    much to fill a hydrogen storage project in each timepoint in MW of H2.
 
-    StorageNetFill[LOAD_ZONE, TIMEPOINT] is an expression describing the net/
-    aggregate impact of FillH2Storage in each load zone and timepoint.
+    H2StorageTotalFill[LOAD_ZONE, TIMEPOINT] is an expression describing the aggregate 
+    impact of FillH2Storage in each load zone and timepoint.
 
     Fill_Storage_Upper_Limit[(s, t) in H2_STORAGE_TPS]
-    constrains FillH2Storage to available power capacity (accounting for
-    gen_store_to_release_ratio)
+    constrains FillH2Storage to available H2 capacity in kg.
+    
+    WithdrawH2Storage[(s, tp) for tp in m.TPS_IN_HGTS[hgts]] is a dispatch decision of how 
+    much to fill a hydrogen storage project in each timepoint in MW of H2.
 
     H2StateOfFill[(s, t) in H2_STORAGE_TPS] is a variable
-    for tracking state of charge. This value stores the state of charge at
-    the end of each timepoint for each storage project.
+    for tracking state of "charge" or state of fill. This value stores the state of 
+    fill at the end of each timepoint for each storage project.
 
-    Track_State_Of_Charge[(s, t) in H2_STORAGE_TPS] constrains
+    H2_Track_State_Of_Fill[(s, t) in H2_STORAGE_TPS] constrains
     H2StateOfFill based on the H2StateOfFill in the previous timepoint,
-    FillH2Storage and DispatchGen.
+    FillH2Storage and WithdrawH2Storage.
 
-    State_Of_Charge_Upper_Limit[(s, t) in H2_STORAGE_TPS]
-    constrains H2StateOfFill based on installed energy capacity.
+    H2_State_Of_Fill_Upper_Limit[(s, t) in H2_STORAGE_TPS]
+    constrains H2StateOfFill based on kg of installed H2 capacity.
 
-    H2StorageLandUseRate[s, period] is an expression for the amount of land used in
-    meters squared per kg of H2 capacity for a given storage project during a given period.
     """
     mod.H2_STORAGE_PROJECTS = Set(dimen=1, input_file="h2_storage.csv")
     mod.h2stor_load_zone = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
@@ -227,7 +223,7 @@ def define_hydrogen_components(mod):
         initialize=lambda m:
             [(s, p) for s in m.H2_STORAGE_PROJECTS for p in m.PERIODS_FOR_H2_STOR[s]])
 
-    mod.H2StorCapacity = Expression(
+    mod.H2StorageCapacity = Expression(
         mod.H2_STORAGE_PROJECTS, mod.PERIODS,
         rule=lambda m, s, period: sum(
             m.BuildH2Storage[s, bld_yr]
@@ -241,7 +237,7 @@ def define_hydrogen_components(mod):
     mod.Max_H2Stor_Build_Potential = Constraint(
         mod.CAPACITY_LIMITED_H2_STOR, mod.PERIODS,
         rule=lambda m, s, p: (
-                m.h2stor_maximum_size_kg[s] * max_build_potential_scaling_factor >= m.H2StorCapacity[
+                m.h2stor_maximum_size_kg[s] * max_build_potential_scaling_factor >= m.H2StorageCapacity[
             s, p] * max_build_potential_scaling_factor))
 
     mod.h2stor_max_cycles_per_year = Param(
@@ -249,13 +245,6 @@ def define_hydrogen_components(mod):
         within=NonNegativeReals,
         input_file="h2_storage.csv",
         default=float("inf"),
-    )
-    mod.h2stor_land_use_rate = Param(
-        mod.H2_STORAGE_PROJECTS,
-        within=NonNegativeReals,
-        default=0,
-        input_file="h2_storage.csv",
-        doc="Meters squared of land used per kg of H2 storage",
     )
 
     mod.H2_STORAGE_BLD_YRS = Set(
@@ -299,12 +288,6 @@ def define_hydrogen_components(mod):
             m.BuildH2Storage[s, bld_yr]
             for bld_yr in m.BLD_YRS_FOR_H2_STOR_PERIOD[s, period]
         ),
-    )
-
-    mod.H2StorageLandUse = Expression(
-        mod.H2_STORAGE_PROJECTS,
-        mod.PERIODS,
-        rule=lambda m, s, p: m.h2stor_land_use_rate[s] * m.H2StorageCapacity[s, p],
     )
     
     mod.HGTS_FOR_H2_STOR = Set(
@@ -374,9 +357,9 @@ def define_hydrogen_components(mod):
         relevant_projects_w = m.H2_Storage_Withdraw_Summation_dict.pop((z, t), {})
         return sum(m.WithdrawH2Storage[s, t]*(1-m.h2stor_leakage_rate[s]) for s in relevant_projects_w)
 
-    mod.H2StorageTotalWithdraw = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_w)
+    mod.H2StorageTotalWithdrawal = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_w)
     # Register net charging with zonal energy balance. 
-    mod.Zone_H2_Injections.append("H2StorageTotalWithdraw")
+    mod.Zone_H2_Injections.append("H2StorageTotalWithdrawal")
     
     # Summarize hydrogen leakage in storage
     # (sum for a zone)
@@ -391,8 +374,17 @@ def define_hydrogen_components(mod):
         relevant_projects_l = m.H2_Storage_Leakage_Summation_dict.pop((z, t), {})
         return sum(m.WithdrawH2Storage[s, t]*(m.h2stor_leakage_rate[s]) for s in relevant_projects_l)
 
-    mod.H2StorageTotalLeakage = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_l)
-    # Keep track of fugitive H2 emissions in each part of the H2 system
+    mod.H2Storage_Zonal_H2_Leakage = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_l)
+    # Net storage change: net fill level in kg of H2
+	# Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] * [1 metric ton/1000 kg] = [metric ton of H2]
+	# 1000/1000 cancels, hence (1/33.32)
+	def total_leakage_rule(m, p):
+		return sum(
+			m.H2Storage_Zonal_H2_Leakage[z, t] * m.tp_weight_in_year[t] * (1/33.32)
+			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
+		)
+    mod.H2StorageTotalLeakage = Expression(mod.PERIODS, rule=total_leakage_rule)
+    # Keep track of fugitive H2 emissions in each part of the H2 system in metric tons of kg
     mod.Zone_Fugitive_H2.append("H2StorageTotalLeakage")
 
     mod.H2StateOfFill = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
@@ -400,27 +392,28 @@ def define_hydrogen_components(mod):
     mod.H2StorageFlow = Expression(
         mod.H2_STORAGE_TPS,
         rule=lambda m, s, t: m.FillH2Storage[s, t]
-        - m.WithdrawH2Storage[s, t],
+        - m.WithdrawH2Storage[s, t]
     )
 
-	def Track_State_Of_Fill_rule(m, s, t):
+	def H2_Track_State_Of_Fill_rule(m, s, t):
 		# Carry-over is just previous fill level (no decay over time like batteries)
 		carry_over_h2 = m.H2StateOfFill[s, m.tp_previous[t]]
 	
-		# Net storage change: fill minus gross withdrawal
-		net_flow = m.FillH2Storage[s, t] - m.WithdrawH2Storage[s, t]
+		# Net storage change: net fill level in kg of H2
+		# Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] = [kg of H2]
+		net_flow = m.H2StorageFlow[s, t] * m.tp_weight_in_year[t] * (1000/33.32)
 	
 		return m.H2StateOfFill[s, t] == carry_over_h2 + net_flow
 	
-	mod.Track_State_Of_Fill = Constraint(
-		mod.H2_STORAGE_TPS, rule=Track_State_Of_Fill_rule
+	mod.H2_Track_State_Of_Fill = Constraint(
+		mod.H2_STORAGE_TPS, rule=H2_Track_State_Of_Fill_rule
 	)
 
-	def State_Of_Fill_Upper_Limit_rule(m, s, t):
+	def H2_State_Of_Fill_Upper_Limit_rule(m, s, t):
 		return m.H2StateOfFill[s, t] <= m.H2StorageCapacity[s, m.tp_period[t]]
 
-	mod.State_Of_Fill_Upper_Limit = Constraint(
-		mod.H2_STORAGE_TPS, rule=State_Of_Fill_Upper_Limit_rule
+	mod.H2_State_Of_Fill_Upper_Limit = Constraint(
+		mod.H2_STORAGE_TPS, rule=H2_State_Of_Fill_Upper_Limit_rule
 	)
 
     # some H2 storage techs can only complete the specified number of cycles per year, averaged over each period

@@ -38,9 +38,29 @@ dependencies = 'switch_model.timescales', 'switch_model.balancing.load_zones', \
                'switch_model.hydrogen.h2_advanced.h2_production_build', \
                'switch_model.hydrogen.h2_advanced.h2_timescales'
 
-def define_components(m):
-    if not m.options.no_hydrogen:
-        define_hydrogen_components(m)
+def define_hydrogen_dynamic_lists(mod):
+    """
+    Zone_H2_Injections and Zone_H2_Withdrawals are lists of
+    components that contribute to load-zone level H2 balance equations.
+    sum(Zone_H2_Injections[z,t]) == sum(Zone_H2_Withdrawals[z,t])
+        for all z,t
+    Other modules may append to either list, as long as the components they
+    add are indexed by [zone, timepoint] and have units of MW of H2. Other modules
+    often include Expressions to summarize decision variables on a zonal basis.
+    
+    *Note: MW of hydrogen is a measure of H2 production (typically thought of in terms of kg of H2 per hour)
+    converted to MW using the LHV of H2 of 33.32 kWh/kg from 
+    https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html
+    and https://sci-hub.kvnp.top/10.1016/j.ijhydene.2019.10.080. 
+    (Example: Say a H2 production project dispatches 30,012 kg of H2 per hour at a particular tp. Then we have:
+    30,012 kg_H2/h * 33.32 kWh/kg * 1 MW/1,000 kW =~ 1,000 MW of H2 or 1 GW of H2)
+    
+    Zone_Fugitive_H2 tracks total fugitive H2 emissions (leaked H2) in metric tonnes per period.
+    
+    """
+    mod.Zone_H2_Injections = []
+    mod.Zone_H2_Withdrawals = []
+    mod.Zone_Fugitive_H2 = []
 
 def define_hydrogen_components(m):
     """
@@ -157,7 +177,7 @@ def define_hydrogen_components(m):
     
     Constraining dispatch decisions subject to available capacity:
 
-    ProdProdDispatchUpperLimit[(h, t) in PROD_TPS] is an
+    ProdDispatchUpperLimit[(h, t) in PROD_TPS] is an
     expression that defines the upper bounds of dispatch subject to
     installed capacity and average expected outage rates.
 
@@ -169,7 +189,7 @@ def define_hydrogen_components(m):
     constraints that limit DispatchProd to the upper and lower bounds
     defined above.
 
-        ProdDispatchLowerLimit <= DispatchProd <= ProdProdDispatchUpperLimit
+        ProdDispatchLowerLimit <= DispatchProd <= ProdDispatchUpperLimit
 
     ProdFuelUseRate_Calculate[(h, t, f) in PROD_TP_FUELS]
     calculates fuel consumption for the variable ProdFuelUseRate as
@@ -222,12 +242,6 @@ def define_hydrogen_components(m):
             (h, tp)
                 for h in m.PRODUCTION_PROJECTS
                     for tp in m.TPS_FOR_PROD[h]))
-    mod.ELECTRICITY_BASED_PROD_TPS = Set(
-        dimen=2,
-        initialize=lambda m: (
-            (h, tp)
-                for h in m.ELECTRICITY_BASED_PROD
-                    for tp in m.TPS_FOR_PROD[h]))
     mod.FUEL_BASED_PROD_TPS = Set(
         dimen=2,
         initialize=lambda m: (
@@ -272,7 +286,7 @@ def define_hydrogen_components(m):
         rule=lambda m, z, t: \
         sum(m.DispatchProd[h, t]
             for h in m.PROD_FOR_ZONE_TPS[z, t]),
-        doc="Total H2 from H2 production projects per zone at each timepoint.")
+        doc="Total H2 from H2 production projects per zone at each timepoint in MW of H2.")
     mod.Zone_H2_Injections.append('ZoneTotalCentralH2Dispatch')
 
     def init_prod_availability(m, h):
@@ -281,6 +295,13 @@ def define_hydrogen_components(m):
         mod.PRODUCTION_PROJECTS,
         within=NonNegativeReals,
         initialize=init_prod_availability)
+    # Units: [MW of H2] * [MWh of power/kg of H2] * [1000 kWh/MWh] * [1 kg of H2/33.32 kWh] = [MW of power]
+    mod.ProdPowerUse = Expression(
+        mod.PROD_TPS,
+        rule=lambda m, h, t: \
+        m.DispatchProd[h, t] * m.mwh_per_kg_h2[h] * (1000/33.32),
+        doc=("[MW] Average power used at each TP by hydrogen production plants."))
+    mod.Zone_Power_Withdrawals.append("ProdPowerUse")
 
     mod.ProdFuelUseRate = Var(
         mod.PROD_TP_FUELS,
@@ -518,4 +539,74 @@ def post_solve(instance, outdir):
                  "ProdDispatchEmissions_tCO2_per_typical_yr", "ProdDispatchEmissions_tCH4_per_typical_yr",
                  "ProdDispatchEmissions_tN2O_per_typical_yr", "ProdDispatchEmissions_tSO2_per_typical_yr",
                  "ProdDispatchEmissions_tNOx_per_typical_yr", "ProdDispatchEmissions_tPM10_per_typical_yr"]
+    )
+
+    """
+    Exports h2_balance.csv, h2_balance_annual_zonal.csv, and h2_balance_annual.csv.
+    Each component registered with Zone_H2_Injections and Zone_H2_Withdrawals will
+    become a column in these .csv files. As such, each column represents an H2 injection
+    or withdrawal and the sum of across all columns should be zero. Note that positive
+    terms are net injections (e.g. generation) while negative terms are net withdrawals
+    (e.g. load).
+
+    load_balance.csv contains the energy balance terms for for every zone and timepoint.
+    We also include a column called normalized_energy_balance_duals_dollar_per_mwh
+    that is a proxy for the locational marginal pricing (LMP). This value represents
+    the incremental cost per hour to increase the demand by 1 MW (or equivalently
+    the incremental cost of providing one more MWh of energy). This is not a perfect
+    proxy for LMP since it factors in build costs etc.
+
+    load_balance_annual_zonal.csv contains the energy injections and withdrawals
+    throughout a year for a given load zone.
+
+    load_balance_annual.csv contains the energy injections and withdrawals
+    throughout a year across all zones.
+    """
+    write_table(
+        instance, instance.LOAD_ZONES, instance.TIMEPOINTS,
+        output_file=os.path.join(outdir, "load_balance.csv"),
+        headings=("load_zone", "timestamp", "normalized_energy_balance_duals_dollar_per_mwh",) + tuple(
+            instance.Zone_Power_Injections +
+            instance.Zone_Power_Withdrawals),
+        values=lambda m, z, t:
+        (
+            z,
+            m.tp_timestamp[t],
+            m.get_dual(
+                "Zone_Energy_Balance",
+                z, t,
+                divider=m.bring_timepoint_costs_to_base_year[t]
+            )
+        )
+        + tuple(getattr(m, component)[z, t] for component in m.Zone_Power_Injections)
+        + tuple(-getattr(m, component)[z, t] for component in m.Zone_Power_Withdrawals)
+    )
+
+    def get_component_per_year(m, z, p, component):
+        """
+        Returns the weighted sum of component across all timepoints in the given period.
+        The components must be indexed by zone and timepoint.
+        """
+        return sum(getattr(m, component)[z, t] * m.tp_weight_in_year[t] for t in m.TPS_IN_PERIOD[p])
+
+    write_table(
+        instance, instance.LOAD_ZONES, instance.PERIODS,
+        output_file=os.path.join(outdir, "load_balance_annual_zonal.csv"),
+        headings=("load_zone", "period",) + tuple(instance.Zone_Power_Injections + instance.Zone_Power_Withdrawals),
+        values=lambda m, z, p:
+        (z, p)
+        + tuple(get_component_per_year(m, z, p, component) for component in m.Zone_Power_Injections)
+        + tuple(-get_component_per_year(m, z, p, component) for component in m.Zone_Power_Withdrawals)
+    )
+
+    write_table(
+        instance, instance.PERIODS,
+        output_file=os.path.join(outdir, "load_balance_annual.csv"),
+        headings=("period",) + tuple(instance.Zone_Power_Injections + instance.Zone_Power_Withdrawals),
+        values=lambda m, p:
+        (p,)
+        + tuple(sum(get_component_per_year(m, z, p, component) for z in m.LOAD_ZONES)
+                for component in m.Zone_Power_Injections)
+        + tuple(-sum(get_component_per_year(m, z, p, component) for z in m.LOAD_ZONES)
+                for component in m.Zone_Power_Withdrawals)
     )
