@@ -16,10 +16,6 @@ def define_arguments(argparser):
         help="Don't allow construction of any hydrogen infrastructure.",
     )
 
-def define_components(m):
-    if not m.options.no_hydrogen:
-        define_hydrogen_components(m)
-
 def define_hydrogen_components(m):
     """
     Users can use the h2_timepoints.csv, h2_timeseries.csv and

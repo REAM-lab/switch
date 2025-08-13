@@ -33,10 +33,6 @@ from switch_model.reporting import write_table
 dependencies = 'switch_model.timescales', \
     'switch_model.financials','switch_model.balancing.load_zones',
 
-def define_components(mod):
-    if not mod.options.no_hydrogen:
-        define_hydrogen_components(mod)
-
 def define_hydrogen_components(mod):
     """
 

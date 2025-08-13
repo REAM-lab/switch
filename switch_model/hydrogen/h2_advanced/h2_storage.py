@@ -9,13 +9,12 @@ INPUT FILE FORMAT
     Import storage parameters. Optional columns are noted with a *.
 
     h2_storage.csv
-        H2_STORAGE_PROJECT, build_year, h2stor_load_zone, h2stor_life_years, h2stor_maximum_size_kg, 
-        h2stor_is_predetermined, h2stor_predetermined_kg, h2stor_leakage_rate,
-        h2stor_capital_cost_per_kg, h2stor_fixed_om_per_kg, h2stor_max_cycles_per_year, h2stor_type
+        H2_STORAGE_PROJECT, build_year, h2stor_is_predetermined, h2stor_predetermined_kg, 
+        h2stor_maximum_size_kg, h2stor_load_zone, h2stor_type, h2stor_life_years, h2stor_leakage_rate,
+        h2stor_overnight_cost_per_kg, h2stor_fixed_om_cost_per_kg, h2stor_max_cycles_per_year
 
 """
 import math
-
 import pandas as pd
 from scipy import fft
 
@@ -34,82 +33,156 @@ dependencies = (
     "switch_model.hydrogen.h2_advanced.h2_production_build"
 )
 
-
-def define_components(mod):
-    if not mod.options.no_hydrogen:
-        define_hydrogen_components(mod)
-
 def define_hydrogen_components(mod):
     """
+    
+    -- SETS AND PARAMETERS --
 
-    H2_STORAGE_PROJECT is the set of H2 storage candidate projects, which are of different types 
-    (liquid_hydrogen_tank, gas_hydrogen_tank, hard_rock, salt_cavern).
+    H2_STORAGE_PROJECTS is the set of H2 storage candidate projects, which are of different types 
+    (gas_hydrogen_tank, hard_rock, salt_cavern). Shorthand for an element 
+    from this set is "s" for storage.  
+    
+    CAPACITY_LIMITED_H2_STORAGE is a subset of H2_STORAGE_PROJECTS that have specified a maximum
+    capacity in kg.
 
     H2_STORAGE_BLD_YRS is the set of H2 storage projects and years which they may be built 
-    (investment periods and predetermined build years).
-
-    h2stor_max_cycles_per_year[H2_STOR], if specified, restricts
-    the number of charge/discharge cycles each H2 storage project can perform
-    per year; one cycle is defined as discharging an amount of H2
-    equal to the H2 storage capacity of the project.
+    (investment periods and predetermined build years). Shorthand for an element from this set 
+    is "(s, bld_yr)". Predetermined projects are in the same input file as canadidate H2 storage 
+    projects, so they are distinguished by a TRUE or FALSE value in the h2stor_is_predetermined 
+    column of h2_storage.csv, which is indexed by [(s, bld_yr) in H2_STORAGE_BLD_YRS].
     
-    h2stor_leakage_rate[H2_STOR] is the rate (as a percent fraction) in which H2 leaks out
-    of storage as a percentage. This is tracked in the H2SystemLeakage dynamic list, which 
-    sums H2 leakage across all H2 system components.
+    PREDETERMINED_H2_STORAGE_BLD_YRS is the set of predetermined H2 storage projects and years
+    which the project built the predetermined capacity. 
+    
+    BLD_YRS_FOR_H2_STORAGE[s] is the set of years (predetermined and not) that a given storage
+    project [s] can be built.
+    
+    BLD_YRS_FOR_H2_STOR_PERIOD[s, p] is the set of build years that could be online in the given 
+    period [p] for the given H2 storage project [s].
+    
+    PERIODS_FOR_H2_STOR[s] is set of periods when a H2 storage project [s] is available to use.
+    
+    H2_STORAGE_PERIODS[s, p] is the set of storage project and period tuples (s, p) corresponding 
+    to all possible combinations of H2 storage projects and periods which each project is 
+    available to use.
+    
+    HGTS_FOR_H2_STORAGE[s] is defined as the set of hydrogen timeseries [HGTS] that a given H2 
+    storage project [s] is available to use.
+    
+    TPS_FOR_H2_STORAGE[s] is defined as the set of timepoints that a given H2 storage project [s] 
+    is available to use.
+    
+    H2_STORAGE_TPS is defined as the set of tuples (s, tp) for every combination of H2 storage 
+    project [s] and corresponding timepoint (tp) which that project is available to use.
 
+    h2stor_predetermined_kg[(s, bld_yr) in PREDETERMINED_H2_STORAGE_BLD_YRS] is the 
+    amount of H2 storage in kg that has either been installed previously, or is slated for 
+    installation and is not a free decision variable. This is analogous to 
+    gen_predetermined_cap, but in units of hydrogen storage capacity (kg) rather than power (MW). 
+
+    h2stor_maximum_size_kg[s] is a parameter which specifies the maximum possible H2 storage 
+    capacity that can be built for a given H2 storage project, in kg of H2. This value can be 
+    greater than the predetermined capacity for a predetermined project if the project can be 
+    expanded beyond its existing capacity.
+
+    h2stor_load_zone[s] is a parameter which specifies which load zone the H2 storage project 
+    corresponds to/falls within.
+
+    h2stor_type[s] is a parameter that identifies whether the H2 storage is a gas_hydrogen_tank, 
+    hard_rock_cavern, or salt_cavern. 
+
+    h2stor_life_years[s] is a parameter which specifies the lifetime of the H2 storage project in 
+    years.
+
+    h2stor_leakage_rate[s] is the rate (as a percent fraction) in which H2 leaks out
+    of storage as a percentage. This is tracked in the H2Storage_Zonal_H2_Leakage expression,
+    which calculates total H2 leakage in metric tons of H2 per zone at each tp, which is summed
+    and addeed to the Zone_Fugitive_H2 dynamic list, which tracks H2 leakage across all H2 system 
+    components.
+    
     h2stor_overnight_cost_per_kg[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the overnight 
     capital cost per kg of hydrogen capacity for building the given storage technology 
-    installed in the given investment period.
+    installed in the given investment period in $/kg.
     
     h2stor_fixed_om_cost_per_kg[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the fixed O&M cost
     per kg of hydrogen capacity per year for building the given storage technology installed 
-    in the given investment period.
-
-    h2stor_predetermined_kg[(s, bld_yr) in PREDETERMINED_H2_STORAGE_BLD_YRS] is the 
-    amount of H2 storage that has either been installed previously, or is slated for 
-    installation and is not a free decision variable. This is analogous to 
-    gen_predetermined_cap, but in units of hydrogen storage capacity (kg) rather than power (MW).
-
-    BuildH2Storage[(s, bld_yr) in H2_STORAGE_BLD_YRS]
-    is a decision of how much H2 capacity to build onto a storage project. This
-    is analogous to BuildGen, but for kg of hydrogen rather than power.
-
-    H2StorageEnergyInstallCosts[PERIODS] is an expression of the
-    annual costs incurred by the BuildH2Storage decision.
-
-    H2StorageCapacity[s, period] is an expression describing the
-    cumulative available H2 capacity of BuildH2Storage. This is
-    analogous to GenCapacity, but in units of kg of hydrogen.
+    in the given investment period in $/kg per year.
     
-    HGTS is defined in the switch_model.hydrogen.h2_advanced.h2_timescales module as
-    the hydrogen_timeseries, which corresponds to the maximum frequency at which 
-    hydrogen will be stored or withdrawn from storage. 
-    TPS_IN_HGTS is also defined in the switch_model.hydrogen.h2_advanced.h2_timescales 
-    module as the set of timepoints within each HGTS, indexed by HGTS.
+    h2stor_max_cycles_per_year[s], if specified, restricts
+    the number of charge/discharge cycles each H2 storage project can perform
+    per year; one cycle is defined as discharging an amount of H2
+    equal to the H2 storage capacity of the project.  
+
+    -- CONSTRUCTION --
+
+    BuildH2Storage[(s, bld_yr) in H2_STORAGE_BLD_YRS] is a decision variable for how much 
+    H2 capacity to build onto a storage project. This is analogous to BuildGen, but for kg 
+    of hydrogen rather than power capacity.
+    
+    Max_H2Stor_Build_Potential[s, p] is a constraint that limits the capacity of a particular
+    capacity limited H2 storage project [s] in period [p] to the specified maximum capacity in kg.
+
+    H2StorageFixedCost[PERIODS] is an expression of the annual fixed costs incurred by the 
+    BuildH2Storage decision for each period in the set PERIODS.
+
+    H2StorageCapacity[s, p] is an expression describing the cumulative available H2 
+    capacity of BuildH2Storage for a given H2 storage project [s] in a given period [p]. 
+    This is analogous to GenCapacity, but in units of kg of hydrogen.
 
     FillH2Storage[(s, tp) for tp in m.TPS_IN_HGTS[hgts]] is a dispatch decision of how 
     much to fill a hydrogen storage project in each timepoint in MW of H2.
+    
+    *Note: MW of H2 can be converted to a kg/h flow rate using the LHV of H2 of 33.32 kWh/kg
+    from https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html
+    and https://sci-hub.kvnp.top/10.1016/j.ijhydene.2019.10.080. 
+    (Example: Say a storage project is filled at a rate of 1 MW of H2 at timepoint t. 
+    -> 1 MW of H2 * (1 kg of H2/33.32 kWh) * (1,000 kW/1 MW) =~ 30.012 kg of H2/h
 
     H2StorageTotalFill[LOAD_ZONE, TIMEPOINT] is an expression describing the aggregate 
-    impact of FillH2Storage in each load zone and timepoint.
-
-    Fill_Storage_Upper_Limit[(s, t) in H2_STORAGE_TPS]
-    constrains FillH2Storage to available H2 capacity in kg.
+    impact of FillH2Storage in each load zone and timepoint. This gets appended to the 
+    Zone_H2_Withdrawals dynamic list, since filling a storage project is a withdrawal from 
+    the load zone hydrogen supply in the H2 balance equation.
     
-    WithdrawH2Storage[(s, tp) for tp in m.TPS_IN_HGTS[hgts]] is a dispatch decision of how 
+    FillH2StorUpperLimit[(s, t) in H2_STORAGE_TPS]
+
+    Fill_H2_Storage_Upper_Limit[(s, t) in H2_STORAGE_TPS] constrains FillH2Storage for each storage
+    project [s] in each timepoint [t] to the maximum fill rate as defined by 
+    FillH2StorUpperLimit[s, t].
+    
+    WithdrawH2Storage[(s, t) in H2_STORAGE_TPS] is a dispatch decision variable for how 
     much to fill a hydrogen storage project in each timepoint in MW of H2.
+    
+    H2StorageTotalWithdrawal[LOAD_ZONES, TIMEPOINTS] is an expression that calculates the total
+    withdrawal of H2 for each load zone at each timepoint as a consequence of 
+    WithdrawH2Storage[s, t], accounting for leakage according to h2stor_leakage_rate[s]. This 
+    gets appended to the Zone_H2_Injections dynamic list, since withdrawing H2 from a storage 
+    project contributes to the load zone hydrogen supply in the H2 balance equation.
+    
+    H2Storage_Zonal_H2_Leakage[LOAD_ZONES, TIMEPOINTS] is an expression that calculates the total
+    H2 leakage (fugitive H2) in metric ton of H2, which we assume is proportional to the amount
+    of H2 withdrawn from each storage project at each timepoint by a factor of 
+    h2stor_leakage_rate[s]. This is appended to the Zone_Fugitive_H2 dynamic list to keep track of 
+    fugitive H2 emissions, which have a high global warming potential (GWP).
 
-    H2StateOfFill[(s, t) in H2_STORAGE_TPS] is a variable
-    for tracking state of "charge" or state of fill. This value stores the state of 
-    fill at the end of each timepoint for each storage project.
+    H2StateOfFill[(s, t) in H2_STORAGE_TPS] is a decision variable for controlling the state of 
+    "charge" or state of fill for a given H2 storage project [s] at a given timepoint [t]. The 
+    state of fill is measured in kg of H2.
 
-    H2_Track_State_Of_Fill[(s, t) in H2_STORAGE_TPS] constrains
-    H2StateOfFill based on the H2StateOfFill in the previous timepoint,
-    FillH2Storage and WithdrawH2Storage.
+    H2_Track_State_Of_Fill[(s, t) in H2_STORAGE_TPS] constrains H2StateOfFill based on the 
+    H2StateOfFill in the previous timepoint, FillH2Storage, and WithdrawH2Storage.
 
-    H2_State_Of_Fill_Upper_Limit[(s, t) in H2_STORAGE_TPS]
-    constrains H2StateOfFill based on kg of installed H2 capacity.
-
+    H2_State_Of_Fill_Upper_Limit[(s, t) in H2_STORAGE_TPS] constrains H2StateOfFill of storage 
+    project [s] in timepoint [t] based on kg of installed H2 capacity for the corresponding 
+    project and period.
+    
+    H2_Storage_Cycle_Limit[(s, p) in H2_STORAGE_PERIODS] constrains the sum of withdrawn H2 in
+    period [p], converted to kg, by the amount of H2 in kg that corresponds to the 
+    h2stor_max_cycles_per_year[s] multiplied by the capacity of storage project [s] in kg 
+    and the number of years in period [p]. One cycle is considered a withdrawal of H2 equal to
+    the capacity of the storage project. For example, if a storage project has a capacity of 
+    100 kg and a max of 10 cycles per year in a 10 year period, then that project can withdraw
+    up to 10,000 kg of H2 in that period.
+    
     """
     mod.H2_STORAGE_PROJECTS = Set(dimen=1, input_file="h2_storage.csv")
     mod.h2stor_load_zone = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
@@ -118,39 +191,36 @@ def define_hydrogen_components(mod):
                             within=PositiveIntegers)
     mod.h2stor_leakage_rate = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
                             within=PercentFraction)
-    mod.CAPACITY_LIMITED_H2_STOR = Set(within=mod.H2_STORAGE_PROJECTS)
+    mod.CAPACITY_LIMITED_H2_STORAGE = Set(within=mod.H2_STORAGE_PROJECTS)
     mod.h2stor_maximum_size_kg = Param(
-        mod.CAPACITY_LIMITED_H2_STOR, input_file="h2_storage.csv",
+        mod.CAPACITY_LIMITED_H2_STORAGE, input_file="h2_storage.csv",
         input_optional=True, within=NonNegativeReals)
 
-    mod.H2_STOR_BLD_YRS = Set(dimen=2, input_file="h2_storage.csv")
-    mod.h2stor_is_predetermined = Param(mod.H2_STOR_BLD_YRS,
+    mod.H2_STORAGE_BLD_YRS = Set(dimen=2, input_file="h2_storage.csv")
+    mod.h2stor_is_predetermined = Param(mod.H2_STORAGE_BLD_YRS,
                                     input_file="h2_storage.csv",
                                     within=Boolean)
     def init_predetermined_h2_stor_bld_yrs(m):
     return [
         (s, bld_yr)
-        for (s, bld_yr) in m.H2_STOR_BLD_YRS
+        for (s, bld_yr) in m.H2_STORAGE_BLD_YRS
         if m.h2stor_is_predetermined[s, bld_yr]
     ]
-	mod.PREDETERMINED_H2_STOR_BLD_YRS = Set(
+	mod.PREDETERMINED_H2_STORAGE_BLD_YRS = Set(
 	    dimen=2,
 	    initialize=init_predetermined_h2_stor_bld_yrs
 	)
 	mod.h2stor_predetermined_kg = Param(
-        mod.PREDETERMINED_H2_STOR_BLD_YRS,
+        mod.PREDETERMINED_H2_STORAGE_BLD_YRS,
         input_file="h2_storage.csv",
         within=NonNegativeReals)
-    mod.BLD_YRS_FOR_H2_STOR = Set(
+    mod.BLD_YRS_FOR_H2_STORAGE = Set(
         mod.H2_STORAGE_PROJECTS,
         ordered=False,
         initialize=lambda m, s: set(
-            bld_yr for (h2stor, bld_yr) in m.H2_STOR_BLD_YRS if h2stor == s
+            bld_yr for (h2stor, bld_yr) in m.H2_STORAGE_BLD_YRS if h2stor == s
         )
     )
-    mod.NEW_H2_STOR_BLD_YRS = Set(
-        dimen=2,
-        initialize=lambda m: m.H2_STOR_BLD_YRS - m.PREDETERMINED_H2_STOR_BLD_YRS)
 
     def h2stor_build_can_operate_in_period(m, s, build_year, period):
         # If a period has the same name as a predetermined build year then we have a problem.
@@ -174,36 +244,36 @@ def define_hydrogen_components(mod):
     # gen_build_can_operate_in_period will mistaken the prebuild for an investment build
     # (see note in h2stor_build_can_operate_in_period)
     mod.h2stor_no_predetermined_bld_yr_vs_period_conflict = BuildCheck(
-        mod.PREDETERMINED_H2_STOR_BLD_YRS, mod.PERIODS,
+        mod.PREDETERMINED_H2_STORAGE_BLD_YRS, mod.PERIODS,
         rule=lambda m, bld_yr, p: bld_yr != p
     )
 
     # The set of build years that could be online in the given period
     # for the given H2 storage project.
-    mod.BLD_YRS_FOR_H2_STOR_PERIOD = Set(
+    mod.BLD_YRS_FOR_H2_STORAGE_PERIOD = Set(
         mod.H2_STORAGE_PROJECTS, mod.PERIODS,
         ordered=False,
         initialize=lambda m, s, period: set(
-            bld_yr for bld_yr in m.BLD_YRS_FOR_H2_STOR[s]
+            bld_yr for bld_yr in m.BLD_YRS_FOR_H2_STORAGE[s]
             if h2stor_build_can_operate_in_period(m, s, bld_yr, period)))
     # The set of periods when a H2 storage tech is available to use
     mod.PERIODS_FOR_H2_STOR = Set(
         mod.H2_STORAGE_PROJECTS,
-        initialize=lambda m, s: [p for p in m.PERIODS if len(m.BLD_YRS_FOR_H2_STOR_PERIOD[s, p]) > 0]
+        initialize=lambda m, s: [p for p in m.PERIODS if len(m.BLD_YRS_FOR_H2_STORAGE_PERIOD[s, p]) > 0]
     )
     
     def bounds_BuildH2Storage(model, s, bld_yr):
-        if((s, bld_yr) in model.PREDETERMINED_H2_STOR_BLD_YRS):
+        if((s, bld_yr) in model.PREDETERMINED_H2_STORAGE_BLD_YRS):
             return (model.h2stor_predetermined_kg[s, bld_yr],
                     model.h2stor_predetermined_kg[s, bld_yr])
-        elif(s in model.CAPACITY_LIMITED_H2_STOR):
+        elif(s in model.CAPACITY_LIMITED_H2_STORAGE):
             # This does not replace Max_Build_Potential because
             # Max_Build_Potential applies across all build years.
             return (0, model.h2stor_maximum_size_kg[s])
         else:
             return (0, None)
     mod.BuildH2Storage = Var(
-        mod.H2_STOR_BLD_YRS,
+        mod.H2_STORAGE_BLD_YRS,
         within=NonNegativeReals,
         bounds=bounds_BuildGen)
     # Some projects are retired before the first study period, so they
@@ -215,7 +285,7 @@ def define_hydrogen_components(mod):
     # starting point we assign an appropriate value to all the existing
     # projects here.
     mod.BuildH2Storage_assign_default_value = BuildAction(
-        mod.PREDETERMINED_H2_STOR_BLD_YRS,
+        mod.PREDETERMINED_H2_STORAGE_BLD_YRS,
         rule=get_assign_default_value_rule("BuildH2Storage", "h2stor_predetermined_kg"))
 
     mod.H2_STORAGE_PERIODS = Set(
@@ -227,7 +297,7 @@ def define_hydrogen_components(mod):
         mod.H2_STORAGE_PROJECTS, mod.PERIODS,
         rule=lambda m, s, period: sum(
             m.BuildH2Storage[s, bld_yr]
-            for bld_yr in m.BLD_YRS_FOR_H2_STOR_PERIOD[s, period]))
+            for bld_yr in m.BLD_YRS_FOR_H2_STORAGE_PERIOD[s, period]))
 
     # We use a scaling factor to improve the numerical properties
     # of the model. The scaling factor was determined using trial
@@ -235,7 +305,7 @@ def define_hydrogen_components(mod):
     # Learn more by reading the documentation on Numerical Issues.
     max_build_potential_scaling_factor = 1e-1
     mod.Max_H2Stor_Build_Potential = Constraint(
-        mod.CAPACITY_LIMITED_H2_STOR, mod.PERIODS,
+        mod.CAPACITY_LIMITED_H2_STORAGE, mod.PERIODS,
         rule=lambda m, s, p: (
                 m.h2stor_maximum_size_kg[s] * max_build_potential_scaling_factor >= m.H2StorageCapacity[
             s, p] * max_build_potential_scaling_factor))
@@ -250,7 +320,7 @@ def define_hydrogen_components(mod):
     mod.H2_STORAGE_BLD_YRS = Set(
         dimen=2,
         initialize=lambda m: [
-            (s, bld_yr) for s in m.H2_STORAGE_PROJECTS for bld_yr in m.BLD_YRS_FOR_H2_STOR[s]
+            (s, bld_yr) for s in m.H2_STORAGE_PROJECTS for bld_yr in m.BLD_YRS_FOR_H2_STORAGE[s]
         ],
     )
     mod.h2stor_overnight_cost_per_kg = Param(
@@ -274,7 +344,7 @@ def define_hydrogen_components(mod):
                 * m.h2stor_overnight_cost_per_kg[s, bld_yr]
                 * crf(m.interest_rate, m.gen_max_age[s])
                 + m.BuildH2Storage[s, bld_yr] * h2stor_fixed_om_cost_per_kg[s, bld_yr]
-                for bld_yr in m.BLD_YRS_FOR_H2_STOR_PERIOD[s, p]
+                for bld_yr in m.BLD_YRS_FOR_H2_STORAGE_PERIOD[s, p]
             )
             for s in m.H2_STORAGE_PROJECTS
         ),
@@ -286,36 +356,36 @@ def define_hydrogen_components(mod):
         mod.PERIODS,
         rule=lambda m, s, period: sum(
             m.BuildH2Storage[s, bld_yr]
-            for bld_yr in m.BLD_YRS_FOR_H2_STOR_PERIOD[s, period]
+            for bld_yr in m.BLD_YRS_FOR_H2_STORAGE_PERIOD[s, period]
         ),
     )
     
-    mod.HGTS_FOR_H2_STOR = Set(
+    mod.HGTS_FOR_H2_STORAGE = Set(
         mod.H2_STORAGE_PROJECTS,
-        within=mod.TIMEPOINTS,
+        within=mod.HGTS,
         initialize=lambda m, s: (
             hgts for p in m.PERIODS_FOR_H2_STOR[s] for hgts in m.HGTS_IN_PERIOD[p]
         )
     )
     
-    mod.TPS_FOR_H2_STOR = Set(
+    mod.TPS_FOR_H2_STORAGE = Set(
         mod.H2_STORAGE_PROJECTS,
         within=mod.TIMEPOINTS,
         initialize=lambda m, s: (
-            tp for hgts in m.HGTS_FOR_H2_STOR[s] for tp in m.TPS_IN_HGTS[hgts]
+            tp for hgts in m.HGTS_FOR_H2_STORAGE[s] for tp in m.TPS_IN_HGTS[hgts]
         )
     )
 
     mod.H2_STORAGE_TPS = Set(
         dimen=2,
         initialize=lambda m: (
-            (s, tp) for s in m.H2_STORAGE_PROJECTS for tp in m.TPS_FOR_H2_STOR[s]
+            (s, tp) for s in m.H2_STORAGE_PROJECTS for tp in m.TPS_FOR_H2_STORAGE[s]
         ),
     )
 
     mod.FillH2Storage = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
 
-    # Summarize storage filling for the energy balance equations
+    # Summarize H2 storage filling for the H2 balance equations
     # (sum for a zone, not a net quantity for a project)
     def rule_f(m, z, t):
         # Construct and cache a set for summation as needed
@@ -329,22 +399,22 @@ def define_hydrogen_components(mod):
         return sum(m.FillH2Storage[s, t] for s in relevant_projects_f)
 
     mod.H2StorageTotalFill = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_f)
-    # Register net charging with zonal energy balance. 
+    # Register net filling with zonal energy balance. 
     mod.Zone_H2_Withdrawals.append("H2StorageTotalFill")
 
     def Fill_H2_Storage_Upper_Limit_rule(m, s, t):
         return (
             m.FillH2Storage[s, t]
-            <= m.DispatchH2StorUpperLimit[s, t]
+            <= m.FillH2StorUpperLimit[s, t]
         )
 
-    mod.Fill_Storage_Upper_Limit = Constraint(
+    mod.Fill_H2_Storage_Upper_Limit = Constraint(
         mod.H2_STORAGE_TPS, rule=Fill_H2_Storage_Upper_Limit_rule
     )
     
     mod.WithdrawH2Storage = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
     
-    # Summarize storage withdrawing for the energy balance equations
+    # Summarize H2 storage withdrawing for the H2 balance equations
     # (sum for a zone, not a net quantity for a project)
     def rule_w(m, z, t):
         # Construct and cache a set for summation as needed
@@ -358,7 +428,7 @@ def define_hydrogen_components(mod):
         return sum(m.WithdrawH2Storage[s, t]*(1-m.h2stor_leakage_rate[s]) for s in relevant_projects_w)
 
     mod.H2StorageTotalWithdrawal = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_w)
-    # Register net charging with zonal energy balance. 
+    # Register net withdrawal with zonal energy balance. 
     mod.Zone_H2_Injections.append("H2StorageTotalWithdrawal")
     
     # Summarize hydrogen leakage in storage
@@ -418,6 +488,7 @@ def define_hydrogen_components(mod):
 
     # some H2 storage techs can only complete the specified number of cycles per year, averaged over each period
     # (switch period, not hydrogen period, since the number of cycles is defined per year)
+    # Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] = [kg of H2]
     mod.H2_Storage_Cycle_Limit = Constraint(
         mod.H2_STORAGE_PERIODS,
         rule=lambda m, s, p:
@@ -426,7 +497,7 @@ def define_hydrogen_components(mod):
         if m.h2stor_max_cycles_per_year[s] == float("inf")
         else (
             sum(
-                m.WithdrawH2Storage[s, tp] * m.tp_duration_hrs[tp]
+                m.WithdrawH2Storage[s, tp] * m.tp_duration_hrs[tp] * (1000/33.32)
                 for hgts in m.HGTS_IN_PERIOD[p] for tp in m.TPS_IN_HGTS[hgts]
             )
             <= m.h2stor_max_cycles_per_year[s]
