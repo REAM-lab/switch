@@ -250,7 +250,7 @@ def define_hydrogen_components(m):
                          within=Any)
 
     m.PRODUCTION_TECHNOLOGIES = Set(ordered=False, initialize=lambda m:
-    {m.prod_tech[h] for h in m.PRODUCTION_PROJECTS})
+                                    {m.prod_tech[h] for h in m.PRODUCTION_PROJECTS})
 
     m.prod_load_zone = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
                               within=m.LOAD_ZONES)
@@ -277,7 +277,7 @@ def define_hydrogen_components(m):
         if not hasattr(m, 'PROD_IN_ZONE_dict'):
             m.PROD_IN_ZONE_dict = {_z: [] for _z in m.LOAD_ZONES}
             for h in m.PRODUCTION_PROJECTS:
-                m.PROD_IN_ZONE_dict[m.prod_load_zone[h]].append(p)
+                m.PROD_IN_ZONE_dict[m.prod_load_zone[h]].append(h)
         result = m.PROD_IN_ZONE_dict.pop(z)
         if not m.PROD_IN_ZONE_dict:
             del m.PROD_IN_ZONE_dict

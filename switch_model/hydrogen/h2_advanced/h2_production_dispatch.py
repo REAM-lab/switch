@@ -17,7 +17,9 @@ INPUT FILE FORMAT
     per kg of h2 produced
 
     h2_emissions_factors.csv
-        prod_tech, kg_co2_per_kg_h2, kg_ch4_per_kg_h2, kg_n2o_per_kg_h2, kg_so2_per_kg_h2, kg_nox_per_kg_h2, kg_pm10_per_kg_h2
+        prod_tech, kg_co2_per_kg_h2, 
+    Optional columns are:
+        kg_ch4_per_kg_h2, kg_n2o_per_kg_h2, kg_so2_per_kg_h2, kg_nox_per_kg_h2, kg_pm10_per_kg_h2
 
 """
 from __future__ import division
@@ -292,11 +294,16 @@ def define_hydrogen_components(m):
         rule=lambda m, h, t, f: m.DispatchProd[h, t]
     )
 
-    # Only used to improve the performance of calculating ZoneTotalCentralH2Dispatch
+    # Only used to improve the performance of calculating ZoneTotalCentralH2Dispatch and H2ProdGridCntdPowerZonalUse
     mod.PROD_FOR_ZONE_TPS = Set(
         mod.LOAD_ZONES, mod.TIMEPOINTS,
         ordered=False,
         initialize=lambda m, z, t: set(h for h in m.PROD_IN_ZONE[z] if (h, t) in m.PROD_TPS)
+    )
+    mod.GRID_CONNECTED_PROD_FOR_ZONE_TPS = Set(
+        mod.LOAD_ZONES, mod.TIMEPOINTS,
+        ordered=False,
+        initialize=lambda m, z, t: set(h for h in m.PROD_IN_ZONE[z] if (h, t) in m.GRID_CONNECTED_PROD_TPS)
     )
 
     mod.ZoneTotalCentralH2Dispatch = Expression(
@@ -319,7 +326,12 @@ def define_hydrogen_components(m):
         rule=lambda m, h, t: \
         m.DispatchProd[h, t] * m.mwh_per_kg_h2[h] * (1000/33.32),
         doc=("[MW] Average power used at each TP by grid-powered/grid-connected hydrogen production plants."))
-    mod.Zone_Power_Withdrawals.append("H2ProdGridCntdPowerUse")
+    mod.H2ProdGridCntdPowerZonalUse = Expression(
+        mod.LOAD_ZONES, mod.TIMEPOINTS,
+        rule=lambda m, z, t: \
+            sum(m.H2ProdGridCntdPowerUse[h, t] for h in m.GRID_CONNECTED_PROD_FOR_ZONE_TPS[z, t]),
+        doc=("[MW] Average power used at each TP by grid-powered/grid-connected hydrogen production plants in each zone."))
+    mod.Zone_Power_Withdrawals.append("H2ProdGridCntdPowerZonalUse")
 
     mod.ProdFuelUseRate = Var(
         mod.PROD_TP_FUELS,
