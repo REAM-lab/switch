@@ -242,6 +242,24 @@ def define_hydrogen_components(m):
             (h, tp)
                 for h in m.PRODUCTION_PROJECTS
                     for tp in m.TPS_FOR_PROD[h]))
+    mod.ONSITE_PROD_TPS = Set(
+        dimen=2,
+        initialize=lambda m: (
+            (h, tp)
+                for h in m.ONSITE_PRODUCTION_PROJECTS
+                    for tp in m.TPS_FOR_PROD[h]))
+    mod.ONSITE_PROD_GEN_TPS = Set(
+        dimen=3,
+        initialize=lambda m: (
+            (h, g, tp)
+                for (h, g) in m.ONSITE_PROD_AND_GEN
+                    for tp in m.TPS_FOR_PROD[h]))
+    mod.GRID_CONNECTED_PROD_TPS = Set(
+        dimen=2,
+        initialize=lambda m: (
+            (h, tp)
+                for h in m.GRID_CONNECTED_PRODUCTION_PROJECTS
+                    for tp in m.TPS_FOR_PROD[h]))
     mod.FUEL_BASED_PROD_TPS = Set(
         dimen=2,
         initialize=lambda m: (
@@ -296,18 +314,19 @@ def define_hydrogen_components(m):
         within=NonNegativeReals,
         initialize=init_prod_availability)
     # Units: [MW of H2] * [MWh of power/kg of H2] * [1000 kWh/MWh] * [1 kg of H2/33.32 kWh] = [MW of power]
-    mod.ProdPowerUse = Expression(
-        mod.PROD_TPS,
+    mod.H2ProdGridCntdPowerUse = Expression(
+        mod.GRID_CONNECTED_PROD_TPS,
         rule=lambda m, h, t: \
         m.DispatchProd[h, t] * m.mwh_per_kg_h2[h] * (1000/33.32),
-        doc=("[MW] Average power used at each TP by hydrogen production plants."))
-    mod.Zone_Power_Withdrawals.append("ProdPowerUse")
+        doc=("[MW] Average power used at each TP by grid-powered/grid-connected hydrogen production plants."))
+    mod.Zone_Power_Withdrawals.append("H2ProdGridCntdPowerUse")
 
     mod.ProdFuelUseRate = Var(
         mod.PROD_TP_FUELS,
         within=NonNegativeReals,
         doc=("[MMBTU/h] Other modules constrain this variable based on DispatchProdByFuel."))
 
+    # -- LOAD EMISSIONS FACTORS --
     # GREENHOUSE GASES (LHV of H2 = 33.32 kWh/kg)
 	mod.kg_co2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
 		input_file="h2_emissions_factors.csv", input_column="kg_co2_per_kg_h2")
@@ -324,7 +343,8 @@ def define_hydrogen_components(m):
 	mod.kg_pm10_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_pm10_per_kg_h2")
 	
-	# EMISSIONS EXPRESSIONS (metric tonnes = kg * 1e-3) [metric tonnes per hour]
+	# -- EMISSIONS EXPRESSIONS PER TP (metric tonnes = kg * 1e-3) [metric tonnes per hour] --
+	# GREENHOUSE GASES
 	def ProdDispatchEmissions_rule_co2(m, h, t, f):
 		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_co2_per_kg_h2[prod_tech[h]] * 1e-3)
 	mod.ProdDispatchEmissionsCO2 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_co2)
@@ -336,7 +356,8 @@ def define_hydrogen_components(m):
 	def ProdDispatchEmissions_rule_n2o(m, h, t, f):
 		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_n2o_per_kg_h2[prod_tech[h]] * 1e-3)
 	mod.ProdDispatchEmissionsN2O = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_n2o)
-	
+
+	# CRITERIA AIR POLLUTANTS
 	def ProdDispatchEmissions_rule_so2(m, h, t, f):
 		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_so2_per_kg_h2[prod_tech[h]] * 1e-3)
 	mod.ProdDispatchEmissionsSO2 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_so2)
@@ -349,7 +370,8 @@ def define_hydrogen_components(m):
 		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_pm10_per_kg_h2[prod_tech[h]] * 1e-3)
 	mod.ProdDispatchEmissionsPM10 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_pm10)
 
-	# [metric tonnes per year]
+	# -- ANNUAL TOTALS[metric tonnes per year] --
+	# GREENHOUSE GASES
 	mod.ProdAnnualEmissionsCO2 = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsCO2[h, t, f] * m.tp_weight_in_year[t]
@@ -371,6 +393,7 @@ def define_hydrogen_components(m):
 			if m.tp_period[t] == period),
 		doc="The system's annual N2O emissions, in metric tonnes per year.")
 
+    # CRITERIA AIR POLLUTANTS
 	mod.ProdAnnualEmissionsSO2 = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsSO2[h, t, f] * m.tp_weight_in_year[t]
@@ -397,7 +420,7 @@ def define_hydrogen_components(m):
 	# H2 produced by a project over the duration of timepoint t in units of MWh. This is converted 
 	# to kg of H2 using the LHV of H2 (33.32 kWh/kg) and the conversion factor of 1000 kWh/MWh.
 
-    mod.ProdVariableOMCostsInPeriod = Expression(
+    mod.H2ProdVariableOMCostsInPeriod = Expression(
 		mod.PERIODS,
 		rule=lambda m, p: sum(
 			m.DispatchProd[h, t] * m.tp_weight_in_year[t] * (1000 / 33.32) * m.prod_variable_om_per_kg[h]
@@ -406,7 +429,7 @@ def define_hydrogen_components(m):
 		),
 		doc="Summarize variable OM costs per kg of H2 produced in each period for the objective function"
 	)
-	mod.Cost_Components_Per_Period.append('ProdVariableOMCostsInPeriod')
+	mod.Cost_Components_Per_Period.append('H2ProdVariableOMCostsInPeriod')
 
     mod.ProdDispatchUpperLimit = Expression(
         mod.PROD_TPS,

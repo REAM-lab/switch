@@ -12,12 +12,13 @@ INPUT FILE FORMAT
         PRODUCTION_PROJECT, prod_tech, prod_energy_source, prod_load_zone,
         prod_max_age, prod_variable_om_per_kg
     Optional columns are:
-        prod_av_outage_rate, prod_capacity_limit_mw, prod_ccs_equipped
+        prod_av_outage_rate, prod_capacity_limit_mw, prod_ccs_equipped, 
+        prod_is_onsite, prod_onsite_GENERATION_PROJECT, prod_onsite_gen_tech
 
     The following file lists existing builds of H2 production projects, and is
     optional for simulations where there is no existing capacity:
 
-    h2_prod_build_predetermined.csv
+    h2_prod_predetermined.csv.csv
         PRODUCTION_PROJECT, build_year, prod_predetermined_cap_mw
 
     The following file is mandatory, because it sets cost parameters for
@@ -121,12 +122,14 @@ def define_hydrogen_components(m):
     usually non-zero, as it represents the electrical load needed to operate 
     the hydrogen production facility.
     
-    CCS_EQUIPPED_PROD is the subset of PRODUCTION_PROJECTS that are equipped 
-    with Carbon Capture and Sequestration (CCS). Note we do not define a CCS
-    capture efficiency or energy penalty like we do for electricity generators with
-    CCS. This is because we instead use a heating value that already accounts for
-    the energy penalty from the CCS and a CO2 emission factor that already accounts 
-    for the capture efficiency of the CCS for each CCS-eqipped H2 production project.
+    prod_ccs_equipped[h] is a TRUE/FALSE parameter which specifies if the H2 production
+    project is equipped with Carbon Capture and Sequestration (CCS). 
+    
+    *Note we do not define a CCS capture efficiency or energy penalty like we do for 
+    electricity generators with CCS. This is because we instead use a heating value 
+    that already accounts for the energy penalty from the CCS and a CO2 emission factor 
+    that already accounts for the capture efficiency of the CCS for each CCS-eqipped H2 
+    production project.
     
     -- CONSTRUCTION --
 
@@ -238,7 +241,7 @@ def define_hydrogen_components(m):
         
     """
 	# H2 PRODUCTION TECHNOLOGY DETAILS
-    
+
     # This set is defined by h2_production_projects_info.csv, which is the set of H2 production technology IDs
     m.PRODUCTION_PROJECTS = Set(dimen=1, input_file="h2_production_projects_info.csv")
 
@@ -288,11 +291,33 @@ def define_hydrogen_components(m):
     m.prod_capacity_limit_mw = Param(
         m.CAPACITY_LIMITED_PROD, input_file="h2_production_projects_info.csv",
         input_optional=True, within=NonNegativeReals)
-    
-    m.CCS_EQUIPPED_PROD Set(within=m.PRODUCTION_PROJECTS)
+
     m.prod_ccs_equipped = Param(
-        m.CCS_EQUIPPED_PROD, input_file="h2_production_projects_info.csv",
+        m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
         input_optional=True, within=Boolean)
+
+    m.prod_is_onsite = Param(
+        m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
+        input_optional=True, within=Boolean)
+    m.prod_onsite_GENERATION_PROJECT = Param(
+        m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
+        input_optional=True, within=m.GENERATION_PROJECTS)
+    m.prod_onsite_gen_tech = Param(
+        m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
+        input_optional=True, within=m.gen_tech)
+    m.ONSITE_PRODUCTION_PROJECTS = Set(within=m.PRODUCTION_PROJECTS)
+    m.GRID_CONNECTED_PRODUCTION_PROJECTS = Set(
+		within=m.PRODUCTION_PROJECTS,
+		initialize=lambda m: m.PRODUCTION_PROJECTS - m.ONSITE_PRODUCTION_PROJECTS
+	)
+    m.ONSITE_PROD_AND_GEN = Set(
+		dimen=2,
+		within=m.PRODUCTION_PROJECTS * m.GENERATION_PROJECTS,
+		initialize=lambda m: [
+			(h, m.prod_onsite_GENERATION_PROJECT[h])
+			for h in m.ONSITE_PRODUCTION_PROJECTS
+		]
+	)
 
     m.prod_uses_fuel = Param(
         m.PRODUCTION_PROJECTS,
@@ -301,7 +326,7 @@ def define_hydrogen_components(m):
     m.FUEL_BASED_PROD = Set(
         initialize=m.PRODUCTION_PROJECTS,
         filter=lambda m, h: m.prod_uses_fuel[h])
-    
+
     m.mmbtu_fuel_per_kg_h2 = Param(m.FUEL_BASED_PROD, input_file="h2_production_projects_info.csv",
                                           within=NonNegativeReals, default=0)
 
@@ -348,7 +373,7 @@ def define_hydrogen_components(m):
         initialize=lambda m: set(bld_yr for (h, bld_yr) in m.PREDETERMINED_PROD_BLD_YRS),
         doc="Set of all the years where pre-determined builds for H2 production projects occur."
     )
-    
+
     # This set is defined by h2_prod_build_costs.csv
     m.PROD_BLD_YRS = Set(
         dimen=2,
@@ -406,7 +431,7 @@ def define_hydrogen_components(m):
             bld_yr for (prod, bld_yr) in m.PROD_BLD_YRS if prod == h
         )
     )
-    
+
     # The set of build years that could be online in the given period
     # for the given H2 production project.
     m.BLD_YRS_FOR_PROD_PERIOD = Set(
@@ -435,7 +460,7 @@ def define_hydrogen_components(m):
         m.PROD_BLD_YRS,
         within=NonNegativeReals,
         bounds=bounds_BuildProd)
-        
+
     # Some projects are retired before the first study period, so they
     # don't appear in the objective function or any constraints.
     # In this case, pyomo may leave the variable value undefined even
@@ -516,12 +541,21 @@ def define_hydrogen_components(m):
     m.Cost_Components_Per_Period.append('TotalProdFixedCosts')
 
 def load_inputs(m, switch_data, inputs_dir):
-    # Construct sets of capacity-limited and ccs-capable projects. 
-    # These sets include projects for which these parameters have a value.
+    # Construct set of capacity-limited projects. This set includes projects for 
+    # which the prod_capacity_limit_mw parameter has a value.
     # Note we removed the capability to have discretely sized H2 production techs
     if 'prod_capacity_limit_mw' in switch_data.data():
         switch_data.data()['CAPACITY_LIMITED_PROD'] = {
             None: list(switch_data.data(name='prod_capacity_limit_mw').keys())}
+    
+    # Construct set of H2 production projects that are installed onsite of a power
+    # generator. This set includes projects for which the parameter prod_is_onsite is True.
+    if 'prod_is_onsite' in switch_data.data():
+        onsite_projects = [
+            h for h, is_onsite in switch_data.data(name='prod_is_onsite').items()
+            if is_onsite
+        ]
+        switch_data.data()['ONSITE_PRODUCTION_PROJECTS'] = {None: onsite_projects}
 
 def post_solve(m, outdir):
     write_table(

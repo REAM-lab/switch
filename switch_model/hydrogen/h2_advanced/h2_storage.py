@@ -383,7 +383,32 @@ def define_hydrogen_components(mod):
         ),
     )
 
+    mod.BuildH2StorageCompressors = Var(
+        mod.H2_STORAGE_BLD_YRS,
+        within=NonNegativeReals,
+        bounds=(0, None)
+    )
+    
+    mod.H2StorageCompressorCapacity = Expression(
+        mod.H2_STORAGE_PROJECTS,
+        mod.PERIODS,
+        rule=lambda m, s, period: sum(
+            m.BuildH2StorageCompressors[s, bld_yr]
+            for bld_yr in m.BLD_YRS_FOR_H2_STORAGE_PERIOD[s, period]
+        ),
+    )
+
     mod.FillH2Storage = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
+
+    def Fill_H2_Storage_Upper_Limit_rule(m, s, t):
+        return (
+            m.FillH2Storage[s, t]
+            <= m.H2StorageCompressorCapacity[s, m.tp_period[t]]
+        )
+
+    mod.Fill_H2_Storage_Upper_Limit = Constraint(
+        mod.H2_STORAGE_TPS, rule=Fill_H2_Storage_Upper_Limit_rule
+    )
 
     # Summarize H2 storage filling for the H2 balance equations
     # (sum for a zone, not a net quantity for a project)
@@ -399,21 +424,22 @@ def define_hydrogen_components(mod):
         return sum(m.FillH2Storage[s, t] for s in relevant_projects_f)
 
     mod.H2StorageTotalFill = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_f)
+
     # Register net filling with zonal energy balance. 
     mod.Zone_H2_Withdrawals.append("H2StorageTotalFill")
 
-    def Fill_H2_Storage_Upper_Limit_rule(m, s, t):
+    mod.WithdrawH2Storage = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
+
+    def Withdraw_H2_Storage_Upper_Limit_rule(m, s, t):
         return (
-            m.FillH2Storage[s, t]
-            <= m.FillH2StorUpperLimit[s, t]
+            m.WithdrawH2Storage[s, t]
+            <= m.H2StorageCompressorCapacity[s, m.tp_period[t]]
         )
 
-    mod.Fill_H2_Storage_Upper_Limit = Constraint(
-        mod.H2_STORAGE_TPS, rule=Fill_H2_Storage_Upper_Limit_rule
+    mod.Withdraw_H2_Storage_Upper_Limit = Constraint(
+        mod.H2_STORAGE_TPS, rule=Withdraw_H2_Storage_Upper_Limit_rule
     )
-    
-    mod.WithdrawH2Storage = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
-    
+
     # Summarize H2 storage withdrawing for the H2 balance equations
     # (sum for a zone, not a net quantity for a project)
     def rule_w(m, z, t):
