@@ -8,25 +8,17 @@ import pandas as pd
 
 dependencies = ("switch_model.timescales")
 
-def define_arguments(argparser):
-    argparser.add_argument(
-        "--no-hydrogen",
-        action="store_true",
-        default=False,
-        help="Don't allow construction of any hydrogen infrastructure.",
-    )
-
 def define_hydrogen_components(m):
     """
-    Users can use the h2_timepoints.csv, h2_timeseries.csv and
-    h2_periods.csv files to customize the hydrogen storage duration and cycle.
+    Users can use the h2_timepoints.csv and h2_timeseries.csv files to customize the 
+    hydrogen storage cycle.
 
     ------------------------------------------
     h2_timepoints.csv:
     The h2_timepoints.csv input file must include all the timepoint_ids in the 
     switch timepoints.csv input file. The hydrogen_timeseries column contains the new
     timeseries names that correspond to the maximum frequency at which hydrogen will 
-    be stored or withdrawn from liquid storage. For example, if hydrogen can be stored 
+    be stored or withdrawn from storage. For example, if hydrogen can be stored 
     daily (but not hourly) to the tank, timepoints would be grouped into daily time 
     series regardless of how long the main time series are in the switch timeseries.csv 
     input file. The only requirement is that the hydrogen timeseries (hgts) must be
@@ -39,30 +31,18 @@ def define_hydrogen_components(m):
     ------------------------------------------
     h2_timeseries.csv:
     The h2_timeseries.csv input file allows users to further describe the hydrogen timeseries
-    defined in h2_timepoints.csv and specify a new HYDROGEN PERIOD (hgp) that corresponds to how
-    often hydrogen storage is cycled. For example, if hydrogen should not be stored for longer than 1
-    month, then each hgp would represent a one month period. Hydrogen storage is constrained to have 
-    zero net hydrogen stored from one hgp to the next hgp (H2 at hgp start - H2 at hgp end = 0). 
+    defined in h2_timepoints.csv and specify the main model period that the hydrogen timeseries belongs to. 
+    For example, if hydrogen state of "charge", or state of fill, should be equal at the start and end of each month,
+    then the hydrogen timeseries should correspond to 1 month. 
     The hydrogen_timseries.csv input file must include the following:
         HYDROGEN_TIMESERIES: the exact same hydrogen timeseries names defined in h2_timepoints.csv
         hgts_period: the PERIOD (from the switch timeseries.csv input file) containing the hydrogen timeseries in col 1
-        hgts_hydrogen_period: the NEW HYDROGEN PERIOD containing the hydrogen timeseries in col 1
         hgts_duration_of_tp: the duration in hours of the timepoints in the hgts in col 1. Must match the
-        ts_duration_of_tp for the corresponding timeseries in switch
-        hgts_scale_to_hgp: the number of times that the hgts in col 1 occurs in the hgp
+        hgts_scale_to_period: the number of times that the hgts in col 1 occurs in the period
     The file format is as follows. 
     h2_timeseries.csv
-        HYDROGEN_TIMESERIES,hgts_period,hgts_hydrogen_period,hgts_duration_of_tp,ts_duration_of_tp,
-        hgts_scale_to_hgp
+        HYDROGEN_TIMESERIES, hgts_period, hgts_duration_of_tp, hgts_scale_to_period
 
-    ------------------------------------------
-    h2_periods.csv:
-    The h2_periods.csv input file maps hydrogen periods to the switch model periods. 
-    It must include the following:
-    h2_periods.csv
-        hydrogen_period, period
-    where hydrogen_period exactly matches the hgp in h2_timeseries.csv and period exactly matches
-    the periods in periods.csv.
     """
     
     # HYDROGEN TIMESCALES DETAILS
@@ -76,7 +56,7 @@ def define_hydrogen_components(m):
     )
     m.HGTS = Set(
         dimen=1,
-        ordered=False,
+        ordered=True,
         initialize=lambda m: set(m.tp_to_hgts[tp] for tp in m.TIMEPOINTS),
         doc="Set of hydrogen timeseries that correspond to max storage frequency as defined in the mapping."
     )
@@ -88,37 +68,20 @@ def define_hydrogen_components(m):
         doc="Mapping of hydrogen time series to the main model periods.",
         within=m.PERIODS
     )
-    m.hgts_hg_period = Param(
-        m.HGTS,
-        input_file='h2_timeseries.csv',
-        input_column='hgts_hydrogen_period',
-        doc="Mapping of hydrogen time series to the hydrogen periods.",
-        within=Any
-    )
-    m.HGP = Set(
-        dimen=1,
-        ordered=False,
-        initialize=lambda m: set(m.hgts_hg_period[hgts] for hgts in m.HGTS),
-        doc="Set of hydrogen periods that correspond to the storage cycling period."
-    )
     m.TPS_IN_HGTS = Set(
         m.HGTS,
         within=m.TIMEPOINTS,
-        ordered=False,
-        initialize=lambda m, hgts: set(t for t in m.TIMEPOINTS if m.tp_to_hgts[t] == hgts),
-        doc="Set of timepoints in each hydrogen timeseries."
-    )
-    m.HGTS_IN_HGP = Set(
-        m.HGP,
-        within=m.HGTS,
-        ordered=False,
-        initialize=lambda m, hgp: set(hgts for hgts in m.HGTS if m.hgts_hg_period[hgts] == hgp),
-        doc="Set of hydrogen time series in each hydrogen period."
+        ordered=True,
+        initialize=lambda m, hgts: sorted(
+			[t for t in m.TIMEPOINTS if m.tp_to_hgts[t] == hgts],
+			key=lambda t: m.tp_timestamp[t]
+		),
+        doc="Set of ordered timepoints in each hydrogen timeseries."
     )
     m.HGTS_IN_PERIOD = Set(
         m.PERIODS,
         within=m.HGTS,
-        ordered=False,
+        ordered=True,
         initialize=lambda m, p: set(hgts for hgts in m.HGTS if m.hgts_period[hgts] == p),
         doc="Set of hydrogen time series in each main model period."
     )
@@ -129,17 +92,19 @@ def define_hydrogen_components(m):
         input_column='hgts_duration_of_tp',
         doc="Duration in hours of the timepoints in each hydrogen time series"
     )
-    m.hgts_scale_to_hgp = Param(
+    m.hgts_scale_to_period = Param(
         m.HGTS,
         within=PositiveReals,
         input_file='h2_timeseries.csv',
-        input_column='hgts_scale_to_hgp',
-        doc="Number of times a hydrogen time series occurs in its hydrogen period"
+        input_column='hgts_scale_to_period',
+        doc="Number of times a hydrogen time series occurs in the main model period"
     )
-    m.hgp_p = Param(
-        m.HGP,
-        within=m.PERIODS,
-        input_file="h2_periods.csv",
-        input_column="period",
-        doc="Mapping of hydrogen periods to normal model periods."
-    )
+    # Identify previous step for each timepoint, for use in tracking
+    # H2 storage. We use circular indexing (.prevw() method) for the
+    # timepoints within a timeseries to give consistency between the
+    # start and end state. (Note: separate timeseries are assumed to be
+    # disconnected from each other.)
+    m.h2_tp_previous = Param(
+        mod.TIMEPOINTS,
+        within=mod.TIMEPOINTS,
+        initialize=lambda m, t: m.TPS_IN_HGTS[m.tp_to_hgts[t]].prevw(t))

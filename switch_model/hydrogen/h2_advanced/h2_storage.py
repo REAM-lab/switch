@@ -212,16 +212,16 @@ def define_hydrogen_components(mod):
                                     input_file="h2_storage.csv",
                                     within=Boolean)
     def init_predetermined_h2_stor_bld_yrs(m):
-    return [
-        (s, bld_yr)
-        for (s, bld_yr) in m.H2_STORAGE_BLD_YRS
-        if m.h2stor_is_predetermined[s, bld_yr]
-    ]
-	mod.PREDETERMINED_H2_STORAGE_BLD_YRS = Set(
+        return [
+            (s, bld_yr)
+            for (s, bld_yr) in m.H2_STORAGE_BLD_YRS
+            if m.h2stor_is_predetermined[s, bld_yr]
+        ]
+    mod.PREDETERMINED_H2_STORAGE_BLD_YRS = Set(
 	    dimen=2,
 	    initialize=init_predetermined_h2_stor_bld_yrs
 	)
-	mod.h2stor_predetermined_kg = Param(
+    mod.h2stor_predetermined_kg = Param(
         mod.PREDETERMINED_H2_STORAGE_BLD_YRS,
         input_file="h2_storage.csv",
         within=NonNegativeReals)
@@ -282,8 +282,8 @@ def define_hydrogen_components(mod):
         if not m.H2_STORAGE_IN_ZONE_dict:
             del m.H2_STORAGE_IN_ZONE_dict
         return result
-    m.H2_STORAGE_IN_ZONE = Set(
-        m.LOAD_ZONES,
+    mod.H2_STORAGE_IN_ZONE = Set(
+        mod.LOAD_ZONES,
         initialize=H2_STORAGE_IN_ZONE_init
     )
 
@@ -300,7 +300,8 @@ def define_hydrogen_components(mod):
     mod.BuildH2Storage = Var(
         mod.H2_STORAGE_BLD_YRS,
         within=NonNegativeReals,
-        bounds=bounds_BuildGen)
+        bounds=bounds_BuildH2Storage
+    )
     # Some projects are retired before the first study period, so they
     # don't appear in the objective function or any constraints.
     # In this case, pyomo may leave the variable value undefined even
@@ -391,7 +392,7 @@ def define_hydrogen_components(mod):
                 m.BuildH2Storage[s, bld_yr]
                 * m.h2stor_overnight_cost_per_kg[s, bld_yr]
                 * crf(m.interest_rate, m.h2stor_life_years[s])
-                + m.BuildH2Storage[s, bld_yr] * h2stor_fixed_om_cost_per_kg[s, bld_yr]
+                + m.BuildH2Storage[s, bld_yr] * m.h2stor_fixed_om_cost_per_kg[s, bld_yr]
                 for bld_yr in m.BLD_YRS_FOR_H2_STORAGE_PERIOD[s, p]
             )
             for s in m.H2_STORAGE_PROJECTS
@@ -438,7 +439,7 @@ def define_hydrogen_components(mod):
                 m.BuildH2StorageCompressors[s, bld_yr]
                 * m.h2stor_comp_overnight_cost_per_mw[m.h2stor_type[s]]
                 * crf(m.interest_rate, m.h2stor_life_years[s])
-                + m.BuildH2StorageCompressors[s, bld_yr] * h2stor_comp_fixed_om_cost_per_mw_yr[m.h2stor_type[s]]
+                + m.BuildH2StorageCompressors[s, bld_yr] * m.h2stor_comp_fixed_om_cost_per_mw_yr[m.h2stor_type[s]]
                 for bld_yr in m.BLD_YRS_FOR_H2_STORAGE_PERIOD[s, p]
             )
             for s in m.H2_STORAGE_PROJECTS
@@ -453,7 +454,6 @@ def define_hydrogen_components(mod):
             m.FillH2Storage[s, t]
             <= m.H2StorageCompressorCapacity[s, m.tp_period[t]]
         )
-
     mod.Fill_H2_Storage_Upper_Limit = Constraint(
         mod.H2_STORAGE_TPS, rule=Fill_H2_Storage_Upper_Limit_rule
     )
@@ -479,11 +479,19 @@ def define_hydrogen_components(mod):
     mod.WithdrawH2Storage = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
 
     def Withdraw_H2_Storage_Upper_Limit_rule(m, s, t):
-        return (
-            m.WithdrawH2Storage[s, t]
-            <= m.H2StorageCompressorCapacity[s, m.tp_period[t]]
-        )
-
+		
+		# Fraction-of-storage-per-day limit for this storage's technology
+		# Units: [kg of H2] * [fraction of capacity/day] * [1 day/24 h]
+		#         * [33.32 kWh/kg] * [1 MWh/1000 kWh] = [MW of H2]
+		daily_limit = m.H2StorageCapacity[s, m.tp_period[t]] 
+		              * m.h2stor_cap_frac_withdraw_limit[m.h2stor_type[s]] 
+		              * 33.32 / (1000 * 24)
+		
+		# Constraint: withdraw ≤ min(compressor capacity, fraction-of-storage limit)
+		return m.WithdrawH2Storage[s, t] <= min(
+			m.H2StorageCompressorCapacity[s, m.tp_period[t]],
+			daily_limit
+		)  
     mod.Withdraw_H2_Storage_Upper_Limit = Constraint(
         mod.H2_STORAGE_TPS, rule=Withdraw_H2_Storage_Upper_Limit_rule
     )
@@ -534,11 +542,11 @@ def define_hydrogen_components(mod):
         return sum(m.WithdrawH2Storage[s, t]*(m.h2stor_leakage_rate[s]) for s in relevant_projects_l)
 
     mod.H2Storage_Zonal_H2_Leakage = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_l)
-    # Net storage change: net fill level in kg of H2
+    # Annual leakage of H2 (fugitive H2 emissions) in each period
 	# Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] * [1 metric ton/1000 kg] = [metric ton of H2]
 	# 1000/1000 cancels, hence (1/33.32)
-	def total_leakage_rule(m, p):
-		return sum(
+    def total_leakage_rule(m, p):
+        return sum(
 			m.H2Storage_Zonal_H2_Leakage[z, t] * m.tp_weight_in_year[t] * (1/33.32)
 			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
 		)
@@ -554,24 +562,24 @@ def define_hydrogen_components(mod):
         - m.WithdrawH2Storage[s, t]
     )
 
-	def H2_Track_State_Of_Fill_rule(m, s, t):
+    def H2_Track_State_Of_Fill_rule(m, s, t):
 		# Carry-over is just previous fill level (no decay over time like batteries)
-		carry_over_h2 = m.H2StateOfFill[s, m.tp_previous[t]]
+        carry_over_h2 = m.H2StateOfFill[s, m.h2_tp_previous[t]]
 	
 		# Net storage change: net fill level in kg of H2
 		# Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] = [kg of H2]
-		net_flow = m.H2StorageFlow[s, t] * m.tp_weight_in_year[t] * (1000/33.32)
+        net_flow = m.H2StorageFlow[s, t] * m.hgts_duration_of_tp[m.tp_to_hgts[t]] * (1000/33.32)
 	
-		return m.H2StateOfFill[s, t] == carry_over_h2 + net_flow
+        return m.H2StateOfFill[s, t] == carry_over_h2 + net_flow
 	
-	mod.H2_Track_State_Of_Fill = Constraint(
+    mod.H2_Track_State_Of_Fill = Constraint(
 		mod.H2_STORAGE_TPS, rule=H2_Track_State_Of_Fill_rule
 	)
 
-	def H2_State_Of_Fill_Upper_Limit_rule(m, s, t):
-		return m.H2StateOfFill[s, t] <= m.H2StorageCapacity[s, m.tp_period[t]]
+    def H2_State_Of_Fill_Upper_Limit_rule(m, s, t):
+        return m.H2StateOfFill[s, t] <= m.H2StorageCapacity[s, m.tp_period[t]]
 
-	mod.H2_State_Of_Fill_Upper_Limit = Constraint(
+    mod.H2_State_Of_Fill_Upper_Limit = Constraint(
 		mod.H2_STORAGE_TPS, rule=H2_State_Of_Fill_Upper_Limit_rule
 	)
 
