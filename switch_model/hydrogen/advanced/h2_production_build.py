@@ -38,31 +38,6 @@ from switch_model.utilities.scaling import get_assign_default_value_rule
 dependencies = 'switch_model.timescales', 'switch_model.balancing.load_zones',\
     'switch_model.financials', 'switch_model.energy_sources.properties.properties'
 
-def define_dynamic_hydrogen_components(mod):
-    """
-    Adds components to a Pyomo abstract model object to enforce the
-    first law of thermodynamics at the level of load zone buses. Unless
-    otherwise stated, all terms describing power are in units of MW and
-    all terms describing energy are in units of MWh.
-
-    Zone_Energy_Balance[load_zone, timepoint] is a constraint that mandates
-    conservation of energy in every load zone and timepoint. This constraint
-    sums the model components in the lists Zone_Power_Injections and
-    Zone_Power_Withdrawals - each of which is indexed by (z, t) and
-    has units of MW - and ensures they are equal. The term tp_duration_hrs
-    is factored out of the equation for brevity.
-    """
-
-    mod.Zone_Energy_Balance = Constraint(
-        mod.ZONE_TIMEPOINTS,
-        rule=lambda m, z, t: (
-            sum(
-                getattr(m, component)[z, t]
-                for component in m.Zone_Power_Injections
-            ) == sum(
-                getattr(m, component)[z, t]
-                for component in m.Zone_Power_Withdrawals)))
-
 def define_hydrogen_components(m):
     """
     Adds components to a Pyomo abstract model object to describe the building of hydrogen production
@@ -121,6 +96,9 @@ def define_hydrogen_components(m):
     source. For fuel-based hydrogen production technologies, this value is
     usually non-zero, as it represents the electrical load needed to operate 
     the hydrogen production facility.
+    
+    prod_leakage_rate[h] is the leakage rate which specifies the % of H2 produced that
+    is leaked as fugitive H2 emissions during production. 
     
     prod_ccs_equipped[h] is a TRUE/FALSE parameter which specifies if the H2 production
     project is equipped with Carbon Capture and Sequestration (CCS). 
@@ -291,6 +269,10 @@ def define_hydrogen_components(m):
     m.prod_capacity_limit_mw = Param(
         m.CAPACITY_LIMITED_PROD, input_file="h2_production_projects_info.csv",
         input_optional=True, within=NonNegativeReals)
+    
+    m.prod_leakage_rate = Param(
+        m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
+        default=0, within=NonNegativeReals)
 
     m.prod_ccs_equipped = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
@@ -340,11 +322,11 @@ def define_hydrogen_components(m):
         if not hasattr(m, 'PROD_BY_ENERGY_dict'):
             m.PROD_BY_ENERGY_dict = {_e: [] for _e in m.ENERGY_SOURCES}
             for h in m.PRODUCTION_PROJECTS:
-                if p in m.FUEL_BASED_PROD:
+                if h in m.FUEL_BASED_PROD:
                     for f in m.FUEL_FOR_PROD[h]:
-                        m.PROD_BY_ENERGY_dict[f].append(p)
+                        m.PROD_BY_ENERGY_dict[f].append(h)
                 else:
-                    m.PROD_BY_ENERGY_dict[m.prod_energy_source[h]].append(p)
+                    m.PROD_BY_ENERGY_dict[m.prod_energy_source[h]].append(h)
         result = m.PROD_BY_ENERGY_dict.pop(e)
         if not m.PROD_BY_ENERGY_dict:
             del m.PROD_BY_ENERGY_dict
@@ -450,7 +432,7 @@ def define_hydrogen_components(m):
         if((h, bld_yr) in model.PREDETERMINED_PROD_BLD_YRS):
             return (model.prod_predetermined_cap_mw[h, bld_yr],
                     model.prod_predetermined_cap_mw[h, bld_yr])
-        elif(p in model.CAPACITY_LIMITED_PROD):
+        elif(h in model.CAPACITY_LIMITED_PROD):
             # This does not replace Max_Prod_Build_Potential because
             # Max_Prod_Build_Potential applies across all build years.
             return (0, model.prod_capacity_limit_mw[h])

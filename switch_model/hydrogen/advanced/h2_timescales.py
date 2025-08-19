@@ -105,6 +105,6 @@ def define_hydrogen_components(m):
     # start and end state. (Note: separate timeseries are assumed to be
     # disconnected from each other.)
     m.h2_tp_previous = Param(
-        mod.TIMEPOINTS,
-        within=mod.TIMEPOINTS,
+        m.TIMEPOINTS,
+        within=m.TIMEPOINTS,
         initialize=lambda m, t: m.TPS_IN_HGTS[m.tp_to_hgts[t]].prevw(t))

@@ -8,9 +8,23 @@ the Switch model.
 INPUT FILE FORMAT
     Import project-specific data from an input directory.
     
-    Import prod_tech emissions data. To skip optional parameters such as
-    upstream_co2_intensity, put a dot . in the relevant cell rather than
-    leaving them blank. Leaving a cell blank will generate an error
+    h2_demand.csv:
+    This input file imports the hydrogen demand profile for the hydrogen balancing 
+    constraint (H2 supply = demand in each load zone at each timepoint). Each row 
+    lists a load zone (LOAD_ZONE), a timepoint (TIMEPOINT) (which has a frequency of 
+    at most 1-hour), and the corresponding hydrogen demand (zone_demand_mw_h2) in units
+    of MW of H2. This is assumed to be the hourly average demand for the duration of 
+    that timepoint. For example, if a timepoint has a duration of 4 hours and a load 
+    zone at that timepoint has a demand of 10 MW of H2, then we assume the demand in that
+    zone is 10 MW for the whole 4 hours corresponding to that timepoint.
+    
+    h2_demand.csv:
+        LOAD_ZONE, TIMEPOINT, zone_demand_mw_h2
+    
+    h2_emissions_factors.csv:
+    This input file imports prod_tech emissions factor data. To skip optional 
+    parameters such as kg_ch4_per_kg_h2, put a dot . in the relevant cell rather 
+    than leaving them blank. Leaving a cell blank will generate an error
     message like "IndexError: list index out of range". The following
     file is expected in the input directory. It is optional because
     you could have an all-electrolysis system. Units are all kg of pollutant
@@ -37,8 +51,8 @@ from switch_model.tools.graph import graph
 
 dependencies = 'switch_model.timescales', 'switch_model.balancing.load_zones', \
                'switch_model.financials', 'switch_model.energy_sources.properties', \
-               'switch_model.hydrogen.h2_advanced.h2_production_build', \
-               'switch_model.hydrogen.h2_advanced.h2_timescales'
+               'switch_model.hydrogen.advanced.h2_production_build', \
+               'switch_model.hydrogen.advanced.h2_timescales'
 
 def define_hydrogen_dynamic_lists(mod):
     """
@@ -64,7 +78,32 @@ def define_hydrogen_dynamic_lists(mod):
     mod.Zone_H2_Withdrawals = []
     mod.Zone_Fugitive_H2 = []
 
-def define_hydrogen_components(m):
+def define_dynamic_hydrogen_components(mod):
+    """
+    Adds components to a Pyomo abstract model object to enforce hydrogen
+    demand and production balance at the level of load zone buses. Unless
+    otherwise stated, all terms describing H2 flows are in units of MW of 
+    H2 all terms describing H2 energy are in units of kg of H2.
+
+    Zone_H2_Balance[load_zone, timepoint] is a constraint that mandates
+    conservation of H2 in every load zone and timepoint. This constraint
+    sums the model components in the lists Zone_H2_Injections and
+    Zone_H2_Withdrawals - each of which is indexed by (z, t) and has units 
+    of MW of H2 - and ensures they are equal. The term tp_duration_hrs
+    is factored out of the equation for brevity.
+    """
+
+    mod.Zone_H2_Balance = Constraint(
+        mod.ZONE_TIMEPOINTS,
+        rule=lambda m, z, t: (
+            sum(
+                getattr(m, component)[z, t]
+                for component in m.Zone_H2_Injections
+            ) == sum(
+                getattr(m, component)[z, t]
+                for component in m.Zone_H2_Withdrawals)))
+
+def define_hydrogen_components(mod):
     """
     Adds components to a Pyomo abstract model object to describe the
     dispatch decisions and constraints of hydrogen production and storage
@@ -111,7 +150,7 @@ def define_hydrogen_components(m):
     prod_av_outage_rate[h] describes the avergage outage
     rate for each hydrogen production project. This parameter
     is specified for individual projects in h2_production_Projects_info.csv. It 
-    is originally defined in switch_model.hydrogen.h2_advanced.h2_production_build.
+    is originally defined in switch_model.hydrogen.advanced.h2_production_build.
 
     prod_availability[h] describes the fraction of a time a project is
     expected to be available. This is derived from the average outage rate 
@@ -119,12 +158,12 @@ def define_hydrogen_components(m):
 
     prod_variable_om_per_kg[h] is the variable Operations and Maintenance
     costs (O&M) per kg of H2 produced for a given H2 production project. It 
-    is originally defined in switch_model.hydrogen.h2_advanced.h2_production_build.
+    is originally defined in switch_model.hydrogen.advanced.h2_production_build.
 
-    mmbtu_fuel_per_kg_h2[h] is defined for fuel-based H2 production projects. 
+    m.mmbtu_fuel_per_kg_h2[h] is defined for fuel-based H2 production projects. 
     This describes the amount of fuel in mmbtu needed to produced 1 kg of H2.
     The default value is 0. It is originally defined in the
-    switch_model.hydrogen.h2_advanced.h2_production_build module.
+    switch_model.hydrogen.advanced.h2_production_build module.
     
     mwh_per_kg_h2[h] is defined for all H2 production projects. This describes 
     the amount of electricity in MWh needed to produced 1 kg of H2.
@@ -132,7 +171,7 @@ def define_hydrogen_components(m):
     source. For fuel-based hydrogen production technologies, this value is
     usually non-zero, as it represents the electrical load needed to operate 
     the hydrogen production facility. It is originally defined in the
-    switch_model.hydrogen.h2_advanced.h2_production_build module.
+    switch_model.hydrogen.advanced.h2_production_build module.
 
     FUEL_BASED_PROD_TPS is a subset of PROD_TPS
     showing all times when fuel-consuming projects could be dispatched
@@ -195,7 +234,7 @@ def define_hydrogen_components(m):
 
     ProdFuelUseRate_Calculate[(h, t, f) in PROD_TP_FUELS]
     calculates fuel consumption for the variable ProdFuelUseRate as
-    DispatchProdByFuel * mmbtu_fuel_per_kg_h2. Using the LHV of H2 
+    DispatchProdByFuel * m.mmbtu_fuel_per_kg_h2. Using the LHV of H2 
     (33.32 kWh/kg of H2) and a conversion factor (1000 kWh/MWh), the units become:
     [MW of H2] * [MMBtu / kg of H2] * [kg of H2 /33.32 kWh] * [1000 kWh / MWh] = MMBTU / h
 
@@ -216,7 +255,7 @@ def define_hydrogen_components(m):
     mod.TPS_FOR_PROD = Set(
         mod.PRODUCTION_PROJECTS,
         within=mod.TIMEPOINTS,
-        initialize=lambda m, p: (
+        initialize=lambda m, h: (
             tp for p in m.PERIODS_FOR_PROD[h] for tp in m.TPS_IN_PERIOD[p]
         )
     )
@@ -309,10 +348,28 @@ def define_hydrogen_components(m):
     mod.ZoneTotalCentralH2Dispatch = Expression(
         mod.LOAD_ZONES, mod.TIMEPOINTS,
         rule=lambda m, z, t: \
-        sum(m.DispatchProd[h, t]
+        sum(m.DispatchProd[h, t] * (1- m.prod_leakage_rate[h])
             for h in m.PROD_FOR_ZONE_TPS[z, t]),
         doc="Total H2 from H2 production projects per zone at each timepoint in MW of H2.")
     mod.Zone_H2_Injections.append('ZoneTotalCentralH2Dispatch')
+    
+    mod.H2_Production_Zonal_H2_Leakage = Expression(
+        mod.LOAD_ZONES, mod.TIMEPOINTS,
+        rule=lambda m, z, t: \
+        sum(m.DispatchProd[h, t] * m.prod_leakage_rate[h]
+            for h in m.PROD_FOR_ZONE_TPS[z, t]),
+        doc="Total H2 leakage from H2 production projects per zone at each timepoint in MW of H2.")
+    # Annual leakage of H2 (fugitive H2 emissions) in each period
+	# Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] * [1 metric ton/1000 kg] = [metric ton of H2]
+	# 1000/1000 cancels, hence (1/33.32)
+    mod.H2ProductionTotalLeakage = Expression(
+        mod.PERIODS, 
+        rule=lambda m,p: sum(
+			m.H2_Production_Zonal_H2_Leakage[z, t] * m.tp_weight_in_year[t] * (1/33.32)
+			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
+		)
+    )
+    mod.Zone_Fugitive_H2.append('H2ProductionTotalLeakage')
 
     def init_prod_availability(m, h):
         return (1 - m.prod_av_outage_rate[h])
@@ -331,7 +388,7 @@ def define_hydrogen_components(m):
         rule=lambda m, z, t: \
             sum(m.H2ProdGridCntdPowerUse[h, t] for h in m.GRID_CONNECTED_PROD_FOR_ZONE_TPS[z, t]),
         doc=("[MW] Average power used at each TP by grid-powered/grid-connected hydrogen production plants in each zone."))
-    mod.Zone_Power_Withdrawals.append("H2ProdGridCntdPowerZonalUse")
+    mod.Zone_H2_Withdrawals.append("H2ProdGridCntdPowerZonalUse")
 
     mod.ProdFuelUseRate = Var(
         mod.PROD_TP_FUELS,
@@ -340,65 +397,65 @@ def define_hydrogen_components(m):
 
     # -- LOAD EMISSIONS FACTORS --
     # GREENHOUSE GASES (LHV of H2 = 33.32 kWh/kg)
-	mod.kg_co2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
+    mod.kg_co2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
 		input_file="h2_emissions_factors.csv", input_column="kg_co2_per_kg_h2")
-	mod.kg_ch4_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=Reals,
+    mod.kg_ch4_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=Reals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_ch4_per_kg_h2")
-	mod.kg_n2o_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
+    mod.kg_n2o_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_n2o_per_kg_h2")
 	
 	# CRITERIA AIR POLLUTANTS (LHV of H2 = 33.32 kWh/kg)
-	mod.kg_so2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
+    mod.kg_so2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_so2_per_kg_h2")
-	mod.kg_nox_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
+    mod.kg_nox_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_nox_per_kg_h2")
-	mod.kg_pm10_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
+    mod.kg_pm10_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_pm10_per_kg_h2")
 	
 	# -- EMISSIONS EXPRESSIONS PER TP (metric tonnes = kg * 1e-3) [metric tonnes per hour] --
 	# GREENHOUSE GASES
-	def ProdDispatchEmissions_rule_co2(m, h, t, f):
-		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_co2_per_kg_h2[prod_tech[h]] * 1e-3)
-	mod.ProdDispatchEmissionsCO2 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_co2)
+    def ProdDispatchEmissions_rule_co2(m, h, t, f):
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_co2_per_kg_h2[m.prod_tech[h]] * 1e-3)
+    mod.ProdDispatchEmissionsCO2 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_co2)
 	
-	def ProdDispatchEmissions_rule_ch4(m, h, t, f):
-		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_ch4_per_kg_h2[prod_tech[h]] * 1e-3)
-	mod.ProdDispatchEmissionsCH4 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_ch4)
+    def ProdDispatchEmissions_rule_ch4(m, h, t, f):
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_ch4_per_kg_h2[m.prod_tech[h]] * 1e-3)
+    mod.ProdDispatchEmissionsCH4 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_ch4)
 	
-	def ProdDispatchEmissions_rule_n2o(m, h, t, f):
-		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_n2o_per_kg_h2[prod_tech[h]] * 1e-3)
-	mod.ProdDispatchEmissionsN2O = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_n2o)
+    def ProdDispatchEmissions_rule_n2o(m, h, t, f):
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_n2o_per_kg_h2[m.prod_tech[h]] * 1e-3)
+    mod.ProdDispatchEmissionsN2O = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_n2o)
 
 	# CRITERIA AIR POLLUTANTS
-	def ProdDispatchEmissions_rule_so2(m, h, t, f):
-		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_so2_per_kg_h2[prod_tech[h]] * 1e-3)
-	mod.ProdDispatchEmissionsSO2 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_so2)
+    def ProdDispatchEmissions_rule_so2(m, h, t, f):
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_so2_per_kg_h2[m.prod_tech[h]] * 1e-3)
+    mod.ProdDispatchEmissionsSO2 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_so2)
 	
-	def ProdDispatchEmissions_rule_nox(m, h, t, f):
-		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_nox_per_kg_h2[prod_tech[h]] * 1e-3)
-	mod.ProdDispatchEmissionsNOx = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_nox)
+    def ProdDispatchEmissions_rule_nox(m, h, t, f):
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_nox_per_kg_h2[m.prod_tech[h]] * 1e-3)
+    mod.ProdDispatchEmissionsNOx = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_nox)
 	
-	def ProdDispatchEmissions_rule_pm10(m, h, t, f):
-		return (m.ProdFuelUseRate[h, t, f] * (1 / mmbtu_fuel_per_kg_h2[h]) * m.kg_pm10_per_kg_h2[prod_tech[h]] * 1e-3)
-	mod.ProdDispatchEmissionsPM10 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_pm10)
+    def ProdDispatchEmissions_rule_pm10(m, h, t, f):
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_pm10_per_kg_h2[m.prod_tech[h]] * 1e-3)
+    mod.ProdDispatchEmissionsPM10 = Expression(mod.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_pm10)
 
 	# -- ANNUAL TOTALS[metric tonnes per year] --
 	# GREENHOUSE GASES
-	mod.ProdAnnualEmissionsCO2 = Expression(mod.PERIODS,
+    mod.ProdAnnualEmissionsCO2 = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsCO2[h, t, f] * m.tp_weight_in_year[t]
 			for (h, t, f) in m.PROD_TP_FUELS
 			if m.tp_period[t] == period),
 		doc="The system's annual CO2 emissions, in metric tonnes per year.")
 
-	mod.ProdAnnualEmissionsCH4 = Expression(mod.PERIODS,
+    mod.ProdAnnualEmissionsCH4 = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsCH4[h, t, f] * m.tp_weight_in_year[t]
 			for (h, t, f) in m.PROD_TP_FUELS
 			if m.tp_period[t] == period),
 		doc="The system's annual CH4 emissions, in metric tonnes per year.")
 
-	mod.ProdAnnualEmissionsN2O = Expression(mod.PERIODS,
+    mod.ProdAnnualEmissionsN2O = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsN2O[h, t, f] * m.tp_weight_in_year[t]
 			for (h, t, f) in m.PROD_TP_FUELS
@@ -406,21 +463,21 @@ def define_hydrogen_components(m):
 		doc="The system's annual N2O emissions, in metric tonnes per year.")
 
     # CRITERIA AIR POLLUTANTS
-	mod.ProdAnnualEmissionsSO2 = Expression(mod.PERIODS,
+    mod.ProdAnnualEmissionsSO2 = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsSO2[h, t, f] * m.tp_weight_in_year[t]
 			for (h, t, f) in m.PROD_TP_FUELS
 			if m.tp_period[t] == period),
 		doc="The system's annual SO2 emissions, in metric tonnes per year.")
 
-	mod.ProdAnnualEmissionsNOx = Expression(mod.PERIODS,
+    mod.ProdAnnualEmissionsNOx = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsNOx[h, t, f] * m.tp_weight_in_year[t]
 			for (h, t, f) in m.PROD_TP_FUELS
 			if m.tp_period[t] == period),
 		doc="The system's annual NOx emissions, in metric tonnes per year.")
 
-	mod.ProdAnnualEmissionsPM10 = Expression(mod.PERIODS,
+    mod.ProdAnnualEmissionsPM10 = Expression(mod.PERIODS,
 		rule=lambda m, period: sum(
 			m.ProdDispatchEmissionsPM10[h, t, f] * m.tp_weight_in_year[t]
 			for (h, t, f) in m.PROD_TP_FUELS
@@ -441,7 +498,7 @@ def define_hydrogen_components(m):
 		),
 		doc="Summarize variable OM costs per kg of H2 produced in each period for the objective function"
 	)
-	mod.Cost_Components_Per_Period.append('H2ProdVariableOMCostsInPeriod')
+    mod.Cost_Components_Per_Period.append('H2ProdVariableOMCostsInPeriod')
 
     mod.ProdDispatchUpperLimit = Expression(
         mod.PROD_TPS,
@@ -461,6 +518,14 @@ def define_hydrogen_components(m):
         mod.PROD_TP_FUELS,
         rule=lambda m, h, t, f: m.ProdFuelUseRate[h, t, f] == m.DispatchProdByFuel[h, t, f] * m.mmbtu_fuel_per_kg_h2[h] * (1000 / 33.32)
     )
+    
+    ### BALANCING ###
+    
+    mod.zone_demand_mw_h2 = Param(
+        mod.ZONE_TIMEPOINTS,
+        input_file="h2_demand.csv",
+        within=NonNegativeReals)
+    mod.Zone_H2_Withdrawals.append('zone_demand_mw_h2')
 
 def post_solve(instance, outdir):
     """
@@ -584,37 +649,37 @@ def post_solve(instance, outdir):
     terms are net injections (e.g. generation) while negative terms are net withdrawals
     (e.g. load).
 
-    load_balance.csv contains the energy balance terms for for every zone and timepoint.
-    We also include a column called normalized_energy_balance_duals_dollar_per_mwh
+    h2_balance.csv contains the energy balance terms for for every zone and timepoint.
+    We also include a column called normalized_h2_balance_duals_dollar_per_mwh
     that is a proxy for the locational marginal pricing (LMP). This value represents
-    the incremental cost per hour to increase the demand by 1 MW (or equivalently
-    the incremental cost of providing one more MWh of energy). This is not a perfect
+    the incremental cost per hour to increase the H2 demand by 1 MW of H2 (or equivalently
+    the incremental cost of providing one more MWh of H2). This is not a perfect
     proxy for LMP since it factors in build costs etc.
 
-    load_balance_annual_zonal.csv contains the energy injections and withdrawals
+    h2_balance_annual_zonal.csv contains the H2 injections and withdrawals
     throughout a year for a given load zone.
 
-    load_balance_annual.csv contains the energy injections and withdrawals
+    h2_balance_annual.csv contains the H2 injections and withdrawals
     throughout a year across all zones.
     """
     write_table(
         instance, instance.LOAD_ZONES, instance.TIMEPOINTS,
-        output_file=os.path.join(outdir, "load_balance.csv"),
-        headings=("load_zone", "timestamp", "normalized_energy_balance_duals_dollar_per_mwh",) + tuple(
-            instance.Zone_Power_Injections +
-            instance.Zone_Power_Withdrawals),
+        output_file=os.path.join(outdir, "h2_balance.csv"),
+        headings=("load_zone", "timestamp", "normalized_h2_balance_duals_dollar_per_mwh",) + tuple(
+            instance.Zone_H2_Injections +
+            instance.Zone_H2_Withdrawals),
         values=lambda m, z, t:
         (
             z,
             m.tp_timestamp[t],
             m.get_dual(
-                "Zone_Energy_Balance",
+                "Zone_H2_Balance",
                 z, t,
                 divider=m.bring_timepoint_costs_to_base_year[t]
             )
         )
-        + tuple(getattr(m, component)[z, t] for component in m.Zone_Power_Injections)
-        + tuple(-getattr(m, component)[z, t] for component in m.Zone_Power_Withdrawals)
+        + tuple(getattr(m, component)[z, t] for component in m.Zone_H2_Injections)
+        + tuple(-getattr(m, component)[z, t] for component in m.Zone_H2_Withdrawals)
     )
 
     def get_component_per_year(m, z, p, component):
@@ -626,22 +691,22 @@ def post_solve(instance, outdir):
 
     write_table(
         instance, instance.LOAD_ZONES, instance.PERIODS,
-        output_file=os.path.join(outdir, "load_balance_annual_zonal.csv"),
-        headings=("load_zone", "period",) + tuple(instance.Zone_Power_Injections + instance.Zone_Power_Withdrawals),
+        output_file=os.path.join(outdir, "h2_balance_annual_zonal.csv"),
+        headings=("load_zone", "period",) + tuple(instance.Zone_H2_Injections + instance.Zone_H2_Withdrawals),
         values=lambda m, z, p:
         (z, p)
-        + tuple(get_component_per_year(m, z, p, component) for component in m.Zone_Power_Injections)
-        + tuple(-get_component_per_year(m, z, p, component) for component in m.Zone_Power_Withdrawals)
+        + tuple(get_component_per_year(m, z, p, component) for component in m.Zone_H2_Injections)
+        + tuple(-get_component_per_year(m, z, p, component) for component in m.Zone_H2_Withdrawals)
     )
 
     write_table(
         instance, instance.PERIODS,
-        output_file=os.path.join(outdir, "load_balance_annual.csv"),
-        headings=("period",) + tuple(instance.Zone_Power_Injections + instance.Zone_Power_Withdrawals),
+        output_file=os.path.join(outdir, "h2_balance_annual.csv"),
+        headings=("period",) + tuple(instance.Zone_H2_Injections + instance.Zone_H2_Withdrawals),
         values=lambda m, p:
         (p,)
         + tuple(sum(get_component_per_year(m, z, p, component) for z in m.LOAD_ZONES)
-                for component in m.Zone_Power_Injections)
+                for component in m.Zone_H2_Injections)
         + tuple(-sum(get_component_per_year(m, z, p, component) for z in m.LOAD_ZONES)
-                for component in m.Zone_Power_Withdrawals)
+                for component in m.Zone_H2_Withdrawals)
     )

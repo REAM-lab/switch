@@ -34,11 +34,11 @@ from switch_model.utilities.scaling import get_assign_default_value_rule
 
 dependencies = (
     "switch_model.timescales",
-    "switch_model.hydrogen.h2_advanced.h2_timescales",
+    "switch_model.hydrogen.advanced.h2_timescales",
     "switch_model.balancing.load_zones",
     "switch_model.financials",
     "switch_model.energy_sources.properties",
-    "switch_model.hydrogen.h2_advanced.h2_production_build"
+    "switch_model.hydrogen.advanced.h2_production_build"
 )
 
 def define_hydrogen_components(mod):
@@ -196,7 +196,7 @@ def define_hydrogen_components(mod):
     mod.h2stor_load_zone = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
                               within=mod.LOAD_ZONES)
     mod.h2stor_type = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv")
-    m.H2_STORAGE_TECHNOLOGIES = Set(ordered=False, initialize=lambda m:
+    mod.H2_STORAGE_TECHNOLOGIES = Set(ordered=False, initialize=lambda m:
                                     {m.h2stor_type[s] for s in m.H2_STORAGE_PROJECTS})
     mod.h2stor_life_years = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
                             within=PositiveIntegers)
@@ -483,12 +483,13 @@ def define_hydrogen_components(mod):
 		# Fraction-of-storage-per-day limit for this storage's technology
 		# Units: [kg of H2] * [fraction of capacity/day] * [1 day/24 h]
 		#         * [33.32 kWh/kg] * [1 MWh/1000 kWh] = [MW of H2]
-		daily_limit = m.H2StorageCapacity[s, m.tp_period[t]] 
-		              * m.h2stor_cap_frac_withdraw_limit[m.h2stor_type[s]] 
-		              * 33.32 / (1000 * 24)
-		
+        daily_limit = (
+            m.H2StorageCapacity[s, m.tp_period[t]] 
+            * m.h2stor_cap_frac_withdraw_limit[m.h2stor_type[s]] 
+            * 33.32 / (1000 * 24)
+        )
 		# Constraint: withdraw ≤ min(compressor capacity, fraction-of-storage limit)
-		return m.WithdrawH2Storage[s, t] <= min(
+        return m.WithdrawH2Storage[s, t] <= min(
 			m.H2StorageCompressorCapacity[s, m.tp_period[t]],
 			daily_limit
 		)  
@@ -545,12 +546,12 @@ def define_hydrogen_components(mod):
     # Annual leakage of H2 (fugitive H2 emissions) in each period
 	# Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] * [1 metric ton/1000 kg] = [metric ton of H2]
 	# 1000/1000 cancels, hence (1/33.32)
-    def total_leakage_rule(m, p):
+    def total_stor_leakage_rule(m, p):
         return sum(
 			m.H2Storage_Zonal_H2_Leakage[z, t] * m.tp_weight_in_year[t] * (1/33.32)
 			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
 		)
-    mod.H2StorageTotalLeakage = Expression(mod.PERIODS, rule=total_leakage_rule)
+    mod.H2StorageTotalLeakage = Expression(mod.PERIODS, rule=total_stor_leakage_rule)
     # Keep track of fugitive H2 emissions in each part of the H2 system in metric tons of kg
     mod.Zone_Fugitive_H2.append("H2StorageTotalLeakage")
 
