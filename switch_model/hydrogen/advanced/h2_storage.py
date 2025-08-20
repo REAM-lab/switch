@@ -22,14 +22,10 @@ INPUT FILE FORMAT
         h2stor_cap_frac_withdraw_limit
 
 """
-import math
-import pandas as pd
-from scipy import fft
-
 from pyomo.environ import *
 import os, collections
 from switch_model.financials import capital_recovery_factor as crf
-from switch_model.tools.graph import graph
+from switch_model.reporting import write_table
 from switch_model.utilities.scaling import get_assign_default_value_rule
 
 dependencies = (
@@ -612,10 +608,9 @@ def post_solve(instance, outdir):
     H2 storage capacity to h2_storage_capacity.csv, and H2 storage
     dispatch info to h2_storage_dispatch.csv
     """
-    import switch_model.reporting as reporting
 
     # Write how much is built each build year for each project to h2_storage_builds.csv
-    reporting.write_table(
+    write_table(
         instance,
         instance.H2_STORAGE_BLD_YRS,
         output_file=os.path.join(outdir, "h2_storage_builds.csv"),
@@ -633,7 +628,7 @@ def post_solve(instance, outdir):
         ),
     )
     # Write the total capacity for each project at each period to h2_storage_capacity.csv
-    reporting.write_table(
+    write_table(
         instance,
         instance.H2_STORAGE_PERIODS,
         output_file=os.path.join(outdir, "h2_storage_capacity.csv"),
@@ -651,7 +646,7 @@ def post_solve(instance, outdir):
         ),
     )
     # Write how much is dispatched by each project at each time point to storage_dispatch.csv
-    reporting.write_table(
+    write_table(
         instance,
         instance.H2_STORAGE_TPS,
         output_file=os.path.join(outdir, "h2_storage_dispatch.csv"),

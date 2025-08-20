@@ -323,7 +323,6 @@ def define_components(mod):
 
     mod.gen_full_load_heat_rate = Param(
         mod.FUEL_BASED_GENS, input_file="generation_projects_info.csv",
-
         within=NonNegativeReals)
     mod.MULTIFUEL_GENS = Set(
         initialize=mod.GENERATION_PROJECTS,

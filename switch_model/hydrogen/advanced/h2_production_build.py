@@ -378,7 +378,7 @@ def define_hydrogen_components(m):
         # will be True even if the project is a 2020 predetermined build.
         # This will result in the "online" variable being the start of the period rather
         # than the prebuild year which can cause issues such as the project retiring too soon.
-        # To prevent this we've added the no_predetermined_bld_yr_vs_period_conflict BuildCheck below.
+        # To prevent this we've added the prod_no_predetermined_bld_yr_vs_period_conflict BuildCheck below.
         if build_year in m.PERIODS:
             online = m.period_start[build_year]
         else:

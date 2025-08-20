@@ -33,7 +33,6 @@ from pyomo.environ import *
 
 import os
 from switch_model.reporting import write_table
-from switch_model.tools.graph import graph
 from switch_model.financials import capital_recovery_factor as crf
 
 dependencies = 'switch_model.timescales', \
@@ -384,7 +383,7 @@ def define_components(mod):
         avg_flow = (m.DispatchH2Pip[z1, z2, t] + m.DispatchH2Pip[z2, z1, t]) / 2
         
         # Compressor load in MW of electricity = 
-        # flow (MW H2) × conversion factors (1 kg H2/33.32 MWh) and (1000 kWh/MWh) x compressor load factor (MWh/kg)
+        # flow (MW_H2) × conversion factors (1 kg H2/33.32 MWh) and (1000 kWh/MWh) x compressor load factor (MWh_e/kg)
         return avg_flow * (1000/33.32) * m.h2pip_comp_mwh_per_kg
     mod.H2PipelineCompressorLoad = Expression(
         mod.H2_PIP_TIMEPOINTS,
@@ -402,22 +401,25 @@ def define_components(mod):
 
 def post_solve(instance, outdir):
     mod = instance
-    pip_build_df = pd.DataFrame([
+    h2pip_build_df = pd.DataFrame([
         {
-            "PIPELINE": pip,
+            "H2_PIPELINE": pip,
             "PERIOD": p,
-            "pip_lz1": mod.h2pip_lz1[pip],
-            "pip_lz2": mod.h2pip_lz2[pip],
-            "pip_length_km": mod.h2pip_length_km[pip],
-            "pip_efficiency": mod.h2pip_efficiency[pip],
+            "h2pip_lz1": mod.h2pip_lz1[pip],
+            "h2pip_lz2": mod.h2pip_lz2[pip],
+            "h2pip_length_km": mod.h2pip_length_km[pip],
+            "h2pip_leakage_rate": mod.h2pip_leakage_rate,
             "existing_h2pip_cap_mw": mod.existing_h2pip_cap_mw[pip],
-            "BuildH2Pip": value(mod.BuildH2Pip[pip, p]) if  (pip, p) in mod.BuildH2Pip else ".",
+            "BuildH2Pip": value(mod.BuildH2Pip[pip, p]) if (pip, p) in mod.BuildH2Pip else 0,
             "H2PipCapacityNameplate": value(mod.H2PipCapacityNameplate[pip, p]),
-            "TotalAnnualCost": value(mod.PipelineCosts[pip, p])
+            "PipelineTotalAnnualCapitalCost": value(mod.PipelineCapitalCosts[pip, p]),
+            "PipelineTotalAnnualFixedOMCost": value(mod.PipelineFixedOMCosts[pip, p]),
+            "CompressorTotalAnnualCapitalCost": value(mod.H2PipelineCompAnnualInvCost[pip, p]),
+            "CompressorTotalAnnualFixedOMCost": value(mod.H2PipelineCompressorFixedCosts[pip, p])
         } for pip, p in mod.H2_PIPELINES * mod.PERIODS
     ])
-    pip_build_df.set_index(["PIPELINE", "PERIOD"], inplace=True)
-    write_table(instance, df=pip_build_df, output_file=os.path.join(outdir, "h2_pipelines.csv"))
+    h2pip_build_df.set_index(["PIPELINE", "PERIOD"], inplace=True)
+    write_table(instance, df=h2pip_build_df, output_file=os.path.join(outdir, "h2_pipelines.csv"))
     
     write_table(
         instance,
@@ -436,5 +438,5 @@ def post_solve(instance, outdir):
                 divider=m.bring_timepoint_costs_to_base_year[t]
             )
         ),
-        output_file=os.path.join(outdir, "pipeline_dispatch.csv")
+        output_file=os.path.join(outdir, "h2_pipeline_dispatch.csv")
     )

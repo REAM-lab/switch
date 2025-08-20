@@ -39,15 +39,12 @@ INPUT FILE FORMAT
 from __future__ import division
 
 import os, collections
-
-# from pyomo.core.base.misc import sorted_robust
-from pyomo.common.sorting import sorted_robust
-
-from pyomo.environ import *
 import pandas as pd
 
+from pyomo.common.sorting import sorted_robust
+from pyomo.environ import *
+
 from switch_model.reporting import write_table
-from switch_model.tools.graph import graph
 
 dependencies = 'switch_model.timescales', 'switch_model.balancing.load_zones', \
                'switch_model.financials', 'switch_model.energy_sources.properties', \

@@ -257,8 +257,10 @@ def define_components(model):
             # If local_td is included with DER modeling, avoid allocating
             # distributed generation to central grid capacity because it will
             # be credited with adjusting load at the distribution node.
-            elif hasattr(m, 'Distributed_Power_Injections') and m.gen_is_distributed[g]:
+            elif hasattr(m, 'Distributed_Power_Injections') and m.h2gen_is_distributed[g]:
                 pass
+            elif hasattr(m, 'h2gen_can_provide_cap_reserves'):
+                reserve_cap += m.H2GenCapacityInTP[g, t] if m.gen_can_provide_cap_reserves[g]
             else:
                 reserve_cap += m.gen_capacity_value[g, t] * m.GenCapacityInTP[g, t]
         return reserve_cap
