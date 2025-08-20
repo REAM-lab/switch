@@ -10,10 +10,10 @@ INPUT FILE FORMAT
     expected in the input directory:
 
     h2_pipelines.csv
-        PIPELINE, pip_lz1, pip_lz2, pip_length_km, pip_efficiency,
-        existing_pip_cap_mw, pip_terrain_multiplier
+        H2_PIPELINE, h2pip_lz1, h2pip_lz2, h2pip_length_km, 
+        existing_h2pip_cap_mw, h2pip_terrain_multiplier
     The last column of h2_pipelines.csv is optional. If the
-    column is missing or if cells contain a dot (.), pip_terrain_multiplier
+    column is missing or if cells contain a dot (.), h2pip_terrain_multiplier
     will be set to default value as described in documentation.
 
     Note that in the next file, parameter names are written on the first
@@ -21,8 +21,11 @@ INPUT FILE FORMAT
     the second row.
 
     h2_pipeline_params.csv
-        pip_capital_cost_per_mw_km, pip_capital_cost_y_int_per_km, 
-        pip_lifetime_yrs, pip_fixed_om_pc
+        h2pip_capital_cost_per_mw_km, h2pip_capital_cost_y_int_per_km, 
+        h2pip_fixed_om_pc, h2pip_lifetime_yrs, 
+    Optional columns:
+        h2pip_leakage_rate, h2pip_comp_overnight_cost_per_mw, 
+        h2pip_comp_fixed_om_cost_per_mw_yr, h2pip_comp_mwh_per_kg, h2pip_comp_life_years
         
 """
 import pandas as pd
@@ -38,7 +41,7 @@ dependencies = 'switch_model.timescales', \
 
 def define_components(mod):
     """
-    Adds components to a Pyomo abstract model object to describe bulk
+    First adds components to a Pyomo abstract model object to describe bulk
     H2 pipelines of an H2 system. This includes parameters, build
     decisions and constraints. Unless otherwise stated, all pipeline
     capacity is specified in units of MW of hydrogen and all sets and parameters 
@@ -58,58 +61,50 @@ def define_components(mod):
     directional information. Pipelines may be abbreviated as trans or
     pip in parameter names or indexes.
 
-    pip_lz1[pip] and pip_lz2[pip] specify the load zones at either end
+    h2pip_lz1[pip] and h2pip_lz2[pip] specify the load zones at either end
     of a pipeline. The order of 1 and 2 is unimportant, but you
     are encouraged to be consistent to simplify merging information back
     into external databases.
 
-    pip_length_km[pip in H2_PIPELINES] is the length of each
+    h2pip_length_km[pip in H2_PIPELINES] is the length of each
     pipeline in kilometers.
 
-    pip_efficiency[pip in H2_PIPELINES] is the proportion of
-    energy sent down a line that is delivered. If 2 percent of energy
-    sent down a line is lost, this value would be set to 0.98. We 
-    assume 0.5% H2 losses per 1000 km for dedicated hydrogen pipelines, 
-    as in https://pubs.rsc.org/en/content/articlehtml/2023/se/d3se00281k.
-    These H2 losses are quantified and considered fugitive H2 emissions,
-    which contribute to the carbon constraint, as H2 is an indirect GHG.
-
-    BLD_YRS_FOR_PIP is the set of pipelines and years in
+    BLD_YRS_FOR_H2_PIP is the set of pipelines and years in
     which they have been or could be built. This set includes past and
     potential future builds. All future builds must come online in the
     first year of an investment period. This set is composed of two
     elements with members:  (pip, build_year). For existing pipelines
     where the build years are not known, build_year is set to 'Legacy'.
 
-    BLD_YRS_FOR_EXISTING _PIP is a subset of BLD_YRS_FOR_PIP that lists
+    BLD_YRS_FOR_EXISTING _PIP is a subset of BLD_YRS_FOR_H2_PIP that lists
     builds that happened before the first investment period. For most
     datasets the build year is unknown, so is it always set to 'Legacy'.
 
-    existing_pip_cap_mw[pip in H2_PIPELINES] is a parameter that
+    existing_h2pip_cap_mw[pip in H2_PIPELINES] is a parameter that
     describes how many MW_H2 of capacity has been installed before the
     start of the study. See the 1st paragraph above for details on MW_H2.
 
-    NEW_H2_PIP_BLD_YRS is a subset of BLD_YRS_FOR_PIP that describes
+    NEW_H2_PIP_BLD_YRS is a subset of BLD_YRS_FOR_H2_PIP that describes
     potential builds.
 
-    BuildH2Pip[(pip, bld_yr) in BLD_YRS_FOR_PIP] is a decision variable
-    that describes the transfer capacity in MW_H2 installed on a corridor
+    BuildH2Pip[(pip, bld_yr) in BLD_YRS_FOR_H2_PIP] is a decision variable
+    that describes the transfer capacity in MW of H2 installed on a corridor
     in a given build year. For existing builds, this variable is locked
     to the existing capacity.
 
-    H2PipCapacityNameplate[(pip, bld_yr) in BLD_YRS_FOR_PIP] is an expression
+    H2PipCapacityNameplate[(pip, bld_yr) in BLD_YRS_FOR_H2_PIP] is an expression
     that returns the total nameplate transfer capacity of a pipeline
     in a given period in MW_H2. This is the sum of existing and newly-build
     capacity.
 
-    pip_terrain_multiplier[pip in H2_PIPELINES] is
+    h2pip_terrain_multiplier[pip in H2_PIPELINES] is
     a cost adjuster applied to each pipeline that reflects the
     additional costs that may be incurred for traversing that specific
     terrain. Crossing mountains or cities will be more expensive than
     crossing plains. This parameter is optional and defaults to 1. This
     parameter should be in the range of 0.5 to 3.
 
-    pip_capital_cost_per_mw_km describes the investment costs of building a
+    h2pip_capital_cost_per_mw_km describes the investment costs of building a
     new pipeline in units of $BASE_YEAR per MW of H2 transfer capacity per
     km. This is optional and defaults to $180/(km * MW_H2). 
     pip_capital_cost_y_int_per_km describes the y-intercept of the investment 
@@ -120,10 +115,10 @@ def define_components(mod):
     in https://www.sciencedirect.com/science/article/pii/S0360319919338625. We 
     adapt the units to be per km rather than m and per MW_H2 rather than GW_H2.
     The full equation for investment cost of pipelines is 
-    (pip_capital_cost_per_mw_km * BuildH2Pip + pip_capital_cost_y_int_per_km) * pip_length_km,
+    (h2pip_capital_cost_per_mw_km * BuildH2Pip + h2pip_capital_cost_y_int_per_km) * h2pip_length_km,
     where BuildH2Pip is in MW of H2. See the 1st paragraph above for details on MW_H2.
     
-    pip_fixed_om_pc describes the fixed Operations and
+    h2pip_fixed_om_pc describes the fixed Operations and
     Maintenance costs of pipelines as a percent of capital costs. This is optional 
     and defaults to 5%, which comes from the ReEDS model and
     https://iopscience.iop.org/article/10.1088/1748-9326/acacb5.
@@ -134,13 +129,16 @@ def define_components(mod):
     https://www.sciencedirect.com/science/article/pii/S0360319919338625.  
     At the end of this time, we assume pipelines will be rebuilt at the same cost.
 
-    pip_cost_hourly[H2_PIPELINES] is the cost of building
-    pipelines in units of $BASE_YEAR / MW- transfer-capacity /
-    hour. This derived parameter is based on the total annualized
-    capital and fixed O&M costs, then divides that by hours per year to
-    determine the portion of costs incurred hourly.
+    h2pip_leakage_rate is an optional parameter that defines the proportion of hydrogen 
+    sent down a line that is leaked. For example, if 0.1% percent of H2 sent down 
+    a line is leaked, the amount delivered (in kg) would be 0.999 times the amount 
+    sent. We assume a default of 0.1% H2 losses per kg of hydrogen sent in 
+    long-distance pipelines, as stated in Table 2 of 
+    https://www.oxfordenergy.org/wpcms/wp-content/uploads/2024/11/ET41-Review-of-Hydrogen-Leakage-along-the-Supply-Chain.pdf.
+    These H2 losses are quantified and considered fugitive H2 emissions,
+    which contribute to the carbon constraint, as H2 is an indirect GHG.
 
-    DIRECTIONAL_PIP is a derived set of directional paths that
+    DIRECTIONAL_H2_PIP is a derived set of directional paths that
     hydrogen can flow along pipelines. Each element of this
     set is a two-dimensional entry that describes the origin and
     destination of the flow: (load_zone_from, load_zone_to). Every
@@ -158,10 +156,10 @@ def define_components(mod):
     with parts being replaced as they wear out.
 
     PIP_BUILDS_IN_PERIOD[p] will return a subset of (pip, bld_yr)
-    in BLD_YRS_FOR_PIP.
+    in BLD_YRS_FOR_H2_PIP.
     
     ------------------------------------------
-    Also adds components to a Pyomo abstract model object to describe the
+    Then adds components to a Pyomo abstract model object to describe the
     dispatch of H2 pipelines in an H2 transport system. This
     includes parameters, dispatch decisions and constraints. Unless
     otherwise stated, allH2 pipelinecapacity is specified in units of MW
@@ -215,7 +213,7 @@ def define_components(mod):
     mod.h2pip_efficiency = Param(
         mod.H2_PIPELINES,
         within=PercentFraction, input_file="h2_pipelines.csv")
-    mod.existing_pip_cap_mw = Param(
+    mod.existing_h2pip_cap_mw = Param(
         mod.H2_PIPELINES,
         within=NonNegativeReals, input_file="h2_pipelines.csv")
     mod.h2pip_terrain_multiplier = Param(
@@ -223,23 +221,37 @@ def define_components(mod):
         within=NonNegativeReals,
         default=1, input_file="h2_pipelines.csv")
     mod.min_data_check(
-        'pip_length_km', 'pip_efficiency', 'existing_pip_cap_mw')
+        'pip_length_km', 'pip_efficiency', 'existing_h2pip_cap_mw')
     mod.h2pip_capital_cost_per_mw_km = Param(
         within=NonNegativeReals,
         default=180, input_file="h2_pipeline_params.csv")
     mod.h2pip_capital_cost_y_int_per_km = Param(
         within=NonNegativeReals,
         default=408000, input_file="h2_pipeline_params.csv")
-    mod.h2pip_lifetime_yrs = Param(
-        within=NonNegativeReals,
-        default=40, input_file="h2_pipeline_params.csv")
     mod.h2pip_fixed_om_pc = Param(
         within=PercentFraction,
         default=0.05, input_file="h2_pipeline_params.csv")
+    mod.h2pip_lifetime_yrs = Param(
+        within=NonNegativeReals,
+        default=40, input_file="h2_pipeline_params.csv")
+    mod.h2pip_leakage_rate = Param(
+        within=NonNegativeReals,
+        default=0.001, input_file="h2_pipeline_params.csv")
+    mod.h2pip_comp_overnight_cost_per_mw = Param(
+        within=NonNegativeReals,
+        default=0, input_file="h2_pipeline_params.csv")
+    mod.h2pip_comp_fixed_om_cost_per_mw_yr = Param(
+        within=NonNegativeReals,
+        default=0, input_file="h2_pipeline_params.csv")
+    mod.h2pip_comp_mwh_per_kg = Param(
+        within=NonNegativeReals,
+        default=0, input_file="h2_pipeline_params.csv")
+    mod.h2pip_comp_life_years = Param(
+        within=NonNegativeReals,
+        default=25, input_file="h2_pipeline_params.csv")
     mod.H2_PIP_BLD_YRS = Set(
         dimen=2,
-        initialize=mod.H2_PIPELINES * mod.PERIODS,
-        filter=lambda m, pip, p: m.h2pip_capital_cost_per_mw_km != float("inf"))
+        initialize=mod.H2_PIPELINES * mod.PERIODS)
     mod.BuildH2Pip = Var(mod.H2_PIP_BLD_YRS, within=NonNegativeReals)
     mod.NewPipCapacity = Expression(
         mod.H2_PIPELINES, mod.PERIODS,
@@ -251,7 +263,7 @@ def define_components(mod):
     )
     mod.H2PipCapacityNameplate = Expression(
         mod.H2_PIPELINES, mod.PERIODS,
-        rule=lambda m, pip, p: m.NewPipCapacity[pip, p] + m.existing_pip_cap_mw[pip])
+        rule=lambda m, pip, p: m.NewPipCapacity[pip, p] + m.existing_h2pip_cap_mw[pip])
     
     # An expression to summarize annual costs for the objective
     # function. Units should be total annual future costs in $base_year
@@ -280,20 +292,20 @@ def define_components(mod):
     )
     mod.Cost_Components_Per_Period.append('PipFixedCosts')
 
-    def init_DIRECTIONAL_PIP(model):
+    def init_DIRECTIONAL_H2_PIP(model):
         pip_dir = set()
         for pip in model.H2_PIPELINES:
             pip_dir.add((model.h2pip_lz1[pip], model.h2pip_lz2[pip]))
             pip_dir.add((model.h2pip_lz2[pip], model.h2pip_lz1[pip]))
         return pip_dir
-    mod.DIRECTIONAL_PIP = Set(
+    mod.DIRECTIONAL_H2_PIP = Set(
         dimen=2,
-        initialize=init_DIRECTIONAL_PIP)
+        initialize=init_DIRECTIONAL_H2_PIP)
     mod.H2_PIP_CONNECTIONS_TO_ZONE = Set(
         mod.LOAD_ZONES,
         ordered=False,
         initialize=lambda m, lz: set(
-            z for z in m.LOAD_ZONES if (z,lz) in m.DIRECTIONAL_PIP))
+            z for z in m.LOAD_ZONES if (z,lz) in m.DIRECTIONAL_H2_PIP))
 
     def init_h2_pip_d_line(m, zone_from, zone_to):
         for pip in m.H2_PIPELINES:
@@ -301,7 +313,7 @@ def define_components(mod):
                (m.h2pip_lz2[pip] == zone_from and m.h2pip_lz1[pip] == zone_to)):
                 return pip
     mod.h2_pip_d_line = Param(
-        mod.DIRECTIONAL_PIP,
+        mod.DIRECTIONAL_H2_PIP,
         within=mod.H2_PIPELINES,
         initialize=init_h2_pip_d_line)
 
@@ -315,7 +327,7 @@ def define_components(mod):
         mod.H2_PIP_TIMEPOINTS,
         rule=lambda m, zone_from, zone_to, tp: (
             m.DispatchH2Pip[zone_from, zone_to, tp] <=
-            m.H2H2PipCapacityNameplateAvailable[m.h2_pip_d_line[zone_from, zone_to],
+            m.H2PipCapacityNameplate[m.h2_pip_d_line[zone_from, zone_to],
                                      m.tp_period[tp]]))
 
     mod.H2PipH2Sent = Expression(
@@ -326,7 +338,9 @@ def define_components(mod):
         mod.H2_PIP_TIMEPOINTS,
         rule=lambda m, zone_from, zone_to, tp: (
             m.DispatchH2Pip[zone_from, zone_to, tp] *
-            m.trans_efficiency[m.h2_pip_d_line[zone_from, zone_to]]))
+            (1- m.h2pip_leakage_rate)
+            )
+    )
 
     def PIP_H2_Net_calculation(m, z, tp):
         return (
@@ -340,6 +354,52 @@ def define_components(mod):
     # Register netH2 pipelineas contributing to zonal energy balance
     mod.Zone_H2_Injections.append('PIP_H2_Net')
 
+    ### Pipeline Compressors ###
+    # Compressor costs
+    mod.H2PipelineCompAnnualInvCost = Expression(
+        mod.H2_PIP_BLD_YRS, 
+        rule=lambda m, pip, period: (
+            m.BuildH2Pip[pip, period] * m.h2pip_comp_overnight_cost_per_mw 
+            * crf(m.interest_rate, m.h2pip_comp_lifetime_yrs)
+            )
+    )
+    mod.H2PipelineCompressorFixedOM = Expression(
+        mod.H2_PIP_BLD_YRS, 
+        rule=lambda m, pip, period: (
+            m.BuildH2Pip[pip, period] * m.h2pip_comp_fixed_om_cost_per_mw_yr
+            )
+    )
+    mod.H2PipelineCompressorFixedCosts = Expression(
+        mod.PERIODS, 
+        rule=lambda m, p: sum(
+            m.H2PipelineCompAnnualInvCost[pip, period] + m.H2PipelineCompressorFixedOM[pip, period]
+            for (pip, period) in m.H2_PIP_BLD_YRS if period == p
+            )
+    )
+    mod.Cost_Components_Per_Period.append('H2PipelineCompressorFixedCosts')
+
+    # Compressor load
+    def H2_Pipeline_Compressor_Load_rule(m, z1, z2, t):
+        # Average flow between z1 <-> z2 in MW of H2 (same method as NREL's ReEDS model as of Aug. 2025)
+        avg_flow = (m.DispatchH2Pip[z1, z2, t] + m.DispatchH2Pip[z2, z1, t]) / 2
+        
+        # Compressor load in MW of electricity = 
+        # flow (MW H2) × conversion factors (1 kg H2/33.32 MWh) and (1000 kWh/MWh) x compressor load factor (MWh/kg)
+        return avg_flow * (1000/33.32) * m.h2pip_comp_mwh_per_kg
+    mod.H2PipelineCompressorLoad = Expression(
+        mod.H2_PIP_TIMEPOINTS,
+        rule=H2_Pipeline_Compressor_Load_rule
+    )
+    mod.Zonal_H2PipelineCompressorLoad = Expression(
+    mod.LOAD_ZONES, mod.TIMEPOINTS,
+        rule=lambda m, z, t: sum(
+            m.H2PipelineCompressorLoad[z1, z2, t]
+            for (z1, z2, tp) in m.H2_PIP_TIMEPOINTS
+            if tp == t and z1 == z
+        )
+    )
+    mod.Zone_Power_Withdrawals.append('Zonal_H2PipelineCompressorLoad')
+
 def post_solve(instance, outdir):
     mod = instance
     pip_build_df = pd.DataFrame([
@@ -350,7 +410,7 @@ def post_solve(instance, outdir):
             "pip_lz2": mod.h2pip_lz2[pip],
             "pip_length_km": mod.h2pip_length_km[pip],
             "pip_efficiency": mod.h2pip_efficiency[pip],
-            "existing_pip_cap_mw": mod.existing_pip_cap_mw[pip],
+            "existing_h2pip_cap_mw": mod.existing_h2pip_cap_mw[pip],
             "BuildH2Pip": value(mod.BuildH2Pip[pip, p]) if  (pip, p) in mod.BuildH2Pip else ".",
             "H2PipCapacityNameplate": value(mod.H2PipCapacityNameplate[pip, p]),
             "TotalAnnualCost": value(mod.PipelineCosts[pip, p])
@@ -369,7 +429,7 @@ def post_solve(instance, outdir):
             zone_to,
             m.tp_timestamp[t],
             m.DispatchH2Pip[zone_from, zone_to, t],
-            m.H2H2PipCapacityNameplateAvailable[m.h2_pip_d_line[zone_from, zone_to], m.tp_period[t]],
+            m.H2PipCapacityNameplate[m.h2_pip_d_line[zone_from, zone_to], m.tp_period[t]],
             m.get_dual(
                 "Maximum_DispatchH2Pip",
                 zone_from, zone_to, t,

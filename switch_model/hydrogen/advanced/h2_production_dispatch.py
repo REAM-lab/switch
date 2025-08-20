@@ -388,7 +388,7 @@ def define_hydrogen_components(mod):
         rule=lambda m, z, t: \
             sum(m.H2ProdGridCntdPowerUse[h, t] for h in m.GRID_CONNECTED_PROD_FOR_ZONE_TPS[z, t]),
         doc=("[MW] Average power used at each TP by grid-powered/grid-connected hydrogen production plants in each zone."))
-    mod.Zone_H2_Withdrawals.append("H2ProdGridCntdPowerZonalUse")
+    mod.Zone_Power_Withdrawals.append("H2ProdGridCntdPowerZonalUse")
 
     mod.ProdFuelUseRate = Var(
         mod.PROD_TP_FUELS,

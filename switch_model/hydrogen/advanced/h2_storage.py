@@ -413,6 +413,8 @@ def define_hydrogen_components(mod):
 	# the resulting MW of H2 would be an upper limit on the withdrawal rate of the H2 storage technology
     mod.h2stor_cap_frac_withdraw_limit = Param(mod.H2_STORAGE_TECHNOLOGIES, within=NonNegativeReals,
 		default=1, input_file="h2_storage_compressors.csv", input_column="h2stor_cap_frac_withdraw_limit")
+    mod.h2stor_comp_life_years = Param(mod.H2_STORAGE_TECHNOLOGIES, within=NonNegativeReals,
+		default=25, input_file="h2_storage_compressors.csv", input_column="h2stor_comp_life_years")
     mod.min_data_check("h2stor_comp_overnight_cost_per_mw","h2stor_comp_fixed_om_cost_per_mw_yr","h2stor_comp_mwh_per_kg")
 
     # Units for BuildH2StorageCompressors are MW of H2
@@ -438,7 +440,7 @@ def define_hydrogen_components(mod):
             sum(
                 m.BuildH2StorageCompressors[s, bld_yr]
                 * m.h2stor_comp_overnight_cost_per_mw[m.h2stor_type[s]]
-                * crf(m.interest_rate, m.h2stor_life_years[s])
+                * crf(m.interest_rate, m.h2stor_comp_life_years[m.h2stor_type[s]])
                 + m.BuildH2StorageCompressors[s, bld_yr] * m.h2stor_comp_fixed_om_cost_per_mw_yr[m.h2stor_type[s]]
                 for bld_yr in m.BLD_YRS_FOR_H2_STORAGE_PERIOD[s, p]
             )
