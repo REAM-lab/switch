@@ -101,7 +101,7 @@ def define_hydrogen_components(mod):
     h2stor_leakage_rate[s] is the rate (as a percent fraction) in which H2 leaks out
     of storage as a percentage. This is tracked in the H2Storage_Zonal_H2_Leakage expression,
     which calculates total H2 leakage in metric tons of H2 per zone at each tp, which is summed
-    and addeed to the Zone_Fugitive_H2 dynamic list, which tracks H2 leakage across all H2 system 
+    and addeed to the Period_Fugitive_H2 dynamic list, which tracks H2 leakage across all H2 system 
     components.
     
     h2stor_overnight_cost_per_kg[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the overnight 
@@ -165,7 +165,7 @@ def define_hydrogen_components(mod):
     H2Storage_Zonal_H2_Leakage[LOAD_ZONES, TIMEPOINTS] is an expression that calculates the total
     H2 leakage (fugitive H2) in metric ton of H2, which we assume is proportional to the amount
     of H2 withdrawn from each storage project at each timepoint by a factor of 
-    h2stor_leakage_rate[s]. This is appended to the Zone_Fugitive_H2 dynamic list to keep track of 
+    h2stor_leakage_rate[s]. This is appended to the Period_Fugitive_H2 dynamic list to keep track of 
     fugitive H2 emissions, which have a high global warming potential (GWP).
 
     H2StateOfFill[(s, t) in H2_STORAGE_TPS] is a decision variable for controlling the state of 
@@ -551,7 +551,7 @@ def define_hydrogen_components(mod):
 		)
     mod.H2StorageTotalLeakage = Expression(mod.PERIODS, rule=total_stor_leakage_rule)
     # Keep track of fugitive H2 emissions in each part of the H2 system in metric tons of kg
-    mod.Zone_Fugitive_H2.append("H2StorageTotalLeakage")
+    mod.Period_Fugitive_H2.append("H2StorageTotalLeakage")
 
     mod.H2StateOfFill = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
 

@@ -34,6 +34,20 @@ INPUT FILE FORMAT
         prod_tech, kg_co2_per_kg_h2, 
     Optional columns are:
         kg_ch4_per_kg_h2, kg_n2o_per_kg_h2, kg_so2_per_kg_h2, kg_nox_per_kg_h2, kg_pm10_per_kg_h2
+        
+    h2_carbpn_policies.csv:
+    This input file imports carbon limits by period, including Global Warming Potential (GWP) 
+    values for CH4, N2O, and H2. GWP describes the coefficient for Greenhouse Gas (GHG) emissions
+    such that the multiplication of the coefficients and the GHG totals equals the CO2 equivalent 
+    emissions in terms of potential to contribute to global warming. The standard is to reference
+    GWP values from the latest IPCC report. GWPs of 0 or emissions factors of 0 for GHGs other than 
+    CO2 would "tell" the model not to consider those GHGs. Note that the CO2 limit listed in this 
+    file applies to the hydrogen sector only (not electricity). Fo the purpose of consolidating 
+    input files, all parameters listed in this file are indexed by period, although only the 
+    h2_carbon_cap_tco2_per_yr actually depends on the period. This input file is optional.
+    
+    h2_carbpn_policies.csv:
+    PERIOD, h2_carbon_cap_tco2_per_yr, ch4_gwp, n2o_gwp, h2_gwp
 
 """
 from __future__ import division
@@ -68,12 +82,12 @@ def define_hydrogen_dynamic_lists(mod):
     (Example: Say a H2 production project dispatches 30,012 kg of H2 per hour at a particular tp. Then we have:
     30,012 kg_H2/h * 33.32 kWh/kg * 1 MW/1,000 kW =~ 1,000 MW of H2 or 1 GW of H2)
     
-    Zone_Fugitive_H2 tracks total fugitive H2 emissions (leaked H2) in metric tonnes per period.
+    Period_Fugitive_H2 tracks total fugitive H2 emissions (leaked H2) in metric tonnes per period.
     
     """
     mod.Zone_H2_Injections = []
     mod.Zone_H2_Withdrawals = []
-    mod.Zone_Fugitive_H2 = []
+    mod.Period_Fugitive_H2 = []
 
 def define_dynamic_hydrogen_components(mod):
     """
@@ -98,7 +112,16 @@ def define_dynamic_hydrogen_components(mod):
                 for component in m.Zone_H2_Injections
             ) == sum(
                 getattr(m, component)[z, t]
-                for component in m.Zone_H2_Withdrawals)))
+                for component in m.Zone_H2_Withdrawals))
+    )
+    
+    mod.System_Fugitive_H2 = Expression(
+        mod.PERIODS,
+        rule=lambda m, p: sum(
+            getattr(m, component)[p]
+                for component in m.Period_Fugitive_H2
+        )
+    )
 
 def define_hydrogen_components(mod):
     """
@@ -366,7 +389,7 @@ def define_hydrogen_components(mod):
 			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
 		)
     )
-    mod.Zone_Fugitive_H2.append('H2ProductionTotalLeakage')
+    mod.Period_Fugitive_H2.append('H2ProductionTotalLeakage')
 
     def init_prod_availability(m, h):
         return (1 - m.prod_av_outage_rate[h])
@@ -392,7 +415,7 @@ def define_hydrogen_components(mod):
         within=NonNegativeReals,
         doc=("[MMBTU/h] Other modules constrain this variable based on DispatchProdByFuel."))
 
-    # -- LOAD EMISSIONS FACTORS --
+    # -- LOAD EMISSIONS PARAMETERS AND CO2 POLICY --
     # GREENHOUSE GASES (LHV of H2 = 33.32 kWh/kg)
     mod.kg_co2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
 		input_file="h2_emissions_factors.csv", input_column="kg_co2_per_kg_h2")
@@ -400,7 +423,16 @@ def define_hydrogen_components(mod):
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_ch4_per_kg_h2")
     mod.kg_n2o_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_n2o_per_kg_h2")
-	
+    
+    mod.h2_carbon_cap_tco2_per_yr = Param(mod.PERIODS, within=NonNegativeReals,
+		input_file="h2_carbon_policies.csv", input_column="h2_carbon_cap_tco2_per_yr")
+    mod.ch4_gwp = Param(mod.PERIODS, within=NonNegativeReals,
+		input_file="h2_carbon_policies.csv", input_column="ch4_gwp")
+    mod.n2o_gwp = Param(mod.PERIODS, within=NonNegativeReals,
+		input_file="h2_carbon_policies.csv", input_column="n2o_gwp")
+    mod.h2_gwp = Param(mod.PERIODS, within=NonNegativeReals,
+		input_file="h2_carbon_policies.csv", input_column="h2_gwp")
+	 
 	# CRITERIA AIR POLLUTANTS (LHV of H2 = 33.32 kWh/kg)
     mod.kg_so2_per_kg_h2 = Param(mod.PRODUCTION_TECHNOLOGIES, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_so2_per_kg_h2")
@@ -458,6 +490,28 @@ def define_hydrogen_components(mod):
 			for (h, t, f) in m.PROD_TP_FUELS
 			if m.tp_period[t] == period),
 		doc="The system's annual N2O emissions, in metric tonnes per year.")
+    
+    mod.ProdAnnualEmissionsCO2equivalent = Expression(mod.PERIODS,
+		rule=lambda m, p: sum(
+			m.ProdAnnualEmissionsCO2[p] + 
+			m.ch4_gwp[p] * m.ProdAnnualEmissionsCH4[p] + 
+			m.n2o_gwp[p] * m.ProdAnnualEmissionsN2O[p] + 
+			m.h2_gwp[p] * m.System_Fugitive_H2[p]),
+		doc="The system's annual CO2 equivalent (sum of GHGs with GWP coefficients) emissions, in metric tonnes per year.")
+    
+    ## Carbon constraint ##
+    # We use a scaling factor to improve the numerical properties
+    # of the model. The scaling factor was determined using trial
+    # and error and this tool https://github.com/staadecker/lp-analyzer.
+    # Learn more by reading the documentation on Numerical Issues.
+    enforce_h2carbon_cap_scaling_factor = 1e-1
+    mod.Enforce_H2_Carbon_Cap = Constraint(mod.PERIODS,
+                                           rule=lambda m, p:
+                                           Constraint.Skip if m.h2_carbon_cap_tco2_per_yr[p] == float('inf')
+                                           else m.ProdAnnualEmissionsCO2equivalent[p] * enforce_h2carbon_cap_scaling_factor <=
+                                                m.h2_carbon_cap_tco2_per_yr[p]
+                                                * enforce_h2carbon_cap_scaling_factor,
+                                           doc=("Enforces the carbon cap for hydrogen-related CO2 direct + equivalent emissions)."))
 
     # CRITERIA AIR POLLUTANTS
     mod.ProdAnnualEmissionsSO2 = Expression(mod.PERIODS,

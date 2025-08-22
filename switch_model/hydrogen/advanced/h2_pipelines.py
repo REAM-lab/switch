@@ -340,6 +340,26 @@ def define_components(mod):
             (1- m.h2pip_leakage_rate)
             )
     )
+    # Keep track of fugitive H2 emissions in each part of the H2 system in metric tons of kg
+    # Per zone at each timepoint
+    mod.H2PipTotalLeakage_ZoneTP = Expression(
+        mod.LOAD_ZONES, mod.TIMEPOINTS,
+        rule=lambda m, z, t: sum(
+            m.DispatchH2Pip[z1, z2, tp] *
+            m.h2pip_leakage_rate * m.tp_weight_in_year[tp] * (1/33.32)
+			for (z1, z2, tp) in m.H2_PIP_TIMEPOINTS
+            if tp == t and z1 == z
+            )
+    )
+    # Annual per period
+    mod.H2PipTotalAnnualLeakage = Expression(
+        mod.PERIODS,
+        rule=lambda m, p: sum(
+            m.H2PipTotalLeakage_ZoneTP[z, t]
+			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
+            )
+    )
+    mod.Period_Fugitive_H2.append("H2PipTotalAnnualLeakage")
 
     def PIP_H2_Net_calculation(m, z, tp):
         return (
@@ -392,7 +412,7 @@ def define_components(mod):
     mod.Zonal_H2PipelineCompressorLoad = Expression(
     mod.LOAD_ZONES, mod.TIMEPOINTS,
         rule=lambda m, z, t: sum(
-            m.H2PipelineCompressorLoad[z1, z2, t]
+            m.H2PipelineCompressorLoad[z1, z2, tp]
             for (z1, z2, tp) in m.H2_PIP_TIMEPOINTS
             if tp == t and z1 == z
         )

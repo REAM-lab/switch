@@ -15,11 +15,11 @@ INPUT FILE FORMAT
     investigating long-duration energy storage from hydrogen in your research.
     
     h2_to_power_projects_info.csv.csv
-        H2_GENERATION_PROJECT, h2gen_build_yr, h2h2gen_tech, h2h2gen_load_zone, h2h2gen_max_age, 
-        h2h2gen_full_load_heat_rate, h2gen_is_predetermined, h2h2gen_predetermined_cap_mw,
-        h2gen_variable_om_per_mwh, h2h2gen_connect_cost_per_mw, h2h2gen_overnight_cost_per_mw_per_mw, 
-        h2h2gen_fixed_om_cost_per_mw_yr_cost_per_mw_yr, h2h2gen_capacity_limit_mw, h2h2gen_scheduled_outage_rate, 
-        h2h2gen_forced_outage_rate, h2gen_can_provide_cap_reserves
+        H2_GENERATION_PROJECT, h2gen_build_yr, h2gen_tech, h2gen_load_zone, h2gen_max_age, 
+        h2gen_full_load_heat_rate, h2gen_is_predetermined, h2gen_predetermined_cap_mw,
+        h2gen_variable_om_per_mwh, h2gen_connect_cost_per_mw, h2gen_overnight_cost_per_mw_per_mw, 
+        h2gen_fixed_om_cost_per_mw_yr_cost_per_mw_yr, h2gen_capacity_limit_mw, h2gen_scheduled_outage_rate, 
+        h2gen_forced_outage_rate, h2gen_can_provide_cap_reserves, mt_nox_per_mmbtu_h2
 
 """
 from __future__ import division
@@ -198,6 +198,8 @@ def define_hydrogen_components(mod):
     mod.h2gen_can_provide_cap_reserves = Param(mod.GENERATION_PROJECTS, input_file='generation_projects_info.csv',
                                              within=Boolean, default=True, 
                                              doc="Indicates whether an H2-fueled generator can provide capacity reserves.")
+    mod.mt_nox_per_mmbtu_h2 = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
+                                         within=NonNegativeReals, default=0)
     mod.min_data_check('H2_GENERATION_PROJECTS', 'h2gen_tech', 'h2gen_overnight_cost_per_mw', 'h2gen_fixed_om_cost_per_mw_yr', 
                        'h2gen_variable_om_per_mwh', 'h2gen_load_zone', 'h2gen_max_age')
 
@@ -411,7 +413,8 @@ def define_hydrogen_components(mod):
             m.H2GenCapitalCosts[g, p] + m.H2GenFixedOMCosts[g, p]
             for g in m.H2_GENERATION_PROJECTS))
     mod.Cost_Components_Per_Period.append('TotalH2GenFixedCosts')
-
+    
+    ### DISPATCH ###
     def period_active_h2gen_rule(m, period):
         if not hasattr(m, 'period_active_h2gen_dict'):
             m.period_active_h2gen_dict = collections.defaultdict(set)
@@ -456,265 +459,70 @@ def define_hydrogen_components(mod):
                 for g in m.H2_GENERATION_PROJECTS
                     for tp in m.TPS_FOR_H2_GEN[g]))
 
+    mod.h2gen_availability = Param(
+        mod.H2_GENERATION_PROJECTS,
+        within=NonNegativeReals,
+        rule=lambda m, g: (1 - m.h2gen_forced_outage_rate[g])
+    )
     mod.H2GenCapacityInTP = Expression(
         mod.H2_GEN_TPS,
-        rule=lambda m, g, t: m.GenCapacity[g, m.tp_period[t]])
+        rule=lambda m, g, t: m.H2GenCapacity[g, m.tp_period[t]]
+    )
     mod.DispatchH2Gen = Var(
         mod.H2_GEN_TPS,
         within=NonNegativeReals)
-
-    ##########################################
-    # Define DispatchH2GenByFuel
-    #
-    # Previously DispatchH2GenByFuel was simply a Variable for all the projects and a constraint ensured
-    # that the sum of DispatchH2GenByFuel across all fuels was equal the total dispatch for that project.
-    # However this approach creates extra variables in our model for projects that have only one fuel.
-    # Although these extra variables likely get removed during Gurobi pre-solve, we've nonetheless
-    # simplified the model here to reduce time in presolve and ensure the model is always
-    # simplified regardless of the solving method.
-    #
-    # To do this we redefine DispatchH2GenByFuel to be an
-    # expression that is equal to DispatchH2GenByFuelVar when we have multiple fuels but
-    # equal to DispatchH2Gen when we have only one fuel.
-
-    # Define a set that is used to define DispatchH2GenByFuelVar
-    mod.GEN_TP_FUELS_FOR_MULTIFUELS = Set(
-        dimen=3,
-        initialize=mod.GEN_TP_FUELS,
-        filter=lambda m, g, t, f: g in m.MULTIFUEL_GENS,
-        doc="Same as GEN_TP_FUELS but only includes multi-fuel projects"
+    mod.H2GenDispatchUpperLimit = Expression(
+        mod.H2_GEN_TPS,
+        rule=lambda m, g, t: m.H2GenCapacityInTP[g, t] * m.h2gen_availability[g]
     )
-    # DispatchH2GenByFuelVar is a variable that exists only for multi-fuel projects.
-    mod.DispatchH2GenByFuelVar = Var(mod.GEN_TP_FUELS_FOR_MULTIFUELS, within=NonNegativeReals)
-    # DispatchH2GenByFuel_Constraint ensures that the sum of all the fuels is DispatchH2Gen
-    mod.DispatchH2GenByFuel_Constraint = Constraint(
-        mod.FUEL_BASED_H2_GEN_TPS,
+    # We use a scaling factor to improve the numerical properties
+    # of the model. The scaling factor was determined using trial
+    # and error and this tool https://github.com/staadecker/lp-analyzer.
+    # Learn more by reading the documentation on Numerical Issues.
+    mod.Enforce_H2Gen_Dispatch_Upper_Limit = Constraint(
+        mod.H2_GEN_TPS,
         rule=lambda m, g, t:
-        (Constraint.Skip if g not in m.MULTIFUEL_GENS
-         else sum(m.DispatchH2GenByFuelVar[g, t, f] for f in m.FUELS_FOR_MULTIFUEL_GEN[g]) == m.DispatchH2Gen[g, t])
+        m.DispatchH2Gen[g, t] * 1e4 <= 1e4 * m.H2GenDispatchUpperLimit[g, t]
     )
-
-    # Define DispatchH2GenByFuel to equal the matching variable if we have many fuels but to equal
-    # the total dispatch if we have only one fuel.
-    mod.DispatchH2GenByFuel = Expression(
-        mod.GEN_TP_FUELS,
-        rule=lambda m, g, t, f: m.DispatchH2GenByFuelVar[g, t, f] if g in m.MULTIFUEL_GENS else m.DispatchH2Gen[g, t]
-    )
-
-    # End Defining DispatchH2GenByFuel
-    ##########################################
-
-    # Only used to improve the performance of calculating ZoneTotalCentralDispatch and ZoneTotalDistributedDispatch
-    mod.GENS_FOR_ZONE_TPS = Set(
+    # Only used to improve the performance of calculating ZoneTotalH2GenDispatch
+    mod.H2_GENS_FOR_ZONE_TPS = Set(
         mod.LOAD_ZONES, mod.TIMEPOINTS,
         ordered=False,
-        initialize=lambda m, z, t: set(g for g in m.GENS_IN_ZONE[z] if (g, t) in m.H2_GEN_TPS)
+        initialize=lambda m, z, t: set(g for g in m.H2_GENS_IN_ZONE[z] if (g, t) in m.H2_GEN_TPS)
     )
-
-    # If we use the local_td module, divide distributed generation into a separate expression so that we can
-    # put it in the distributed node's power balance equations
-    using_local_td = hasattr(mod, "Distributed_Power_Injections")
-
-    mod.ZoneTotalCentralDispatch = Expression(
+    mod.ZoneTotalH2GenDispatch = Expression(
         mod.LOAD_ZONES, mod.TIMEPOINTS,
         rule=lambda m, z, t: \
-        sum(m.DispatchH2Gen[g, t]
-            for g in m.GENS_FOR_ZONE_TPS[z, t] if not using_local_td or not m.gen_is_distributed[g]) -
-        sum(m.DispatchH2Gen[g, t] * m.gen_ccs_energy_load[g]
-            for g in m.CCS_EQUIPPED_GENS if g in m.GENS_FOR_ZONE_TPS[z, t]) -
-        (sum(m.DispatchProd[h, t] * m.mwh_per_kg_h2[h] * (1000/33.32)
-            for (h, g2, tp) in m.ONSITE_PROD_H2_GEN_TPS
-            if tp == t and g2 in m.GENS_FOR_ZONE_TPS[z, t]) if hasattr(m, "ONSITE_PROD_H2_GEN_TPS") else 0)),
-        doc="Net power from grid-tied generation projects.")
-    mod.Zone_Power_Injections.append('ZoneTotalCentralDispatch')
+        sum(m.DispatchH2Gen[g, t] for g in m.H2_GENS_FOR_ZONE_TPS[z, t]),
+    doc="Total power from hydrogen-fueled electricity generation projects.")
+    mod.Zone_Power_Injections.append('ZoneTotalH2GenDispatch')
 
-    if using_local_td:
-        mod.ZoneTotalDistributedDispatch = Expression(
-            mod.LOAD_ZONES, mod.TIMEPOINTS,
-            rule=lambda m, z, t: \
-                sum(m.DispatchH2Gen[g, t]
-                    for g in m.GENS_FOR_ZONE_TPS[z, t] if m.gen_is_distributed[g]),
-            doc="Total power from distributed generation projects."
-        )
-        mod.Distributed_Power_Injections.append('ZoneTotalDistributedDispatch')
-
-    def init_gen_availability(m, g):
-        if m.gen_is_baseload[g]:
-            return (
-                (1 - m.gen_forced_outage_rate[g]) *
-                (1 - m.gen_scheduled_outage_rate[g]))
-        else:
-            return (1 - m.gen_forced_outage_rate[g])
-    mod.gen_availability = Param(
-        mod.H2_GENERATION_PROJECTS,
+    # Units: [MW of power generated] * [MMBtu of H2 consumed/MWh of electricity generated] * [0.293071 MWh/MMBtu] = [MW of H2 consumed]
+    # [MMBtu/MWh is the full load heat rate of the generator]
+    # [0.293071 MWh/MMBtu] is simply a conversion factor
+    mod.ZoneTotalH2GeneratorH2Use = Expression(
+        mod.LOAD_ZONES, mod.TIMEPOINTS,
         within=NonNegativeReals,
-        initialize=init_gen_availability)
+        rule=lambda m, z, t: sum(m.DispatchH2Gen[g, t] * m.h2gen_full_load_heat_rate[g] * 0.293071 for g in m.H2_GENS_FOR_ZONE_TPS[z, t]),
+        doc="Total H2 consumed from H2-fueled electricity generators per zone at each timepoint in MW of H2.")
+    mod.Zone_H2_Withdrawals.append('ZoneTotalH2GeneratorH2Use')
 
-    mod.VARIABLE_H2_GEN_TPS_RAW = Set(
-        dimen=2,
-        within=mod.VARIABLE_GENS * mod.TIMEPOINTS,
-        input_file='variable_capacity_factors.csv',
-        input_optional=True
-    )
-    mod.gen_max_capacity_factor = Param(
-        mod.VARIABLE_H2_GEN_TPS_RAW,
-        within=Reals,
-        input_file='variable_capacity_factors.csv',
-        validate=lambda m, val, g, t: -1 < val < 2)
-    # Validate that a gen_max_capacity_factor has been defined for every
-    # variable gen / timepoint that we need. Extra cap factors (like beyond an
-    # existing plant's lifetime) shouldn't cause any problems.
-    # This replaces: mod.min_data_check('gen_max_capacity_factor') from when
-    # gen_max_capacity_factor was indexed by VARIABLE_H2_GEN_TPS.
-    mod.have_minimal_gen_max_capacity_factors = BuildCheck(
-        mod.VARIABLE_H2_GEN_TPS,
-        rule=lambda m, g, t: (g,t) in m.VARIABLE_H2_GEN_TPS_RAW)
-
-    mod.GenFuelUseRate = Var(
-        mod.GEN_TP_FUELS,
-        within=NonNegativeReals,
-        doc=("Other modules constraint this variable based on DispatchH2GenByFuel and "
-             "module-specific formulations of unit commitment and heat rates."))
-
-    def DispatchEmissions_rule(m, g, t, f):
-        if g not in m.CCS_EQUIPPED_GENS:
-            return (
-                m.GenFuelUseRate[g, t, f] *
-                (m.f_co2_intensity[f] + m.f_upstream_co2_intensity[f]))
-        else:
-            ccs_emission_frac = 1 - m.gen_ccs_capture_efficiency[g]
-            return (
-                m.GenFuelUseRate[g, t, f] *
-                (m.f_co2_intensity[f] * ccs_emission_frac +
-                 m.f_upstream_co2_intensity[f]))
-                 
-    def CapturedEmissions_rule(m, g, t, f):
-        if g in m.CCS_EQUIPPED_GENS:
-            return (
-                m.GenFuelUseRate[g, t, f] *
-                (m.f_co2_intensity[f] * m.gen_ccs_capture_efficiency[g]))
-        else:
-            return (0)
-                 
-    mod.DispatchEmissions = Expression(
-        mod.GEN_TP_FUELS,
-        rule=DispatchEmissions_rule)
-        
-    mod.CapturedEmissions = Expression(
-        mod.GEN_TP_FUELS,
-        rule=CapturedEmissions_rule)
-
-    mod.DispatchEmissionsNOx = Expression(
-        mod.GEN_TP_FUELS,
-        rule=(lambda m, g, t, f: m.DispatchH2GenByFuel[g, t, f] * m.f_nox_intensity[f]))
-
-    mod.DispatchEmissionsSO2 = Expression(
-        mod.GEN_TP_FUELS,
-        rule=(lambda m, g, t, f: m.DispatchH2GenByFuel[g, t, f] * m.f_so2_intensity[f]))
-
-    mod.DispatchEmissionsCH4 = Expression(
-        mod.GEN_TP_FUELS,
-        rule=(lambda m, g, t, f: m.DispatchH2GenByFuel[g, t, f] * m.f_ch4_intensity[f]))
-        
-    mod.DispatchEmissionsNH3 = Expression(
-        mod.GEN_TP_FUELS,
-        rule=(lambda m, g, t, f: m.DispatchH2GenByFuel[g, t, f] * m.f_nh3_intensity[f]))
-
-    mod.DispatchEmissionsPM25 = Expression(
-        mod.GEN_TP_FUELS,
-        rule=(lambda m, g, t, f: m.DispatchH2GenByFuel[g, t, f] * m.f_pm25_intensity[f]))
-
-    mod.AnnualEmissions = Expression(mod.PERIODS,
-        rule=lambda m, period: sum(
-            m.DispatchEmissions[g, t, f] * m.tp_weight_in_year[t]
-            for (g, t, f) in m.GEN_TP_FUELS
-            if m.tp_period[t] == period),
-        doc="The system's annual CO2 emissions, in metric tonnes of CO2 per year.")
-        
-    mod.AnnualCapturedEmissions = Expression(mod.PERIODS,
-        rule=lambda m, period: sum(
-            m.CapturedEmissions[g, t, f] * m.tp_weight_in_year[t]
-            for (g, t, f) in m.GEN_TP_FUELS
-            if m.tp_period[t] == period),
-        doc="The system's annual captured CO2 emissions, in metric tonnes of CO2 per year.")
-        
-    mod.AnnualCapturedEmissions_by_g = Expression(mod.FUEL_BASED_GENS, mod.PERIODS,
-    	rule=lambda m, g, period: sum(
-     	   m.CapturedEmissions[g, t, f] * m.tp_weight_in_year[t]
-     	   for (gg, t, f) in m.GEN_TP_FUELS
-     	   if m.tp_period[t] == period and gg == g),
-    	doc="The annual captured CO2 emissions for each CCS equipped generator, in metric tonnes of CO2 per year.")
-    	
-    mod.AnnualCapturedEmissions_by_z = Expression(mod.LOAD_ZONES, mod.PERIODS,
-    	rule=lambda m, z, period: sum(
-     	   m.CapturedEmissions[g, t, f] * m.tp_weight_in_year[t]
-     	   for (g, t, f) in m.GEN_TP_FUELS
-     	   if m.tp_period[t] == period and g in m.GENS_IN_ZONE[z]),
-    	doc="The annual captured CO2 emissions for each load zone, in metric tonnes of CO2 per year.")
-    	
-    mod.AnnualCCSPipelineCosts = Expression(
-    	mod.PERIODS,
-    	rule = lambda m, period: sum(
-    		90 * m.zone_ccs_distance_km[z] * m.AnnualCapturedEmissions_by_z[z, period] * 0.001
-    		for z in m.LOAD_ZONES),
-    	doc="The annual cost in dollars of CCS pipelines connecting each load zone to a carbon sink.")
-    mod.Cost_Components_Per_Period.append('AnnualCCSPipelineCosts')
-    	
-    mod.AnnualCCS45QTaxCredit = Expression(
-    	mod.PERIODS,
-    	rule = lambda m, period: sum(
-    		-70.05 * m.AnnualCapturedEmissions_by_z[z, period]
-    		for z in m.LOAD_ZONES),
-    	doc="The annual savings in dollars from 45Q tax credit, which grants $85/tonne ($2023) of CO2 captured.")
-    mod.Cost_Components_Per_Period.append('AnnualCCS45QTaxCredit')
-
-    mod.AnnualEmissionsNOx = Expression(
-        mod.PERIODS,
-        rule=lambda m, period: sum(
-            m.DispatchEmissionsNOx[g, t, f] * m.tp_weight_in_year[t]
-            for (g, t, f) in m.GEN_TP_FUELS
-            if m.tp_period[t] == period),
-        doc="The system's annual NOx emissions, in metric tonnes of NOx per year.")
-
-    mod.AnnualEmissionsSO2 = Expression(
-        mod.PERIODS,
-        rule=lambda m, period: sum(
-            m.DispatchEmissionsSO2[g, t, f] * m.tp_weight_in_year[t]
-            for (g, t, f) in m.GEN_TP_FUELS
-            if m.tp_period[t] == period),
-        doc="The system's annual SO2 emissions, in metric tonnes of SO2 per year.")
-
-    mod.AnnualEmissionsCH4 = Expression(
-        mod.PERIODS,
-        rule=lambda m, period: sum(
-            m.DispatchEmissionsCH4[g, t, f] * m.tp_weight_in_year[t]
-            for (g, t, f) in m.GEN_TP_FUELS
-            if m.tp_period[t] == period),
-        doc="The system's annual CH4 emissions, in metric tonnes of CH4 per year.")
-        
-    mod.AnnualEmissionsNH3 = Expression(
-        mod.PERIODS,
-        rule=lambda m, period: sum(
-            m.DispatchEmissionsNH3[g, t, f] * m.tp_weight_in_year[t]
-            for (g, t, f) in m.GEN_TP_FUELS
-            if m.tp_period[t] == period),
-        doc="The system's annual NH3 emissions, in metric tonnes of NH3 per year.")
-        
-    mod.AnnualEmissionsPM25 = Expression(
-        mod.PERIODS,
-        rule=lambda m, period: sum(
-            m.DispatchEmissionsPM25[g, t, f] * m.tp_weight_in_year[t]
-            for (g, t, f) in m.GEN_TP_FUELS
-            if m.tp_period[t] == period),
-        doc="The system's annual PM2.5 emissions, in metric tonnes of PM2.5 per year.")
-
-    mod.GenVariableOMCostsInTP = Expression(
+    mod.H2GenVariableOMCostsInTP = Expression(
         mod.TIMEPOINTS,
         rule=lambda m, t: sum(
-            m.DispatchH2Gen[g, t] * m.gen_variable_om[g]
+            m.DispatchH2Gen[g, t] * m.h2gen_variable_om_per_mwh[g]
             for g in m.H2_GENS_IN_PERIOD[m.tp_period[t]]),
-        doc="Summarize costs for the objective function")
-    mod.Cost_Components_Per_TP.append('GenVariableOMCostsInTP')
+        doc="Summarize H2-fueled generator variable O&M costs for the objective function")
+    mod.Cost_Components_Per_TP.append('H2GenVariableOMCostsInTP')
+                 
+    mod.H2GenAnnualNOxEmissions = Expression(
+        mod.PERIODS,
+        rule=lambda m, period: sum(
+            m.DispatchH2Gen[g, t] * m.mt_nox_per_mmbtu_h2[g] * m.tp_weight_in_year[t]
+            for (g, t) in m.H2_GEN_TPS
+            if m.tp_period[t] == period),
+        doc="The system's annual NOx emissions from H2-fueled electricity generators in metric tonnes of NOx per year.")
+
 
 def load_inputs(switch_data):
     # Construct set of capacity-limited projects. This set includes projects for which 
@@ -724,9 +532,24 @@ def load_inputs(switch_data):
             None: list(switch_data.data(name='h2gen_capacity_limit_mw').keys())}
 
 def post_solve(m, outdir):
+    """
+    Exported files: (all files are for H2-fueled generators only)
+    
+    h2gen_cap.csv - Installed capacity and fixed cost results by 
+    H2_GENERATION_PROJECT and PERIOD
+
+    h2gen-dispatch.csv - Dispatch results in normalized form where each row
+    describes the dispatch of a generation project in one timepoint.
+
+    h2gen-dispatch_annual_summary.csv - Similar to dispatch.csv, but summarized
+    by generation technology and period.
+
+    h2gen-dispatch_zonal_annual_summary.csv - Similar to dispatch_annual_summary.csv
+    but broken out by load zone.
+    
+    """
     write_table(
-        m,
-        m.H2_GEN_PERIODS,
+        m, m.H2_GEN_PERIODS,
         output_file=os.path.join(outdir, "h2gen_cap.csv"),
         headings=(
             "H2_GENERATION_PROJECT", "PERIOD",
@@ -738,3 +561,51 @@ def post_solve(m, outdir):
             g, p,
             m.h2gen_tech[g], m.h2gen_load_zone[g], m.H2GenCapacity[g, p], 
             m.H2GenCapitalCosts[g, p], m.H2GenFixedOMCosts[g, p]))
+
+    def c(func):
+        return (value(func(g, t)) for g, t in m.H2_GEN_TPS)
+
+    # Note we've refactored to create the Dataframe in one
+    # line to reduce the overall memory consumption during
+    # the most intensive part of post-solve (this function)
+    h2gen_dispatch_full_df = pd.DataFrame({
+        "generation_project": c(lambda g, t: g),
+        "gen_tech": c(lambda g, t: m.h2gen_tech[g]),
+        "gen_load_zone": c(lambda g, t: m.h2gen_load_zone[g]),
+        "gen_energy_source": "hydrogen",
+        "timestamp": c(lambda g, t: m.tp_timestamp[t]),
+        "tp_weight_in_year_hrs": c(lambda g, t: m.tp_weight_in_year[t]),
+        "period": c(lambda g, t: m.tp_period[t]),
+        "DispatchGen_MW": c(lambda g, t: m.DispatchH2Gen[g, t]),
+        "Curtailment_MW": c(lambda g, t:
+                            value(m.H2GenDispatchUpperLimit[g, t]) - value(m.DispatchH2Gen[g, t])),
+        "Energy_GWh_typical_yr": c(lambda g, t:
+                                   m.DispatchH2Gen[g, t] * m.tp_weight_in_year[t] / 1000),
+        "VariableOMCost_per_yr": c(lambda g, t:
+                                   m.DispatchH2Gen[g, t] * m.h2gen_variable_om_per_mwh[g] *
+                                   m.tp_weight_in_year[t]),
+        "DispatchEmissions_tNOx_per_typical_yr": c(lambda g, t:
+                                                   sum(
+                                                       m.DispatchH2Gen[g, t] 
+                                                       * m.mt_nox_per_mmbtu_h2[g] 
+                                                       * m.tp_weight_in_year[t]))
+    })
+    h2gen_dispatch_full_df.set_index(["generation_project", "timestamp"], inplace=True)
+    write_table(m, output_file=os.path.join(outdir, "h2gen_dispatch.csv"), df=h2gen_dispatch_full_df)
+
+    h2gen_annual_summary = h2gen_dispatch_full_df.groupby(['gen_tech', "gen_energy_source", "period"]).sum()
+    write_table(m, output_file=os.path.join(outdir, "h2gen_dispatch_annual_summary.csv"),
+                df=h2gen_annual_summary,
+                columns=["Energy_GWh_typical_yr", "VariableOMCost_per_yr",
+                         "DispatchEmissions_tNOx_per_typical_yr"])
+
+    h2gen_zonal_annual_summary = h2gen_dispatch_full_df.groupby(
+        ['gen_tech', "gen_load_zone", "gen_energy_source", "period"]
+    ).sum()
+    write_table(
+        m,
+        output_file=os.path.join(outdir, "dispatch_zonal_annual_summary.csv"),
+        df=h2gen_zonal_annual_summary,
+        columns=["Energy_GWh_typical_yr", "VariableOMCost_per_yr",
+                 "DispatchEmissions_tNOx_per_typical_yr"]
+    )
