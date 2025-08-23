@@ -27,16 +27,21 @@ def define_hydrogen_components(m):
     h2_timeseries.csv:
     The h2_timeseries.csv input file allows users to further describe the hydrogen timeseries
     defined in h2_timepoints.csv and specify the main model period that the hydrogen timeseries belongs to. 
-    For example, if hydrogen state of "charge", or state of fill, should be equal at the start and end of each month,
-    then the hydrogen timeseries should correspond to 1 month. 
+    For example, if hydrogen state of "charge", or state of fill, should be equal at the start and end of 
+    each month, then the hydrogen timeseries should correspond to 1 month. 
     The hydrogen_timseries.csv input file must include the following:
-        HYDROGEN_TIMESERIES: the exact same hydrogen timeseries names defined in h2_timepoints.csv
-        hgts_period: the PERIOD (from the switch timeseries.csv input file) containing the hydrogen timeseries in col 1
+    
+        HYDROGEN_TIMESERIES: the exact same hydrogen timeseries names defined in h2_timepoints.csv.
+        
+        hgts_period: the PERIOD (from the switch timeseries.csv input file) containing the hydrogen 
+        timeseries in col 1.
+        
         hgts_duration_of_tp: the duration in hours of the timepoints in the hgts in col 1. Must match the
-        hgts_scale_to_period: the number of times that the hgts in col 1 occurs in the period
+        ts_duration_of_tp for the corresponding timeseries in switch.
+        
     The file format is as follows. 
     h2_timeseries.csv
-        HYDROGEN_TIMESERIES, hgts_period, hgts_duration_of_tp, hgts_scale_to_period
+        HYDROGEN_TIMESERIES, hgts_period, hgts_duration_of_tp
 
     """
     
@@ -86,13 +91,6 @@ def define_hydrogen_components(m):
         input_file='h2_timeseries.csv',
         input_column='hgts_duration_of_tp',
         doc="Duration in hours of the timepoints in each hydrogen time series"
-    )
-    m.hgts_scale_to_period = Param(
-        m.HGTS,
-        within=PositiveReals,
-        input_file='h2_timeseries.csv',
-        input_column='hgts_scale_to_period',
-        doc="Number of times a hydrogen time series occurs in the main model period"
     )
     # Identify previous step for each timepoint, for use in tracking
     # H2 storage. We use circular indexing (.prevw() method) for the

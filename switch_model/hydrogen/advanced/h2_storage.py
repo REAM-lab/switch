@@ -367,6 +367,7 @@ def define_hydrogen_components(mod):
             (s, tp) for s in m.H2_STORAGE_PROJECTS for tp in m.TPS_FOR_H2_STORAGE[s]
         ),
     )
+    
     # -- H2torage costs --
     mod.h2stor_overnight_cost_per_kg = Param(
         mod.H2_STORAGE_BLD_YRS,
@@ -600,6 +601,17 @@ def define_hydrogen_components(mod):
             * m.H2StorageCapacity[s, p]
             * m.period_length_years[p]
         ),
+    )
+    
+    mod.H2_Storage_Conservation_of_Mass_Annual = Constraint(
+        mod.LOAD_ZONES, 
+        mod.PERIODS, 
+        rule=lambda m, z, p:
+        sum(
+            (m.FillH2Storage[z, tp] - m.WithdrawH2Storage[z, tp])
+            for hgts in m.HGTS_IN_PERIOD[p] 
+            for tp in m.TPS_IN_HGTS[hgts] 
+        ) == 0
     )
 
 def post_solve(instance, outdir):
