@@ -17,8 +17,8 @@ INPUT FILE FORMAT
     h2_to_power_projects_info.csv.csv
         H2_GENERATION_PROJECT, h2gen_build_yr, h2gen_tech, h2gen_load_zone, h2gen_max_age, 
         h2gen_full_load_heat_rate, h2gen_is_predetermined, h2gen_predetermined_cap_mw,
-        h2gen_variable_om_per_mwh, h2gen_connect_cost_per_mw, h2gen_overnight_cost_per_mw_per_mw, 
-        h2gen_fixed_om_cost_per_mw_yr_cost_per_mw_yr, h2gen_capacity_limit_mw, h2gen_scheduled_outage_rate, 
+        h2gen_connect_cost_per_mw, h2gen_overnight_cost_per_mw_per_mw, h2gen_fixed_om_cost_per_mw_yr,  
+        h2gen_variable_om_per_mwh, h2gen_capacity_limit_mw, h2gen_scheduled_outage_rate, 
         h2gen_forced_outage_rate, h2gen_can_provide_cap_reserves, mt_nox_per_mmbtu_h2
 
 """

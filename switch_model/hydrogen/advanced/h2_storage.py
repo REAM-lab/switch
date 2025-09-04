@@ -9,15 +9,17 @@ INPUT FILE FORMAT
     Import storage and storage compressor parameters.
 
     h2_storage.csv
-        H2_STORAGE_PROJECT, build_year, h2stor_is_predetermined, h2stor_predetermined_kg, 
-        h2stor_maximum_size_kg, h2stor_load_zone, h2stor_type, h2stor_life_years, h2stor_leakage_rate,
-        h2stor_overnight_cost_per_kg, h2stor_fixed_om_cost_per_kg, 
+        H2_STORAGE_PROJECT, build_year, h2stor_load_zone, h2stor_life_years, 
+        h2stor_maximum_size_kg, h2stor_is_predetermined, h2stor_predetermined_kg, 
+        h2stor_leakage_rate, h2stor_overnight_cost_per_kg, h2stor_fixed_om_cost_per_kg, 
+        h2stor_type
+        
     Optional columns are: 
         h2stor_max_cycles_per_year
         
     h2_storage_compressors.csv
         h2stor_type, comp_overnight_cost_per_mw, comp_fixed_om_cost_per_mw_yr, 
-        comp_mwh_per_kg,
+        comp_mwh_per_kg, h2stor_comp_life_years
     Optional columns are:
         h2stor_cap_frac_withdraw_limit
 

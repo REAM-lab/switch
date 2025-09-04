@@ -9,8 +9,8 @@ INPUT FILE FORMAT
     You may drop optional columns entirely or mark blank
     values with a dot '.' for select rows for which the column does not
     apply. Mandatory columns are:
-        PRODUCTION_PROJECT, prod_tech, prod_energy_source, prod_load_zone,
-        prod_max_age, prod_variable_om_per_kg
+        PRODUCTION_PROJECT, prod_tech, prod_load_zone, prod_energy_source,
+        prod_max_age, mmbtu_fuel_per_kg_h2, mwh_per_kg_h2, prod_variable_om_per_kg
     Optional columns are:
         prod_av_outage_rate, prod_capacity_limit_mw, prod_ccs_equipped, 
         prod_is_onsite, prod_onsite_GENERATION_PROJECT, prod_onsite_gen_tech
