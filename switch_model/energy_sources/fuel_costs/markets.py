@@ -345,23 +345,23 @@ def define_components(mod):
     )
     # If the model also has fuel use from hydrogen production (ProdFuelUseRate), then construct PRODS_FOR_RFM_PERIOD
     if hasattr(mod, "ProdFuelUseRate"):
-		def PRODS_FOR_RFM_PERIOD_rule(m, rfm, p):
-			try:
-				d = m.PRODS_FOR_RFM_PERIOD_dict
-			except AttributeError:
-				d = m.PRODS_FOR_RFM_PERIOD_dict = dict()
-				for h in m.FUEL_BASED_PROD:
-					for f in m.FUEL_FOR_PROD[h]:
-						for p_ in m.PERIODS_FOR_PROD[h]:
-							d.setdefault((m.prod_load_zone[h], f, p_), []).append(h)
-			relevant_prods = [
+        def PRODS_FOR_RFM_PERIOD_rule(m, rfm, p):
+            try:
+                d = m.PRODS_FOR_RFM_PERIOD_dict
+            except AttributeError:
+                d = m.PRODS_FOR_RFM_PERIOD_dict = dict()
+                for h in m.FUEL_BASED_PROD:
+                    for f in m.FUEL_FOR_PROD[h]:
+                        for p_ in m.PERIODS_FOR_PROD[h]:
+                            d.setdefault((m.prod_load_zone[h], f, p_), []).append(h)
+            relevant_prods = [
 				h
 				for z in m.ZONES_IN_RFM[rfm]
 				for h in d.pop((z, m.rfm_fuel[rfm], p), [])
 			]
-			return relevant_prods
+            return relevant_prods
 	
-		mod.PRODS_FOR_RFM_PERIOD = Set(
+        mod.PRODS_FOR_RFM_PERIOD = Set(
 			mod.REGIONAL_FUEL_MARKETS, mod.PERIODS,
 			initialize=PRODS_FOR_RFM_PERIOD_rule
 		)
@@ -379,11 +379,11 @@ def define_components(mod):
             t in m.TPS_IN_PERIOD[p])
         # If the model also has fuel use from hydrogen production (ProdFuelUseRate), then consider that in the fuel use constraint
         if hasattr(m, "ProdFuelUseRate"):
-        	rhs += enforce_fuel_consumption_scaling_factor * sum(
+            rhs += enforce_fuel_consumption_scaling_factor * sum(
             m.ProdFuelUseRate[h, t, m.rfm_fuel[rfm]] * m.tp_weight_in_year[t] for h in m.PRODS_FOR_RFM_PERIOD[rfm, p] for
             t in m.TPS_IN_PERIOD[p])
         # If we have only positive costs, FuelConsumptionInMarket will automatically
-        # try to be minimized in which case we can use a one-sided constraint
+        # # try to be minimized in which case we can use a one-sided constraint
         if ONLY_POSITIVE_RFM_COSTS:
             return lhs >= rhs
         else:
@@ -406,7 +406,7 @@ def define_components(mod):
 			initialize=mod.PROD_TP_FUELS,
 			filter=lambda m, h, t, f: \
 				(m.prod_load_zone[h], f) not in m.ZONE_FUELS)
-		mod.Enforce_Prod_Fuel_Unavailability = Constraint(
+        mod.Enforce_Prod_Fuel_Unavailability = Constraint(
 			mod.PROD_TP_FUELS_UNAVAILABLE,
 			rule=lambda m, h, t, f: m.ProdFuelUseRate[h, t, f] == 0)
 
