@@ -519,13 +519,14 @@ def define_components(m):
     m.prod_is_onsite = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
         input_optional=True, within=Boolean)
+    m.ONSITE_PRODUCTION_PROJECTS = Set(within=m.PRODUCTION_PROJECTS)
     m.prod_onsite_GENERATION_PROJECT = Param(
-        m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
+        m.ONSITE_PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
         within=m.GENERATION_PROJECTS, input_optional=True)
     m.prod_onsite_gen_tech = Param(
-        m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
+        m.ONSITE_PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
         within=m.gen_tech, input_optional=True)
-    m.ONSITE_PRODUCTION_PROJECTS = Set(within=m.PRODUCTION_PROJECTS)
+    
     m.GRID_CONNECTED_PRODUCTION_PROJECTS = Set(
 		within=m.PRODUCTION_PROJECTS,
 		initialize=lambda m: m.PRODUCTION_PROJECTS - m.ONSITE_PRODUCTION_PROJECTS
