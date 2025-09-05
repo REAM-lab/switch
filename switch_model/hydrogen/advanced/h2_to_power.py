@@ -502,7 +502,6 @@ def define_components(mod):
     # [0.293071 MWh/MMBtu] is simply a conversion factor
     mod.ZoneTotalH2GeneratorH2Use = Expression(
         mod.LOAD_ZONES, mod.TIMEPOINTS,
-        within=NonNegativeReals,
         rule=lambda m, z, t: sum(m.DispatchH2Gen[g, t] * m.h2gen_full_load_heat_rate[g] * 0.293071 for g in m.H2_GENS_FOR_ZONE_TPS[z, t]),
         doc="Total H2 consumed from H2-fueled electricity generators per zone at each timepoint in MW of H2.")
     mod.Zone_H2_Withdrawals.append('ZoneTotalH2GeneratorH2Use')
