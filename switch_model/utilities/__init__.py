@@ -135,6 +135,21 @@ def create_model(module_list=None, args=sys.argv[1:]):
     define_dynamic_components(model): Add dynamic components to the model that
     depend on the contents of dyanmics lists. Power balance constraints and
     the objective function are defined in this manner.
+    
+    define_hydrogen_dynamic_lists(model): Add lists to the model that other modules can
+    register with. Used for power balance equations, cost components of the
+    objective function, etc. This is for the optional hydrogen expansion portion 
+    of the model.
+
+    define_hydrogen_components(model): Add components to the model object (parameters,
+    sets, decisions variables, expressions, and/or constraints). Also register
+    with relevant hydrogen_dynamic_lists. This is for the optional hydrogen expansion  
+    portion of the model.
+
+    define_hydrogen_dynamic_components(model): Add dynamic components to the model that
+    depend on the contents of dyanmics lists. Hydrogen balance constraints and
+    the objective function are defined in this manner. This is for the optional hydrogen
+    expansion portion of the model.
 
     See financials and balancing.load_zones for examples of dynamic definitions.
 
@@ -182,6 +197,15 @@ def create_model(module_list=None, args=sys.argv[1:]):
     for module in model.get_modules():
         if hasattr(module, 'define_dynamic_components'):
             module.define_dynamic_components(model)
+    for module in model.get_modules():
+        if hasattr(module, 'define_hydrogen_dynamic_lists'):
+            module.define_hydrogen_dynamic_lists(model)
+    for module in model.get_modules():
+        if hasattr(module, 'define_hydrogen_components'):
+            module.define_hydrogen_components(model)
+    for module in model.get_modules():
+        if hasattr(module, 'define_hydrogen_dynamic_components'):
+            module.define_hydrogen_dynamic_components(model)
 
     return model
 

@@ -107,7 +107,7 @@ def define_hydrogen_dynamic_lists(m):
     m.Zone_H2_Withdrawals = []
     m.Period_Fugitive_H2 = []
 
-def define_dynamic_hydrogen_components(m):
+def define_hydrogen_dynamic_components(m):
     """
     Adds components to a Pyomo abstract model object to enforce hydrogen
     demand and production balance at the level of load zone buses. Unless
