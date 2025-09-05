@@ -193,8 +193,6 @@ def define_components(mod):
                                             within=PercentFraction, default=0)
     mod.h2gen_forced_outage_rate = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
                                          within=PercentFraction, default=0)
-    mod.h2gen_forced_outage_rate = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
-                                         within=PercentFraction, default=0)
     mod.h2gen_can_provide_cap_reserves = Param(mod.GENERATION_PROJECTS, input_file='generation_projects_info.csv',
                                              within=Boolean, default=True, 
                                              doc="Indicates whether an H2-fueled generator can provide capacity reserves.")
