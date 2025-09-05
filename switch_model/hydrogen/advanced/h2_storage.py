@@ -39,7 +39,7 @@ dependencies = (
     "switch_model.hydrogen.advanced.h2_production_build"
 )
 
-def define_hydrogen_components(mod):
+def define_components(mod):
     """
     
     -- SETS AND PARAMETERS --

@@ -38,7 +38,7 @@ from switch_model.utilities.scaling import get_assign_default_value_rule
 dependencies = 'switch_model.timescales', 'switch_model.balancing.load_zones', \
                'switch_model.financials', 'switch_model.hydrogen.advanced.h2_production_dispatch'
 
-def define_hydrogen_components(mod):
+def define_components(mod):
     """
     Adds components to a Pyomo abstract model object to describe
     hydrogen-fueled generation projects. Unless otherwise stated, all power

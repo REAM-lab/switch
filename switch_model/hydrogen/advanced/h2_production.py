@@ -83,7 +83,7 @@ dependencies = 'switch_model.timescales', 'switch_model.balancing.load_zones', \
                'switch_model.financials', 'switch_model.energy_sources.properties', \
                'switch_model.hydrogen.advanced.h2_timescales'
 
-def define_hydrogen_dynamic_lists(m):
+def define_dynamic_lists(m):
     """
     Zone_H2_Injections and Zone_H2_Withdrawals are lists of
     components that contribute to load-zone level H2 balance equations.
@@ -107,7 +107,7 @@ def define_hydrogen_dynamic_lists(m):
     m.Zone_H2_Withdrawals = []
     m.Period_Fugitive_H2 = []
 
-def define_hydrogen_dynamic_components(m):
+def define_dynamic_components(m):
     """
     Adds components to a Pyomo abstract model object to enforce hydrogen
     demand and production balance at the level of load zone buses. Unless
@@ -141,7 +141,7 @@ def define_hydrogen_dynamic_components(m):
         )
     )
 
-def define_hydrogen_components(m):
+def define_components(m):
     """
     Adds components to a Pyomo abstract model object to describe the building of hydrogen production
     capacity in each of the load zones. 

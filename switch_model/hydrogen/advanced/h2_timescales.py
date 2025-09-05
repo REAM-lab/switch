@@ -3,7 +3,7 @@ from pyomo.environ import *
 
 dependencies = ("switch_model.timescales")
 
-def define_hydrogen_components(m):
+def define_components(m):
     """
     Users can use the h2_timepoints.csv and h2_timeseries.csv files to customize the 
     hydrogen storage cycle.

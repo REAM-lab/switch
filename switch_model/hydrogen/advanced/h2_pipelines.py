@@ -38,7 +38,7 @@ from switch_model.financials import capital_recovery_factor as crf
 dependencies = 'switch_model.timescales', 'switch_model.hydrogen.advanced.h2_production', \
     'switch_model.financials','switch_model.balancing.load_zones'
 
-def define_hydrogen_components(mod):
+def define_components(mod):
     """
     First adds components to a Pyomo abstract model object to describe bulk
     H2 pipelines of an H2 system. This includes parameters, build

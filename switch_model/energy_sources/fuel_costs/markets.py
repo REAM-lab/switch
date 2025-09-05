@@ -400,7 +400,7 @@ def define_components(mod):
     mod.Enforce_Fuel_Unavailability = Constraint(
         mod.GEN_TP_FUELS_UNAVAILABLE,
         rule=lambda m, g, t, f: m.GenFuelUseRate[g, t, f] == 0)
-    if hasattr(m, "ProdFuelUseRate"):
+    if hasattr(mod, "ProdFuelUseRate"):
         mod.PROD_TP_FUELS_UNAVAILABLE = Set(
 			dimen=3,
 			initialize=mod.PROD_TP_FUELS,
