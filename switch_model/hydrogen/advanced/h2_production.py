@@ -465,8 +465,11 @@ def define_components(m):
                          input_file="h2_production_projects_info.csv",
                          within=Any)
 
-    m.PRODUCTION_TECHNOLOGIES = Set(ordered=False, initialize=lambda m:
-                                    {m.prod_tech[h] for h in m.PRODUCTION_PROJECTS})
+    m.PRODUCTION_TECHNOLOGIES = Set(
+        dimen=1,
+        ordered=False,
+        initialize=lambda m: {m.prod_tech[h] for h in m.PRODUCTION_PROJECTS}
+    )
 
     m.prod_load_zone = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
                               within=m.LOAD_ZONES)
