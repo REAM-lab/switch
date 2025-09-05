@@ -510,7 +510,7 @@ def define_components(m):
     
     m.prod_leakage_rate = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        default=0, within=NonNegativeReals)
+        default=0, within=PercentFraction)
 
     m.prod_ccs_equipped = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
@@ -521,10 +521,10 @@ def define_components(m):
         input_optional=True, within=Boolean)
     m.prod_onsite_GENERATION_PROJECT = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        input_optional=True, within=m.GENERATION_PROJECTS)
+        within=m.GENERATION_PROJECTS, input_optional=True)
     m.prod_onsite_gen_tech = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        input_optional=True, within=m.gen_tech)
+        within=m.gen_tech, input_optional=True)
     m.ONSITE_PRODUCTION_PROJECTS = Set(within=m.PRODUCTION_PROJECTS)
     m.GRID_CONNECTED_PRODUCTION_PROJECTS = Set(
 		within=m.PRODUCTION_PROJECTS,
