@@ -506,7 +506,7 @@ def define_components(m):
     m.CAPACITY_LIMITED_PROD = Set(within=m.PRODUCTION_PROJECTS)
     m.prod_capacity_limit_mw = Param(
         m.CAPACITY_LIMITED_PROD, input_file="h2_production_projects_info.csv",
-        input_optional=True, within=NonNegativeReals)
+        input_optional=True, default=None, within=NonNegativeReals)
     
     m.prod_leakage_rate = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
@@ -514,17 +514,17 @@ def define_components(m):
 
     m.prod_ccs_equipped = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        input_optional=True, within=Boolean)
+        input_optional=True, default=False, within=Boolean)
 
     m.prod_is_onsite = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        input_optional=True, within=Boolean)
+        input_optional=True, default=False, within=Boolean)
     m.prod_onsite_GENERATION_PROJECT = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        input_optional=True, within=m.GENERATION_PROJECTS)
+        input_optional=True, default=None, within=m.GENERATION_PROJECTS)
     m.prod_onsite_gen_tech = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        input_optional=True, within=m.gen_tech)
+        input_optional=True, default=None, within=m.gen_tech)
     m.ONSITE_PRODUCTION_PROJECTS = Set(within=m.PRODUCTION_PROJECTS)
     m.GRID_CONNECTED_PRODUCTION_PROJECTS = Set(
 		within=m.PRODUCTION_PROJECTS,
