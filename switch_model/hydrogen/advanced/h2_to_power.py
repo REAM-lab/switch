@@ -515,7 +515,7 @@ def define_components(mod):
         doc="The system's annual NOx emissions from H2-fueled electricity generators in metric tonnes of NOx per year.")
 
 
-def load_inputs(switch_data):
+def load_inputs(mod, switch_data, inputs_dir):
     # Construct set of capacity-limited projects. This set includes projects for which 
     # the parameter has a value
     if 'h2gen_capacity_limit_mw' in switch_data.data():
