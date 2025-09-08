@@ -62,14 +62,17 @@ def define_components(mod):
     H2_GENS_IN_ZONE[z in LOAD_ZONES] is an indexed set that lists all
     hydrogen-fueled generation projects within each load zone.
 
-    CAPACITY_LIMITED_H2_GENS is the subset of H2_GENERATION_PROJECTS that are
-    capacity limited. Some existing or proposed hydrogen-fueled generation 
-    projects may have upper bounds on increasing capacity or replacing capacity 
-    as it is retired based on permits or local air quality regulations.
+    CAPACITY_LIMITED_H2_GENS_BLD_YR is the subset of H2_GENERATION_PROJECTS and 
+    bld_yr that are capacity limited. Some existing or proposed hydrogen-fueled
+    generation projects may have upper bounds on increasing capacity or replacing 
+    capacity as it is retired based on permits or local air quality regulations.
 
-    h2gen_capacity_limit_mw[g] is defined for generation technologies that are
-    resource limited and do not compete for land area. This describes the
-    maximum possible capacity of a generation project in units of megawatts.
+    h2gen_capacity_limit_mw[g, bld_yr] is defined for generation technologies 
+    that are resource limited and do not compete for land area. This describes 
+    the maximum possible capacity of a generation project in units of megawatts.
+    Each limit only applies to each corresponding build year. The total limit for 
+    the project should equal the sum of all the capacity limits over all build 
+    years for each project.
 
     -- CONSTRUCTION --
 
@@ -112,11 +115,6 @@ def define_components(mod):
     H2GenCapacity[g, period] is an expression that returns the total
     capacity online in a given period. This is the sum of installed capacity
     minus all retirements.
-
-    Max_H2Gen_Build_Potential[g] is a constraint defined for each project
-    that enforces maximum capacity limits for resource-limited projects.
-
-        H2GenCapacity <= h2gen_capacity_limit_mw
 
     --- OPERATIONS ---
 
@@ -177,8 +175,12 @@ def define_components(mod):
     benefit of the objective function.
 
     """
-    # This set is defined by h2_to_power_projects_info.csv
-    mod.H2_GENERATION_PROJECTS = Set(dimen=1, input_file="h2_to_power_projects_info.csv")
+    # This set is defined by the first two columns of h2_to_power_projects_info.csv
+    mod.H2_GEN_BLD_YRS = Set(dimen=2, input_file="h2_to_power_projects_info.csv")
+    mod.H2_GENERATION_PROJECTS = Set(
+        dimen=1,
+        initialize=lambda m: {g for (g, bld_yr) in m.H2_GEN_BLD_YRS}
+    )
     mod.h2gen_tech = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
                            within=Any)
     mod.H2_GENERATION_TECHNOLOGIES = Set(ordered=False, initialize=lambda m:
@@ -220,13 +222,16 @@ def define_components(mod):
         initialize=H2_GENS_IN_ZONE_init
     )
 
-    mod.CAPACITY_LIMITED_H2_GENS = Set(within=mod.H2_GENERATION_PROJECTS)
     mod.h2gen_capacity_limit_mw = Param(
-        mod.CAPACITY_LIMITED_H2_GENS, input_file="h2_to_power_projects_info.csv",
+        mod.H2_GEN_BLD_YRS, input_file="h2_to_power_projects_info.csv",
         input_optional=True, within=NonNegativeReals)
-
-    # This set is defined by the first two columns of h2_to_power_projects_info.csv
-    mod.H2_GEN_BLD_YRS = Set(dimen=2, input_file="h2_to_power_projects_info.csv")
+    mod.CAPACITY_LIMITED_H2_GENS_BLD_YR = Set(
+        within=mod.H2_GEN_BLD_YRS,
+        initialize=lambda m: {
+            (g, bld_yr) for (g, bld_yr) in m.H2_GEN_BLD_YRS
+            if (g, bld_yr) in m.h2gen_capacity_limit_mw
+        }
+    )
     
     mod.h2gen_is_predetermined = Param(mod.H2_GEN_BLD_YRS,
                                     input_file="h2_to_power_projects_info.csv",
@@ -317,10 +322,10 @@ def define_components(mod):
         if((g, bld_yr) in model.PREDETERMINED_H2_GEN_BLD_YRS):
             return (model.h2gen_predetermined_cap[g, bld_yr],
                     model.h2gen_predetermined_cap[g, bld_yr])
-        elif(g in model.CAPACITY_LIMITED_H2_GENS):
+        elif((g, bld_yr) in model.CAPACITY_LIMITED_H2_GENS_BLD_YR):
             # This does not replace Max_H2Gen_Build_Potential because
             # Max_H2Gen_Build_Potential applies across all build years.
-            return (0, model.h2gen_capacity_limit_mw[g])
+            return (0, model.h2gen_capacity_limit_mw[g, bld_yr])
         else:
             return (0, None)
     mod.BuildH2Gen = Var(
@@ -358,17 +363,6 @@ def define_components(mod):
         rule=lambda m, g, period: sum(
             m.BuildH2Gen[g, bld_yr]
             for bld_yr in m.BLD_YRS_FOR_H2_GEN_PERIOD[g, period]))
-
-    # We use a scaling factor to improve the numerical properties
-    # of the model. The scaling factor was determined using trial
-    # and error and this tool https://github.com/staadecker/lp-analyzer.
-    # Learn more by reading the documentation on Numerical Issues.
-    max_H2Gen_build_potential_scaling_factor = 1e-1
-    mod.Max_H2Gen_Build_Potential = Constraint(
-        mod.CAPACITY_LIMITED_H2_GENS, mod.PERIODS,
-        rule=lambda m, g, p: (
-                m.h2gen_capacity_limit_mw[g] * max_H2Gen_build_potential_scaling_factor >= m.H2GenCapacity[
-            g, p] * max_H2Gen_build_potential_scaling_factor))
 
     ### Costs ###
     mod.h2gen_connect_cost_per_mw = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
@@ -525,7 +519,7 @@ def load_inputs(switch_data):
     # Construct set of capacity-limited projects. This set includes projects for which 
     # the parameter has a value
     if 'h2gen_capacity_limit_mw' in switch_data.data():
-        switch_data.data()['CAPACITY_LIMITED_H2_GENS'] = {
+        switch_data.data()['CAPACITY_LIMITED_H2_GENS_BLD_YR'] = {
             None: list(switch_data.data(name='h2gen_capacity_limit_mw').keys())}
 
 def post_solve(m, outdir):

@@ -129,9 +129,6 @@ def define_components(mod):
     BuildH2Storage[(s, bld_yr) in H2_STORAGE_BLD_YRS] is a decision variable for how much 
     H2 capacity to build onto a storage project. This is analogous to BuildGen, but for kg 
     of hydrogen rather than power capacity.
-    
-    Max_H2Stor_Build_Potential[s, p] is a constraint that limits the capacity of a particular
-    capacity limited H2 storage project [s] in period [p] to the specified maximum capacity in kg.
 
     H2StorageFixedCost[PERIODS] is an expression of the annual fixed costs incurred by the 
     BuildH2Storage decision for each period in the set PERIODS.
@@ -216,8 +213,8 @@ def define_components(mod):
     mod.CAPACITY_LIMITED_H2_STORAGE_BLD_YR = Set(
         within=mod.H2_STORAGE_BLD_YRS,
         initialize=lambda m: {
-            (s, b) for (s, b) in m.H2_STORAGE_BLD_YRS
-            if (s, b) in m.h2stor_maximum_size_kg
+            (s, bld_yr) for (s, bld_yr) in m.H2_STORAGE_BLD_YRS
+            if (s, bld_yr) in m.h2stor_maximum_size_kg
         }
     )
     
