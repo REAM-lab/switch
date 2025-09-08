@@ -43,19 +43,19 @@ def define_components(mod):
     """
     
     -- SETS AND PARAMETERS --
-
-    H2_STORAGE_PROJECTS is the set of H2 storage candidate projects, which are of different types 
-    (gas_hydrogen_tank, hard_rock, salt_cavern). Shorthand for an element 
-    from this set is "s" for storage.  
     
-    CAPACITY_LIMITED_H2_STORAGE is a subset of H2_STORAGE_PROJECTS that have specified a maximum
-    capacity in kg.
-
     H2_STORAGE_BLD_YRS is the set of H2 storage projects and years which they may be built 
     (investment periods and predetermined build years). Shorthand for an element from this set 
     is "(s, bld_yr)". Predetermined projects are in the same input file as canadidate H2 storage 
     projects, so they are distinguished by a TRUE or FALSE value in the h2stor_is_predetermined 
     column of h2_storage.csv, which is indexed by [(s, bld_yr) in H2_STORAGE_BLD_YRS].
+
+    H2_STORAGE_PROJECTS is the set of H2 storage candidate projects, which are of different types 
+    (gas_hydrogen_tank, hard_rock, salt_cavern). Shorthand for an element 
+    from this set is "s" for storage.  
+    
+    CAPACITY_LIMITED_H2_STORAGE_BLD_YR is a subset of H2_STORAGE_BLD_YRS that have specified a 
+    maximum capacity in kg for the respective bld_yr.
     
     PREDETERMINED_H2_STORAGE_BLD_YRS is the set of predetermined H2 storage projects and years
     which the project built the predetermined capacity. 
@@ -86,10 +86,15 @@ def define_components(mod):
     installation and is not a free decision variable. This is analogous to 
     gen_predetermined_cap, but in units of hydrogen storage capacity (kg) rather than power (MW). 
 
-    h2stor_maximum_size_kg[s] is a parameter which specifies the maximum possible H2 storage 
-    capacity that can be built for a given H2 storage project, in kg of H2. This value can be 
-    greater than the predetermined capacity for a predetermined project if the project can be 
-    expanded beyond its existing capacity.
+    h2stor_maximum_size_kg[s, bld_yr] is a parameter which specifies the maximum possible H2 storage 
+    capacity that can be built for a given H2 storage project in a given build year, in kg of H2. 
+    This value can have different values for the same project in different years. If the project has
+    predetermined capacity, then the row with the build year for the predetermined capacity should 
+    have equal values for h2stor_maximum_size_kg[s, bld_yr] and h2stor_predetermined_kg[s, bld_yr]. 
+    If the project can be expanded beyond its predetermined capacity, it can be listed in a new row 
+    with a new build year and a new h2stor_maximum_size_kg[s, bld_yr] for that year. The maximum of 
+    the total project capacity should be the sum of h2stor_maximum_size_kg[s, bld_year] over all
+    bld_yr for storage project s.
 
     h2stor_load_zone[s] is a parameter which specifies which load zone the H2 storage project 
     corresponds to/falls within.
@@ -190,7 +195,11 @@ def define_components(mod):
     up to 10,000 kg of H2 in that period.
     
     """
-    mod.H2_STORAGE_PROJECTS = Set(dimen=1, input_file="h2_storage.csv")
+    mod.H2_STORAGE_BLD_YRS = Set(dimen=2, input_file="h2_storage.csv")
+    mod.H2_STORAGE_PROJECTS = Set(
+        dimen=1,
+        initialize=lambda m: {s for (s, bld_yr) in m.H2_STORAGE_BLD_YRS}
+    )
     mod.h2stor_load_zone = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
                               within=mod.LOAD_ZONES)
     mod.h2stor_type = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv")
@@ -200,29 +209,31 @@ def define_components(mod):
                             within=PositiveIntegers)
     mod.h2stor_leakage_rate = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
                             within=PercentFraction)
-    mod.CAPACITY_LIMITED_H2_STORAGE = Set(within=mod.H2_STORAGE_PROJECTS)
-    mod.h2stor_maximum_size_kg = Param(
-        mod.CAPACITY_LIMITED_H2_STORAGE, input_file="h2_storage.csv",
-        input_optional=True, within=NonNegativeReals)
-
-    mod.H2_STORAGE_BLD_YRS = Set(dimen=2, input_file="h2_storage.csv")
+    mod.h2stor_maximum_size_kg = Param(mod.H2_STORAGE_BLD_YRS, input_file="h2_storage.csv",
+                                       input_optional=True, within=NonNegativeReals)
+    mod.CAPACITY_LIMITED_H2_STORAGE_BLD_YR = Set(
+        within=mod.H2_STORAGE_BLD_YRS,
+        initialize=lambda m: {
+            (s, b) for (s, b) in m.H2_STORAGE_BLD_YRS
+            if (s, b) in m.h2stor_maximum_size_kg
+        }
+    )
+    
     mod.h2stor_is_predetermined = Param(mod.H2_STORAGE_BLD_YRS,
                                     input_file="h2_storage.csv",
                                     within=Boolean)
-    def init_predetermined_h2_stor_bld_yrs(m):
-        return [
-            (s, bld_yr)
-            for (s, bld_yr) in m.H2_STORAGE_BLD_YRS
-            if m.h2stor_is_predetermined[s, bld_yr]
-        ]
     mod.PREDETERMINED_H2_STORAGE_BLD_YRS = Set(
 	    dimen=2,
-	    initialize=init_predetermined_h2_stor_bld_yrs
+	    initialize=lambda m: {
+            (s, bld_yr) for (s, bld_yr) in m.H2_STORAGE_BLD_YRS
+            if m.h2stor_is_predetermined[s, bld_yr]
+        }
 	)
     mod.h2stor_predetermined_kg = Param(
         mod.PREDETERMINED_H2_STORAGE_BLD_YRS,
         input_file="h2_storage.csv",
         within=NonNegativeReals)
+    
     mod.BLD_YRS_FOR_H2_STORAGE = Set(
         mod.H2_STORAGE_PROJECTS,
         ordered=False,
@@ -289,10 +300,10 @@ def define_components(mod):
         if((s, bld_yr) in model.PREDETERMINED_H2_STORAGE_BLD_YRS):
             return (model.h2stor_predetermined_kg[s, bld_yr],
                     model.h2stor_predetermined_kg[s, bld_yr])
-        elif(s in model.CAPACITY_LIMITED_H2_STORAGE):
+        elif((s, bld_yr) in model.CAPACITY_LIMITED_H2_STORAGE_BLD_YR):
             # This does not replace Max_Build_Potential because
             # Max_Build_Potential applies across all build years.
-            return (0, model.h2stor_maximum_size_kg[s])
+            return (0, model.h2stor_maximum_size_kg[s, bld_yr])
         else:
             return (0, None)
     mod.BuildH2Storage = Var(
@@ -322,17 +333,6 @@ def define_components(mod):
         rule=lambda m, s, period: sum(
             m.BuildH2Storage[s, bld_yr]
             for bld_yr in m.BLD_YRS_FOR_H2_STORAGE_PERIOD[s, period]))
-
-    # We use a scaling factor to improve the numerical properties
-    # of the model. The scaling factor was determined using trial
-    # and error and this tool https://github.com/staadecker/lp-analyzer.
-    # Learn more by reading the documentation on Numerical Issues.
-    max_build_potential_scaling_factor = 1e-1
-    mod.Max_H2Stor_Build_Potential = Constraint(
-        mod.CAPACITY_LIMITED_H2_STORAGE, mod.PERIODS,
-        rule=lambda m, s, p: (
-                m.h2stor_maximum_size_kg[s] * max_build_potential_scaling_factor >= m.H2StorageCapacity[
-                s, p] * max_build_potential_scaling_factor))
 
     mod.h2stor_max_cycles_per_year = Param(
         mod.H2_STORAGE_PROJECTS,
