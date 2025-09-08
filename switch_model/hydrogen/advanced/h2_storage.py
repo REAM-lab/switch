@@ -203,8 +203,10 @@ def define_components(mod):
     mod.h2stor_load_zone = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
                               within=mod.LOAD_ZONES)
     mod.h2stor_type = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv")
-    mod.H2_STORAGE_TECHNOLOGIES = Set(ordered=False, initialize=lambda m:
-                                    {m.h2stor_type[s] for s in m.H2_STORAGE_PROJECTS})
+    mod.H2_STORAGE_TECHNOLOGIES = Set(ordered=False, 
+                                      dimen=1,
+                                      initialize=lambda m:
+                                          {m.h2stor_type[s] for s in m.H2_STORAGE_PROJECTS})
     mod.h2stor_life_years = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
                             within=PositiveIntegers)
     mod.h2stor_leakage_rate = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
