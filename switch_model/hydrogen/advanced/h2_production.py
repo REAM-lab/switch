@@ -551,6 +551,7 @@ def define_components(m):
         initialize=lambda m, h: (
             m.prod_energy_source[h] in m.FUELS))
     m.FUEL_BASED_PROD = Set(
+        dimen=1,
         initialize=m.PRODUCTION_PROJECTS,
         filter=lambda m, h: m.prod_uses_fuel[h])
 
