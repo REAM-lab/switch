@@ -141,6 +141,29 @@ def define_dynamic_components(m):
         )
     )
 
+    m.ProdAnnualEmissionsCO2equivalent = Expression(m.PERIODS,
+		rule=lambda m, p: sum(
+			m.ProdAnnualEmissionsCO2[p] + 
+			m.ch4_gwp[p] * m.ProdAnnualEmissionsCH4[p] + 
+			m.n2o_gwp[p] * m.ProdAnnualEmissionsN2O[p] + 
+			m.h2_gwp[p] * m.System_Fugitive_H2[p]),
+		doc="The system's annual CO2 equivalent (sum of GHGs with GWP coefficients) emissions, in metric tonnes per year."
+    )
+    
+    ## Carbon constraint ##
+    # We use a scaling factor to improve the numerical properties
+    # of the model. The scaling factor was determined using trial
+    # and error and this tool https://github.com/staadecker/lp-analyzer.
+    # Learn more by reading the documentation on Numerical Issues.
+    enforce_h2carbon_cap_scaling_factor = 1e-1
+    m.Enforce_H2_Carbon_Cap = Constraint(m.PERIODS,
+                                           rule=lambda m, p:
+                                           Constraint.Skip if m.h2_carbon_cap_tco2_per_yr[p] == float('inf')
+                                           else m.ProdAnnualEmissionsCO2equivalent[p] * enforce_h2carbon_cap_scaling_factor <=
+                                                m.h2_carbon_cap_tco2_per_yr[p]
+                                                * enforce_h2carbon_cap_scaling_factor,
+                                           doc=("Enforces the carbon cap for hydrogen-related CO2 direct + equivalent emissions)."))
+
 def define_components(m):
     """
     Adds components to a Pyomo abstract model object to describe the building of hydrogen production
@@ -1003,28 +1026,6 @@ def define_components(m):
 			for (h, t, f) in m.PROD_TP_FUELS
 			if m.tp_period[t] == period),
 		doc="The system's annual N2O emissions, in metric tonnes per year.")
-    
-    m.ProdAnnualEmissionsCO2equivalent = Expression(m.PERIODS,
-		rule=lambda m, p: sum(
-			m.ProdAnnualEmissionsCO2[p] + 
-			m.ch4_gwp[p] * m.ProdAnnualEmissionsCH4[p] + 
-			m.n2o_gwp[p] * m.ProdAnnualEmissionsN2O[p] + 
-			m.h2_gwp[p] * m.System_Fugitive_H2[p]),
-		doc="The system's annual CO2 equivalent (sum of GHGs with GWP coefficients) emissions, in metric tonnes per year.")
-    
-    ## Carbon constraint ##
-    # We use a scaling factor to improve the numerical properties
-    # of the model. The scaling factor was determined using trial
-    # and error and this tool https://github.com/staadecker/lp-analyzer.
-    # Learn more by reading the documentation on Numerical Issues.
-    enforce_h2carbon_cap_scaling_factor = 1e-1
-    m.Enforce_H2_Carbon_Cap = Constraint(m.PERIODS,
-                                           rule=lambda m, p:
-                                           Constraint.Skip if m.h2_carbon_cap_tco2_per_yr[p] == float('inf')
-                                           else m.ProdAnnualEmissionsCO2equivalent[p] * enforce_h2carbon_cap_scaling_factor <=
-                                                m.h2_carbon_cap_tco2_per_yr[p]
-                                                * enforce_h2carbon_cap_scaling_factor,
-                                           doc=("Enforces the carbon cap for hydrogen-related CO2 direct + equivalent emissions)."))
 
     # CRITERIA AIR POLLUTANTS
     m.ProdAnnualEmissionsSO2 = Expression(m.PERIODS,
