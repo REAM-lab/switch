@@ -531,9 +531,6 @@ def define_components(m):
     m.prod_onsite_GENERATION_PROJECT = Param(
         m.ONSITE_PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
         within=m.GENERATION_PROJECTS, input_optional=True)
-    m.prod_onsite_gen_tech = Param(
-        m.ONSITE_PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        within=m.gen_tech, input_optional=True)
     
     m.GRID_CONNECTED_PRODUCTION_PROJECTS = Set(
 		within=m.PRODUCTION_PROJECTS,
