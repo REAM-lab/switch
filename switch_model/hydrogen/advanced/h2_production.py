@@ -545,6 +545,7 @@ def define_components(m):
 		initialize=lambda m: [
 			(h, m.prod_onsite_GENERATION_PROJECT[h])
 			for h in m.ONSITE_PRODUCTION_PROJECTS
+            if h in m.prod_onsite_GENERATION_PROJECT
 		]
 	)
 

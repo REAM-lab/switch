@@ -310,8 +310,9 @@ def define_components(mod):
         sum(m.DispatchGen[g, t] * m.gen_ccs_energy_load[g]
             for g in m.CCS_EQUIPPED_GENS if g in m.GENS_FOR_ZONE_TPS[z, t]) -
         (sum(m.DispatchProd[h, t] * m.mwh_per_kg_h2[h] * (1000/33.32)
-            for (h, g2, tp) in m.ONSITE_PROD_GEN_TPS
-            if tp == t and g2 in m.GENS_FOR_ZONE_TPS[z, t]) if hasattr(m, "ONSITE_PROD_GEN_TPS") else 0),
+            for (h, g2) in m.ONSITE_PROD_AND_GEN 
+            for tp in m.TPS_FOR_PROD[h]
+            if tp == t and g2 in m.GENS_FOR_ZONE_TPS[z, t]) if hasattr(m, "ONSITE_PROD_GEN_TPS") else 0),,
         doc="Net power from grid-tied generation projects."
     )
     mod.Zone_Power_Injections.append('ZoneTotalCentralDispatch')
