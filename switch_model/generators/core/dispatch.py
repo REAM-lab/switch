@@ -309,12 +309,12 @@ def define_components(mod):
             for g in m.GENS_FOR_ZONE_TPS[z, t] if not using_local_td or not m.gen_is_distributed[g]) -
         sum(m.DispatchGen[g, t] * m.gen_ccs_energy_load[g]
             for g in m.CCS_EQUIPPED_GENS if g in m.GENS_FOR_ZONE_TPS[z, t]) -
-        (sum(m.DispatchProd[h, tp] * m.mwh_per_kg_h2[h] * (1000/33.32)
-            for h in m.PRODUCTION_PROJECTS
-            for tp in m.TPS_FOR_PROD[h]
-            if tp == t and m.prod_is_onsite[h] and m.prod_onsite_GENERATION_PROJECT[h] in m.GENS_FOR_ZONE_TPS[z, t]) if hasattr(m, "PRODUCTION_PROJECTS") else 0),
-        doc="Net power from grid-tied generation projects."
-    )
+        (sum(m.DispatchProd[h, t] * m.mwh_per_kg_h2[h] * (1000/33.32) 
+             for (h, g2, tp) in m.ONSITE_PROD_GEN_TPS 
+             if tp == t and g2 in m.GENS_FOR_ZONE_TPS[z, t]) 
+             if hasattr(m, "ONSITE_PROD_GEN_TPS") else 0), 
+             doc="Net power from grid-tied generation projects." 
+        )
     mod.Zone_Power_Injections.append('ZoneTotalCentralDispatch')
 
     if using_local_td:
