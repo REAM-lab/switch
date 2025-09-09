@@ -554,6 +554,9 @@ def define_components(m):
         dimen=1,
         initialize=m.PRODUCTION_PROJECTS,
         filter=lambda m, h: m.prod_uses_fuel[h])
+    m.FUEL_BASED_PROD_TECH = Set(
+        dimen=1,
+        initialize=lambda m: {m.prod_tech[h] for h in m.FUEL_BASED_PROD})
 
     m.mmbtu_fuel_per_kg_h2 = Param(m.FUEL_BASED_PROD, input_file="h2_production_projects_info.csv",
                                           within=NonNegativeReals, default=0)
@@ -846,8 +849,8 @@ def define_components(m):
     m.PROD_TP_PROD_TECH = Set(
         dimen=3,
         initialize=lambda m: (
-            (h, t, tech)
-                for (h, t) in m.FUEL_BASED_PROD_TPS
+            (h, tp, tech)
+                for (h, tp) in m.FUEL_BASED_PROD_TPS
                     for tech in m.prod_tech[h]))
 
     m.ProdCapacityInTP = Expression(
@@ -927,11 +930,11 @@ def define_components(m):
 
     # -- LOAD EMISSIONS PARAMETERS AND CO2 POLICY --
     # GREENHOUSE GASES (LHV of H2 = 33.32 kWh/kg)
-    m.kg_co2_per_kg_h2 = Param(m.FUEL_BASED_PROD, within=NonNegativeReals,
+    m.kg_co2_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
 		input_file="h2_emissions_factors.csv", input_column="kg_co2_per_kg_h2")
-    m.kg_ch4_per_kg_h2 = Param(m.FUEL_BASED_PROD, within=Reals,
+    m.kg_ch4_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=Reals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_ch4_per_kg_h2")
-    m.kg_n2o_per_kg_h2 = Param(m.FUEL_BASED_PROD, within=NonNegativeReals,
+    m.kg_n2o_per_kg_h2 = Param(m.FUEL_BASFUEL_BASED_PROD_TECHED_PROD, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_n2o_per_kg_h2")
     
     m.h2_carbon_cap_tco2_per_yr = Param(m.PERIODS, within=NonNegativeReals,
@@ -944,11 +947,11 @@ def define_components(m):
 		input_file="h2_carbon_policies.csv", input_column="h2_gwp")
 	 
 	# CRITERIA AIR POLLUTANTS (LHV of H2 = 33.32 kWh/kg)
-    m.kg_so2_per_kg_h2 = Param(m.FUEL_BASED_PROD, within=NonNegativeReals,
+    m.kg_so2_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_so2_per_kg_h2")
-    m.kg_nox_per_kg_h2 = Param(m.FUEL_BASED_PROD, within=NonNegativeReals,
+    m.kg_nox_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_nox_per_kg_h2")
-    m.kg_pm10_per_kg_h2 = Param(m.FUEL_BASED_PROD, within=NonNegativeReals,
+    m.kg_pm10_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_pm10_per_kg_h2")
 	
 	# -- EMISSIONS EXPRESSIONS PER TP (metric tonnes = kg * 1e-3) [metric tonnes per hour] --
