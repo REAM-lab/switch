@@ -525,7 +525,7 @@ def define_components(m):
     m.ONSITE_PRODUCTION_PROJECTS = Set(
         within=m.PRODUCTION_PROJECTS,
         initialize=lambda m: {
-            h for h in m.PRODUCTION_PROJECTS if m.prod_is_onsite[h]
+            h for h in m.PRODUCTION_PROJECTS if m.prod_is_onsite.get(h, False)
         }
     )
     m.prod_onsite_GENERATION_PROJECT = Param(
