@@ -557,7 +557,7 @@ def define_components(m):
     m.mmbtu_fuel_per_kg_h2 = Param(m.FUEL_BASED_PROD, input_file="h2_production_projects_info.csv",
                                           within=NonNegativeReals, default=0)
 
-    m.mwh_per_kg_h2 = Param(m.PRODUCTION_TECHNOLOGIES, input_file="h2_production_projects_info.csv",
+    m.mwh_per_kg_h2 = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
                                           within=NonNegativeReals, default=0)
 
     m.FUEL_FOR_PROD = Set(m.FUEL_BASED_PROD,
