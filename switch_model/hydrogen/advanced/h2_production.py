@@ -934,7 +934,7 @@ def define_components(m):
 		input_file="h2_emissions_factors.csv", input_column="kg_co2_per_kg_h2")
     m.kg_ch4_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=Reals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_ch4_per_kg_h2")
-    m.kg_n2o_per_kg_h2 = Param(m.FUEL_BASFUEL_BASED_PROD_TECHED_PROD, within=NonNegativeReals,
+    m.kg_n2o_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_n2o_per_kg_h2")
     
     m.h2_carbon_cap_tco2_per_yr = Param(m.PERIODS, within=NonNegativeReals,
