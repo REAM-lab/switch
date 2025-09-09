@@ -522,7 +522,12 @@ def define_components(m):
     m.prod_is_onsite = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
         input_optional=True, within=Boolean)
-    m.ONSITE_PRODUCTION_PROJECTS = Set(within=m.PRODUCTION_PROJECTS)
+    m.ONSITE_PRODUCTION_PROJECTS = Set(
+        within=m.PRODUCTION_PROJECTS,
+        initialize=lambda m: {
+            h for h in m.PRODUCTION_PROJECTS if m.prod_is_onsite[h]
+        }
+    )
     m.prod_onsite_GENERATION_PROJECT = Param(
         m.ONSITE_PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
         within=m.GENERATION_PROJECTS, input_optional=True)
@@ -1092,14 +1097,6 @@ def load_inputs(m, switch_data, inputs_dir):
         switch_data.data()['CAPACITY_LIMITED_PROD'] = {
             None: list(switch_data.data(name='prod_capacity_limit_mw').keys())}
     
-    # Construct set of H2 production projects that are installed onsite of a power
-    # generator. This set includes projects for which the parameter prod_is_onsite is True.
-    if 'prod_is_onsite' in switch_data.data():
-        onsite_projects = [
-            h for h, is_onsite in switch_data.data(name='prod_is_onsite').items()
-            if is_onsite
-        ]
-        switch_data.data()['ONSITE_PRODUCTION_PROJECTS'] = {None: onsite_projects}
 
 def post_solve(m, outdir):
     """
