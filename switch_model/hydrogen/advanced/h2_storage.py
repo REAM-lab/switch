@@ -617,15 +617,6 @@ def define_components(mod):
         ) == 0
     )
 
-def load_inputs(mod, switch_data, inputs_dir):
-    switch_data.load(filename=os.path.join(inputs_dir, "h2_storage.csv"),
-                     set=mod.H2_STORAGE_BLD_YRS)
-
-    # derive projects from the first column of H2_STORAGE_BLD_YRS
-    projects = {s for (s, bld_yr) in switch_data.data(name='H2_STORAGE_BLD_YRS')}
-    switch_data.data()['H2_STORAGE_PROJECTS'] = list(projects)
-
-
 def post_solve(instance, outdir):
     """
     Export H2 storage build information to h2_storage_builds.csv,
