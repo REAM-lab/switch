@@ -192,9 +192,7 @@ def define_components(mod):
     up to 10,000 kg of H2 in that period.
     
     """
-    mod.H2_STORAGE_BLD_YRS = Set(dimen=2, 
-                                 input_file="h2_storage.csv",
-                                 input_column=['H2_STORAGE_PROJECT', 'h2stor_build_year'])
+    mod.H2_STORAGE_BLD_YRS = Set(dimen=2, input_file="h2_storage.csv")
     mod.H2_STORAGE_PROJECTS = Set(dimen=1)
     mod.h2stor_load_zone = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
                               within=mod.LOAD_ZONES)
@@ -615,6 +613,13 @@ def define_components(mod):
     )
 
 def load_inputs(mod, switch_data, inputs_dir):
+    raw_data = switch_data.data(name='H2_STORAGE_BLD_YRS')
+    # Keep only the first two columns for the set
+    switch_data.data()['H2_STORAGE_BLD_YRS'] = {
+        None: [(row[0], row[1]) for row in raw_data]
+    }
+
+    
     switch_data.load(filename=os.path.join(inputs_dir, "h2_storage.csv"),
                      set=mod.H2_STORAGE_BLD_YRS)
 
