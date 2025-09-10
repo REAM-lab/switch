@@ -617,8 +617,8 @@ def load_inputs(mod, switch_data, inputs_dir):
                      set=mod.H2_STORAGE_BLD_YRS)
 
     # derive projects from the first column of H2_STORAGE_BLD_YRS
-    projects = {s for (s, bld_yr) in switch_data.data(name='H2_STORAGE_BLD_YRS')[None]}
-    switch_data.data()['H2_STORAGE_PROJECTS'] = {None: list(projects)}
+    projects = {s for (s, bld_yr) in switch_data.data(name='H2_STORAGE_BLD_YRS')}
+    switch_data.data()['H2_STORAGE_PROJECTS'] = list(projects)
 
 
 def post_solve(instance, outdir):
