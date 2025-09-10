@@ -192,7 +192,9 @@ def define_components(mod):
     up to 10,000 kg of H2 in that period.
     
     """
-    mod.H2_STORAGE_BLD_YRS = Set(dimen=2, input_file="h2_storage.csv")
+    mod.H2_STORAGE_BLD_YRS = Set(dimen=2, 
+                                 input_file="h2_storage.csv",
+                                 columns=['H2_STORAGE_PROJECT', 'h2stor_build_year'])
     mod.H2_STORAGE_PROJECTS = Set(dimen=1)
     mod.h2stor_load_zone = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
                               within=mod.LOAD_ZONES)
