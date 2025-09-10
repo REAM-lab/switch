@@ -193,10 +193,7 @@ def define_components(mod):
     
     """
     mod.H2_STORAGE_BLD_YRS = Set(dimen=2, input_file="h2_storage.csv")
-    mod.H2_STORAGE_PROJECTS = Set(
-        dimen=1,
-        initialize=lambda m: {s for (s, bld_yr) in m.H2_STORAGE_BLD_YRS}
-    )
+    mod.H2_STORAGE_PROJECTS = Set(dimen=1)
     mod.h2stor_load_zone = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv",
                               within=mod.LOAD_ZONES)
     mod.h2stor_type = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage.csv")
@@ -614,6 +611,15 @@ def define_components(mod):
             for tp in m.TPS_IN_HGTS[hgts] 
         ) == 0
     )
+
+def load_inputs(mod, switch_data, inputs_dir):
+    switch_data.load(filename=os.path.join(inputs_dir, "h2_storage.csv"),
+                     index=mod.H2_STORAGE_BLD_YRS)
+
+    # derive projects from the first column of H2_STORAGE_BLD_YRS
+    projects = {s for (s, bld_yr) in switch_data.data(name='H2_STORAGE_BLD_YRS')[None]}
+    switch_data.data()['H2_STORAGE_PROJECTS'] = {None: list(projects)}
+
 
 def post_solve(instance, outdir):
     """
