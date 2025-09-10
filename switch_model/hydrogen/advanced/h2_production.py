@@ -255,11 +255,6 @@ def define_components(m):
     written out as (h, build_year) for clarity, but when brevity is
     more important (h, b) is acceptable.
 
-    NEW_PROD_BLD_YRS is a subset of PROD_BLD_YRS that only
-    includes projects that have not yet been constructed. This is
-    derived by joining the set of PRODUCTION_PROJECTS with the set of
-    NEW_PROD_BLD_YRS using H2 production technology.
-
     PREDETERMINED_PROD_BLD_YRS is a subset of PROD_BLD_YRS that
     only includes existing or planned projects that are not subject to
     optimization.
@@ -287,10 +282,6 @@ def define_components(m):
     avoid binary variables.
 
     --- OPERATIONS ---
-
-    PERIODS_FOR_PROD_BLD_YR[h, build_year] is an indexed
-    set that describes which periods a given project build will be
-    operational.
 
     BLD_YRS_FOR_PROD_PERIOD[h, period] is a complementary
     indexed set that identify which build years will still be online
@@ -627,7 +618,11 @@ def define_components(m):
         initialize=lambda m: set(bld_yr for (h, bld_yr) in m.PREDETERMINED_PROD_BLD_YRS),
         doc="Set of all the years where pre-determined builds for H2 production projects occur."
     )
-
+    m.prod_predetermined_cap_mw = Param(
+        m.PREDETERMINED_PROD_BLD_YRS,
+        input_file="h2_prod_predetermined.csv",
+        within=NonNegativeReals)
+    
     # This set is defined by h2_prod_build_costs.csv
     m.PROD_BLD_YRS = Set(
         dimen=2,
@@ -635,13 +630,6 @@ def define_components(m):
         validate=lambda m, h, bld_yr: (
             (h, bld_yr) in m.PREDETERMINED_PROD_BLD_YRS or
             (h, bld_yr) in m.PRODUCTION_PROJECTS * m.PERIODS))
-    m.NEW_PROD_BLD_YRS = Set(
-        dimen=2,
-        initialize=lambda m: m.PROD_BLD_YRS - m.PREDETERMINED_PROD_BLD_YRS)
-    m.prod_predetermined_cap_mw = Param(
-        m.PREDETERMINED_PROD_BLD_YRS,
-        input_file="h2_prod_predetermined.csv",
-        within=NonNegativeReals)
 
     def prod_build_can_operate_in_period(m, h, build_year, p):
         # If a period has the same name as a predetermined build year then we have a problem.
@@ -668,15 +656,6 @@ def define_components(m):
         m.PREDETERMINED_BLD_YRS_FOR_PROD, m.PERIODS,
         rule=lambda m, bld_yr, p: bld_yr != p
     )
-
-    # The set of periods when a project built in a certain year will be online
-    m.PERIODS_FOR_PROD_BLD_YR = Set(
-        m.PROD_BLD_YRS,
-        within=m.PERIODS,
-        ordered=True,
-        initialize=lambda m, h, bld_yr: [
-            p for p in m.PERIODS
-            if prod_build_can_operate_in_period(m, h, bld_yr, p)])
 
     m.BLD_YRS_FOR_PROD = Set(
         m.PRODUCTION_PROJECTS,
@@ -748,8 +727,8 @@ def define_components(m):
     m.Max_Prod_Build_Potential = Constraint(
         m.CAPACITY_LIMITED_PROD, m.PERIODS,
         rule=lambda m, h, p: (
-                m.prod_capacity_limit_mw[h] * max_build_potential_scaling_factor >= m.ProdCapacity[
-            h, p] * max_build_potential_scaling_factor))
+                m.prod_capacity_limit_mw[h] * max_build_potential_scaling_factor >= 
+                m.ProdCapacity[h, p] * max_build_potential_scaling_factor))
 
     # Costs
     m.prod_variable_om_per_kg = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
