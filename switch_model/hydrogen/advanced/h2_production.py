@@ -874,7 +874,7 @@ def define_components(m):
         initialize=lambda m: (
             (h, tp, tech)
                 for (h, tp) in m.FUEL_BASED_PROD_TPS
-                    for tech in m.prod_tech[h]))
+                    for tech in [m.prod_tech[h]]))
 
     m.ProdCapacityInTP = Expression(
         m.PROD_TPS,
