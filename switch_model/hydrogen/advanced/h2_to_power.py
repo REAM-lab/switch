@@ -16,10 +16,9 @@ INPUT FILE FORMAT
     
     h2_to_power_projects_info.csv
         H2_GENERATION_PROJECT, h2gen_build_yr, h2gen_tech, h2gen_load_zone, h2gen_max_age, 
-        h2gen_full_load_heat_rate, h2gen_is_predetermined, h2gen_predetermined_cap_mw,
-        h2gen_connect_cost_per_mw, h2gen_overnight_cost_per_mw_per_mw, h2gen_fixed_om_cost_per_mw_yr,  
-        h2gen_variable_om_per_mwh, h2gen_capacity_limit_mw, h2gen_scheduled_outage_rate, 
-        h2gen_forced_outage_rate, h2gen_can_provide_cap_reserves, mt_nox_per_mmbtu_h2
+        h2gen_full_load_heat_rate, h2gen_connect_cost_per_mw,  h2gen_variable_om_per_mwh, 
+        h2gen_capacity_limit_mw, h2gen_scheduled_outage_rate, h2gen_forced_outage_rate, 
+        h2gen_can_provide_cap_reserves, mt_nox_per_mmbtu_h2
 
     h2_to_power_predetermined.csv
         H2_GENERATION_PROJECT, build_year, h2gen_predetermined_cap_mw
@@ -109,7 +108,7 @@ def define_components(mod):
     only includes existing or planned projects that are not subject to
     optimization.
 
-    h2gen_predetermined_cap[(g, build_year) in PREDETERMINED_H2_GEN_BLD_YRS] is
+    h2gen_predetermined_cap_mw[(g, build_year) in PREDETERMINED_H2_GEN_BLD_YRS] is
     a parameter that describes how much capacity was built in the past
     for existing projects, or is planned to be built for future projects.
 
@@ -238,7 +237,7 @@ def define_components(mod):
         mod.PREDETERMINED_H2_GEN_BLD_YRS,
         input_file="h2_to_power_predetermined.csv",
         within=NonNegativeReals)
-    mod.min_data_check('h2gen_predetermined_cap')
+    mod.min_data_check('h2gen_predetermined_cap_mw')
 
     # inputs from by gen_build_costs.csv
     mod.H2_GEN_BLD_YRS = Set(
@@ -305,14 +304,14 @@ def define_components(mod):
         initialize=lambda m, g: [p for p in m.PERIODS if len(m.BLD_YRS_FOR_H2_GEN_PERIOD[g, p]) > 0]
     )
 
-    def bounds_BuildH2Gen(model, g, bld_yr):
-        if((g, bld_yr) in model.PREDETERMINED_H2_GEN_BLD_YRS):
-            return (model.h2gen_predetermined_cap[g, bld_yr],
-                    model.h2gen_predetermined_cap[g, bld_yr])
-        elif((g, bld_yr) in model.CAPACITY_LIMITED_H2_GENS):
+    def bounds_BuildH2Gen(mod, g, bld_yr):
+        if((g, bld_yr) in mod.PREDETERMINED_H2_GEN_BLD_YRS):
+            return (mod.h2gen_predetermined_cap_mw[g, bld_yr],
+                    mod.h2gen_predetermined_cap_mw[g, bld_yr])
+        elif((g, bld_yr) in mod.CAPACITY_LIMITED_H2_GENS):
             # This does not replace Max_H2Gen_Build_Potential because
             # Max_H2Gen_Build_Potential applies across all build years.
-            return (0, model.h2gen_capacity_limit_mw[g, bld_yr])
+            return (0, mod.h2gen_capacity_limit_mw[g, bld_yr])
         else:
             return (0, None)
     mod.BuildH2Gen = Var(
@@ -329,7 +328,7 @@ def define_components(mod):
     # projects here.
     mod.BuildH2Gen_assign_default_value = BuildAction(
         mod.PREDETERMINED_H2_GEN_BLD_YRS,
-        rule=get_assign_default_value_rule("BuildH2Gen", "h2gen_predetermined_cap"))
+        rule=get_assign_default_value_rule("BuildH2Gen", "h2gen_predetermined_cap_mw"))
 
     # note: in pull request 78, commit e7f870d..., H2_GEN_PERIODS
     # was mistakenly redefined as H2_GENERATION_PROJECTS * PERIODS.

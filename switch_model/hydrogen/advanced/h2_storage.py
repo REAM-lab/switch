@@ -308,14 +308,14 @@ def define_components(mod):
         initialize=H2_STORAGE_IN_ZONE_init
     )
 
-    def bounds_BuildH2Storage(model, s, bld_yr):
-        if((s, bld_yr) in model.PREDETERMINED_H2_STORAGE_BLD_YRS):
-            return (model.h2stor_predetermined_kg[s, bld_yr],
-                    model.h2stor_predetermined_kg[s, bld_yr])
-        elif(s in model.CAPACITY_LIMITED_H2_STORAGE):
+    def bounds_BuildH2Storage(mod, s, bld_yr):
+        if((s, bld_yr) in mod.PREDETERMINED_H2_STORAGE_BLD_YRS):
+            return (mod.h2stor_predetermined_kg[s, bld_yr],
+                    mod.h2stor_predetermined_kg[s, bld_yr])
+        elif(s in mod.CAPACITY_LIMITED_H2_STORAGE):
             # This does not replace Max_Build_Potential because
             # Max_Build_Potential applies across all build years.
-            return (0, model.h2stor_maximum_size_kg[s])
+            return (0, mod.h2stor_maximum_size_kg[s])
         else:
             return (0, None)
     mod.BuildH2Storage = Var(
