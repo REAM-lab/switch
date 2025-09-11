@@ -195,7 +195,7 @@ def define_components(mod):
     mod.H2_STORAGE_PROJECTS = Set(dimen=1, input_file="h2_storage_projects_info.csv")
     mod.h2stor_load_zone = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage_projects_info.csv",
                               within=mod.LOAD_ZONES)
-    mod.h2stor_type = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage_projects_info.csv")
+    mod.h2stor_type = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage_projects_info.csv",within=Any)
     mod.H2_STORAGE_TECHNOLOGIES = Set(ordered=False, 
                                       dimen=1,
                                       initialize=lambda m:
@@ -480,7 +480,7 @@ def define_components(mod):
 
     mod.WithdrawH2Storage = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
 
-    def Withdraw_H2_Storage_Upper_Limit_rule(m, s, t):
+    def Withdraw_H2_Storage_Upper_Limit_rule1(m, s, t):
 		
 		# Fraction-of-storage-per-day limit for this storage's technology
 		# Units: [kg of H2] * [fraction of capacity/day] * [1 day/24 h]
@@ -490,13 +490,18 @@ def define_components(mod):
             * m.h2stor_cap_frac_withdraw_limit[m.h2stor_type[s]] 
             * 33.32 / (1000 * 24)
         )
-		# Constraint: withdraw ≤ min(compressor capacity, fraction-of-storage limit)
-        return m.WithdrawH2Storage[s, t] <= min(
-			m.H2StorageCompressorCapacity[s, m.tp_period[t]],
-			daily_limit
-		)  
-    mod.Withdraw_H2_Storage_Upper_Limit = Constraint(
-        mod.H2_STORAGE_TPS, rule=Withdraw_H2_Storage_Upper_Limit_rule
+		
+        return m.WithdrawH2Storage[s, t] <= daily_limit
+		
+    def Withdraw_H2_Storage_Upper_Limit_rule2(m, s, t):
+        return m.WithdrawH2Storage[s, t] <= m.H2StorageCompressorCapacity[s, m.tp_period[t]]
+    
+    # Constraint: withdraw ≤ min(compressor capacity, fraction-of-storage limit)
+    mod.Withdraw_H2_Storage_Upper_Limit1 = Constraint(
+        mod.H2_STORAGE_TPS, rule=Withdraw_H2_Storage_Upper_Limit_rule1
+    )
+    mod.Withdraw_H2_Storage_Upper_Limit2 = Constraint(
+        mod.H2_STORAGE_TPS, rule=Withdraw_H2_Storage_Upper_Limit_rule2
     )
 
     # Summarize H2 storage withdrawing for the H2 balance equations
