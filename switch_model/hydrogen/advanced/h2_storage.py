@@ -616,7 +616,7 @@ def define_components(mod):
         mod.PERIODS, 
         rule=lambda m, z, p:
         sum(
-            (m.FillH2Storage[z, tp] - m.WithdrawH2Storage[z, tp])
+            (m.H2StorageTotalFill[z, tp] - m.H2StorageTotalWithdrawal[z, tp])
             for hgts in m.HGTS_IN_PERIOD[p] 
             for tp in m.TPS_IN_HGTS[hgts] 
         ) == 0
