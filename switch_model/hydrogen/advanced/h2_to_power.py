@@ -227,7 +227,8 @@ def define_components(mod):
     mod.PREDETERMINED_H2_GEN_BLD_YRS = Set(
 	    input_file="h2_to_power_predetermined.csv",
         input_optional=True,
-        dimen=2)
+        dimen=2,
+        initialize={})
     mod.PREDETERMINED_BLD_YRS_FOR_H2_GEN = Set(
         dimen=1,
         ordered=False,
