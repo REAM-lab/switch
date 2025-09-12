@@ -99,11 +99,6 @@ def define_components(mod):
     written out as (g, build_year) for clarity, but when brevity is
     more important (g, b) is acceptable.
 
-    NEW_H2_GEN_BLD_YRS is a subset of H2_GEN_BLD_YRS that only
-    includes projects that have not yet been constructed. This is
-    derived by joining the set of H2_GENERATION_PROJECTS with the set of
-    NEW_GENERATION_BUILDYEARS using generation technology.
-
     PREDETERMINED_H2_GEN_BLD_YRS is a subset of H2_GEN_BLD_YRS that
     only includes existing or planned projects that are not subject to
     optimization.
@@ -239,13 +234,13 @@ def define_components(mod):
         within=NonNegativeReals)
     mod.min_data_check('h2gen_predetermined_cap_mw')
 
-    # inputs from by gen_build_costs.csv
+    # inputs from by h2_to_power_build_costs.csv
     mod.H2_GEN_BLD_YRS = Set(
         dimen=2,
         input_file="h2_to_power_build_costs.csv",
-        validate=lambda m, s, bld_yr: (
-            (s, bld_yr) in m.PREDETERMINED_H2_GEN_BLD_YRS or
-            (s, bld_yr) in m.H2_GENERATION_PROJECTS * m.PERIODS))
+        validate=lambda m, g, bld_yr: (
+            (g, bld_yr) in m.PREDETERMINED_H2_GEN_BLD_YRS or
+            (g, bld_yr) in m.H2_GENERATION_PROJECTS * m.PERIODS))
 
     def h2gen_build_can_operate_in_period(m, g, build_year, period):
         # If a period has the same name as a predetermined build year then we have a problem.
@@ -308,10 +303,10 @@ def define_components(mod):
         if((g, bld_yr) in mod.PREDETERMINED_H2_GEN_BLD_YRS):
             return (mod.h2gen_predetermined_cap_mw[g, bld_yr],
                     mod.h2gen_predetermined_cap_mw[g, bld_yr])
-        elif((g, bld_yr) in mod.CAPACITY_LIMITED_H2_GENS):
+        elif(g in mod.CAPACITY_LIMITED_H2_GENS):
             # This does not replace Max_H2Gen_Build_Potential because
             # Max_H2Gen_Build_Potential applies across all build years.
-            return (0, mod.h2gen_capacity_limit_mw[g, bld_yr])
+            return (0, mod.h2gen_capacity_limit_mw[g])
         else:
             return (0, None)
     mod.BuildH2Gen = Var(
