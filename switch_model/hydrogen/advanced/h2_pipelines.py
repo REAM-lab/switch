@@ -202,16 +202,7 @@ def define_components(mod):
     mod.H2_PIPELINES = Set(dimen=1, input_file="h2_pipelines.csv")
     mod.h2pip_lz1 = Param(mod.H2_PIPELINES, within=mod.LOAD_ZONES, input_file="h2_pipelines.csv")
     mod.h2pip_lz2 = Param(mod.H2_PIPELINES, within=mod.LOAD_ZONES, input_file="h2_pipelines.csv")
-    # we don't do a min_data_check for H2_PIPELINES, because it may be empty for model
-    # configurations that are sometimes run with interzonal pipelines and sometimes not
-    # (e.g., island interconnect scenarios). However, presence of this column will still be
-    # checked by load_data_aug.
-    mod.min_data_check('h2pip_lz1', 'h2pip_lz2')
-
     mod.h2pip_length_km = Param(mod.H2_PIPELINES, within=NonNegativeReals, input_file="h2_pipelines.csv")
-    mod.h2pip_efficiency = Param(
-        mod.H2_PIPELINES,
-        within=PercentFraction, input_file="h2_pipelines.csv")
     mod.existing_h2pip_cap_mw = Param(
         mod.H2_PIPELINES,
         within=NonNegativeReals, input_file="h2_pipelines.csv")
@@ -219,7 +210,7 @@ def define_components(mod):
         mod.H2_PIPELINES,
         within=NonNegativeReals,
         default=1, input_file="h2_pipelines.csv")
-    mod.min_data_check('h2pip_length_km', 'h2pip_efficiency', 'existing_h2pip_cap_mw')
+    mod.min_data_check('h2pip_lz1', 'h2pip_lz2','h2pip_length_km', 'h2pip_efficiency', 'existing_h2pip_cap_mw')
     mod.h2pip_capital_cost_per_mw_km = Param(
         within=NonNegativeReals,
         default=180, input_file="h2_pipeline_params.csv")
