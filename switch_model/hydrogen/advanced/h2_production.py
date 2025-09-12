@@ -10,10 +10,12 @@ INPUT FILE FORMAT
     values with a dot '.' for select rows for which the column does not
     apply. Mandatory columns are:
         PRODUCTION_PROJECT, prod_tech, prod_load_zone, prod_energy_source,
-        prod_max_age, mmbtu_fuel_per_kg_h2, mwh_per_kg_h2, prod_variable_om_per_kg
+        prod_max_age, mmbtu_fuel_per_kg_h2*, mwh_per_kg_h2, prod_variable_om_per_kg
     Optional columns are:
         prod_av_outage_rate, prod_capacity_limit_mw, prod_ccs_equipped, 
         prod_is_onsite, prod_onsite_GENERATION_PROJECT, prod_onsite_gen_tech
+    *Note: mmbtu_fuel_per_kg_h2 is only mandatory for fuel-consuming H2 production
+    projects. For example, '.' can be put in rows corresponding to electrolyzers.
 
     The following file lists existing builds of H2 production projects, and is
     optional for simulations where there is no existing capacity:
@@ -573,7 +575,7 @@ def define_components(m):
         initialize=lambda m: {m.prod_tech[h] for h in m.FUEL_BASED_PROD})
 
     m.mmbtu_fuel_per_kg_h2 = Param(m.FUEL_BASED_PROD, input_file="h2_production_projects_info.csv",
-                                          within=NonNegativeReals, default=0)
+                                          within=NonNegativeReals, input_optional=True)
 
     m.mwh_per_kg_h2 = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
                                           within=NonNegativeReals, default=0)
