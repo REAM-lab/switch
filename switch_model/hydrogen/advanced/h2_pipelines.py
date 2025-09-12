@@ -369,7 +369,7 @@ def define_components(mod):
         mod.H2_PIP_BLD_YRS, 
         rule=lambda m, pip, period: (
             m.BuildH2Pip[pip, period] * m.h2pip_comp_overnight_cost_per_mw 
-            * crf(m.interest_rate, m.h2pip_comp_lifetime_yrs)
+            * crf(m.interest_rate, m.h2pip_comp_life_years)
             )
     )
     mod.H2PipelineCompressorFixedOM = Expression(
