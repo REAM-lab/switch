@@ -206,7 +206,7 @@ def define_components(mod):
     # configurations that are sometimes run with interzonal pipelines and sometimes not
     # (e.g., island interconnect scenarios). However, presence of this column will still be
     # checked by load_data_aug.
-    mod.min_data_check('pip_lz1', 'pip_lz2')
+    mod.min_data_check('h2pip_lz1', 'h2pip_lz2')
 
     mod.h2pip_length_km = Param(mod.H2_PIPELINES, within=NonNegativeReals, input_file="h2_pipelines.csv")
     mod.h2pip_efficiency = Param(
