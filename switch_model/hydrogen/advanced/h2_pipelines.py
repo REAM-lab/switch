@@ -210,7 +210,7 @@ def define_components(mod):
         mod.H2_PIPELINES,
         within=NonNegativeReals,
         default=1, input_file="h2_pipelines.csv")
-    mod.min_data_check('h2pip_lz1', 'h2pip_lz2','h2pip_length_km', 'h2pip_efficiency', 'existing_h2pip_cap_mw')
+    mod.min_data_check('h2pip_lz1', 'h2pip_lz2','h2pip_length_km', 'existing_h2pip_cap_mw')
     mod.h2pip_capital_cost_per_mw_km = Param(
         within=NonNegativeReals,
         default=180, input_file="h2_pipeline_params.csv")
