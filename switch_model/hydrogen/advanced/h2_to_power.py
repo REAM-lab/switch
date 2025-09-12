@@ -228,6 +228,12 @@ def define_components(mod):
 	    input_file="h2_to_power_predetermined.csv",
         input_optional=True,
         dimen=2)
+    mod.PREDETERMINED_BLD_YRS_FOR_H2_GEN = Set(
+        dimen=1,
+        ordered=False,
+        initialize=lambda m: set(bld_yr for (g, bld_yr) in m.PREDETERMINED_H2_GEN_BLD_YRS),
+        doc="Set of all the years where pre-determined builds occurs for H2 to power generators."
+    )
     mod.h2gen_predetermined_cap_mw = Param(
         mod.PREDETERMINED_H2_GEN_BLD_YRS,
         input_file="h2_to_power_predetermined.csv",
@@ -264,7 +270,7 @@ def define_components(mod):
     # h2gen_build_can_operate_in_period will mistaken the prebuild for an investment build
     # (see note in h2gen_build_can_operate_in_period)
     mod.h2gen_no_predetermined_bld_yr_vs_period_conflict = BuildCheck(
-        mod.PREDETERMINED_BLD_YRS, mod.PERIODS,
+        mod.PREDETERMINED_BLD_YRS_FOR_H2_GEN, mod.PERIODS,
         rule=lambda m, bld_yr, p: bld_yr != p
     )
 
