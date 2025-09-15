@@ -415,9 +415,9 @@ def define_components(mod):
     def average_fuel_costs_rule(m, rfm, p):
         total_consumed = sum(m.ConsumeFuelTier[rfm_st]
                             for rfm_st in m.SUPPLY_TIERS_FOR_RFM_PERIOD[rfm, p])
-        if total_consumed == 0:
-            return 0  # or maybe None, depending on how you want to treat unused fuels
-        return rfm_annual_costs(m, rfm, p) / total_consumed
+        return Expr_if(IF= (total_consumed > 0),
+                    THEN= rfm_annual_costs(m, rfm, p) / total_consumed,
+                    ELSE= 0.0)
 
     mod.AverageFuelCosts = Expression(
         mod.REGIONAL_FUEL_MARKETS, mod.PERIODS,
