@@ -196,8 +196,7 @@ def define_components(mod):
                                              doc="Indicates whether an H2-fueled generator can provide capacity reserves.")
     mod.mt_nox_per_mmbtu_h2 = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
                                          within=NonNegativeReals, default=0)
-    mod.min_data_check('H2_GENERATION_PROJECTS', 'h2gen_tech', 'h2gen_overnight_cost_per_mw', 'h2gen_fixed_om_cost_per_mw_yr', 
-                       'h2gen_variable_om_per_mwh', 'h2gen_load_zone', 'h2gen_max_age')
+    mod.min_data_check('H2_GENERATION_PROJECTS', 'h2gen_tech', 'h2gen_load_zone', 'h2gen_max_age')
 
     """Construct H2_GENS_* indexed sets efficiently with a
     'construction dictionary' pattern: on the first call, make a single
