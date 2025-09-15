@@ -412,13 +412,16 @@ def define_components(mod):
 
     # Calculate average fuel costs to allow post-optimization inspection
     # and cost allocation.
+    def average_fuel_costs_rule(m, rfm, p):
+        total_consumed = sum(m.ConsumeFuelTier[rfm_st]
+                            for rfm_st in m.SUPPLY_TIERS_FOR_RFM_PERIOD[rfm, p])
+        if total_consumed == 0:
+            return 0  # or maybe None, depending on how you want to treat unused fuels
+        return rfm_annual_costs(m, rfm, p) / total_consumed
+
     mod.AverageFuelCosts = Expression(
         mod.REGIONAL_FUEL_MARKETS, mod.PERIODS,
-        rule=lambda m, rfm, p: (
-            rfm_annual_costs(m, rfm, p) /
-            sum(m.ConsumeFuelTier[rfm_st]
-                for rfm_st in m.SUPPLY_TIERS_FOR_RFM_PERIOD[rfm, p])))
-
+        rule=average_fuel_costs_rule)
 
 def load_inputs(mod, switch_data, inputs_dir):
     """
