@@ -407,7 +407,7 @@ def define_components(mod):
     def period_active_h2gen_rule(m, period):
         if not hasattr(m, 'period_active_h2gen_dict'):
             m.period_active_h2gen_dict = collections.defaultdict(set)
-            for (_g, _period) in m.GEN_PERIODS:
+            for (_g, _period) in m.H2_GEN_PERIODS:
                 m.period_active_h2gen_dict[_period].add(_g)
         result = m.period_active_h2gen_dict.pop(period)
         if len(m.period_active_h2gen_dict) == 0:
