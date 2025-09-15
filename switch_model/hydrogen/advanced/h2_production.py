@@ -143,12 +143,13 @@ def define_dynamic_components(m):
         )
     )
 
-    m.ProdAnnualEmissionsCO2equivalent = Expression(m.PERIODS,
-		rule=lambda m, p: sum(
+    m.ProdAnnualEmissionsCO2equivalent = Expression(
+        m.PERIODS,
+		rule=lambda m, p:
 			m.ProdAnnualEmissionsCO2[p] + 
 			m.ch4_gwp[p] * m.ProdAnnualEmissionsCH4[p] + 
 			m.n2o_gwp[p] * m.ProdAnnualEmissionsN2O[p] + 
-			m.h2_gwp[p] * m.System_Fugitive_H2[p]),
+			m.h2_gwp[p] * m.System_Fugitive_H2[p],
 		doc="The system's annual CO2 equivalent (sum of GHGs with GWP coefficients) emissions, in metric tonnes per year."
     )
     
