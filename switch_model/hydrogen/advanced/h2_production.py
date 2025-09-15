@@ -936,20 +936,20 @@ def define_components(m):
     # -- LOAD EMISSIONS PARAMETERS AND CO2 POLICY --
     # GREENHOUSE GASES (LHV of H2 = 33.32 kWh/kg)
     m.kg_co2_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
-		input_file="h2_emissions_factors.csv", input_column="kg_co2_per_kg_h2")
+		default=0, input_file="h2_emissions_factors.csv", input_column="kg_co2_per_kg_h2")
     m.kg_ch4_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=Reals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_ch4_per_kg_h2")
     m.kg_n2o_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
 		default=0, input_file="h2_emissions_factors.csv", input_column="kg_n2o_per_kg_h2")
     
     m.h2_carbon_cap_tco2_per_yr = Param(m.PERIODS, within=NonNegativeReals,
-		input_file="h2_carbon_policies.csv", input_column="h2_carbon_cap_tco2_per_yr")
+		default=float('inf'), input_file="h2_carbon_policies.csv", input_column="h2_carbon_cap_tco2_per_yr")
     m.ch4_gwp = Param(m.PERIODS, within=NonNegativeReals,
-		input_file="h2_carbon_policies.csv", input_column="ch4_gwp")
+		default=0, input_file="h2_carbon_policies.csv", input_column="ch4_gwp")
     m.n2o_gwp = Param(m.PERIODS, within=NonNegativeReals,
-		input_file="h2_carbon_policies.csv", input_column="n2o_gwp")
+		default=0, input_file="h2_carbon_policies.csv", input_column="n2o_gwp")
     m.h2_gwp = Param(m.PERIODS, within=NonNegativeReals,
-		input_file="h2_carbon_policies.csv", input_column="h2_gwp")
+		default=0, input_file="h2_carbon_policies.csv", input_column="h2_gwp")
 	 
 	# CRITERIA AIR POLLUTANTS (LHV of H2 = 33.32 kWh/kg)
     m.kg_so2_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
