@@ -57,7 +57,7 @@ def define_components(m):
     m.HGTS = Set(
         dimen=1,
         ordered=True,
-        initialize=lambda m: [m.tp_to_hgts[tp] for tp in m.TIMEPOINTS],
+        initialize=lambda m: sorted(set(m.tp_to_hgts[tp] for tp in m.TIMEPOINTS)),
         doc="Set of hydrogen timeseries that correspond to max storage frequency as defined in the mapping."
     )
 
@@ -82,7 +82,7 @@ def define_components(m):
         m.PERIODS,
         within=m.HGTS,
         ordered=True,
-        initialize=lambda m, p: [hgts for hgts in m.HGTS if m.hgts_period[hgts] == p],
+        initialize=lambda m, p: sorted(set(hgts for hgts in m.HGTS if m.hgts_period[hgts] == p)),
         doc="Set of hydrogen time series in each main model period."
     )
     m.hgts_duration_of_tp = Param(

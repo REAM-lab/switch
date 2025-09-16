@@ -541,7 +541,7 @@ def define_components(m):
         input_optional=True, within=Boolean)
     m.ONSITE_PRODUCTION_PROJECTS = Set(
         within=m.PRODUCTION_PROJECTS,
-        initialize=lambda m: [h for h in m.PRODUCTION_PROJECTS if m.prod_is_onsite[h]]
+        initialize=lambda m: sorted(set(h for h in m.PRODUCTION_PROJECTS if m.prod_is_onsite[h]))
     )
     m.prod_onsite_GENERATION_PROJECT = Param(
         m.ONSITE_PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
@@ -571,7 +571,7 @@ def define_components(m):
         filter=lambda m, h: m.prod_uses_fuel[h])
     m.FUEL_BASED_PROD_TECH = Set(
         dimen=1,
-        initialize=lambda m: [m.prod_tech[h] for h in m.FUEL_BASED_PROD])
+        initialize=lambda m: sorted(set(m.prod_tech[h] for h in m.FUEL_BASED_PROD)))
 
     m.mmbtu_fuel_per_kg_h2 = Param(m.FUEL_BASED_PROD, input_file="h2_production_projects_info.csv",
                                           within=NonNegativeReals, input_optional=True)
