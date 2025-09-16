@@ -578,22 +578,22 @@ def post_solve(m, outdir):
                                                    * m.h2gen_full_load_heat_rate[g]
                                                    * m.mt_nox_per_mmbtu_h2[g])
     })
-    h2gen_dispatch_full_df.set_index(["generation_project", "timestamp"], inplace=True)
+    h2gen_dispatch_full_df.set_index(["h2_generation_project", "timestamp"], inplace=True)
     write_table(m, output_file=os.path.join(outdir, "h2gen_dispatch.csv"), df=h2gen_dispatch_full_df)
 
     h2gen_annual_summary = h2gen_dispatch_full_df.groupby(['gen_tech', "gen_energy_source", "period"]).sum()
     write_table(m, output_file=os.path.join(outdir, "h2gen_dispatch_annual_summary.csv"),
                 df=h2gen_annual_summary,
                 columns=["Energy_GWh_typical_yr", "VariableOMCost_per_yr",
-                         "DispatchEmissions_tNOx_per_typical_yr"])
+                         "DispatchEmissions_tNOx"])
 
     h2gen_zonal_annual_summary = h2gen_dispatch_full_df.groupby(
-        ['gen_tech', "gen_load_zone", "gen_energy_source", "period"]
+        ['h2gen_tech', "h2gen_load_zone", "gen_energy_source", "period"]
     ).sum()
     write_table(
         m,
         output_file=os.path.join(outdir, "dispatch_zonal_annual_summary.csv"),
         df=h2gen_zonal_annual_summary,
         columns=["Energy_GWh_typical_yr", "VariableOMCost_per_yr",
-                 "DispatchEmissions_tNOx_per_typical_yr"]
+                 "DispatchEmissions_tNOx"]
     )

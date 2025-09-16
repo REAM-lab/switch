@@ -108,54 +108,54 @@ def post_solve(instance, outdir):
         output_file=os.path.join(outdir, "transmission_dispatch.csv")
     )
 
-@graph(
-    "transmission_limit_duals",
-    title="Transmission limit duals per period",
-    note="Note: Outliers and zero-valued duals are ignored from box plot.",
-    is_long=True
-)
-def transmission_limits(tools):
-    dispatch = tools.get_dataframe("transmission_dispatch")
-    dispatch = tools.transform.timestamp(dispatch)
-    dispatch["transmission_limit_dual"] = tools.pd.to_numeric(dispatch["transmission_limit_dual"], errors="coerce")
-    dispatch = dispatch[["transmission_limit_dual", "time_row"]]
-    dispatch = dispatch.pivot(columns="time_row", values="transmission_limit_dual")
-    # Multiply the duals by -1 since the formulation gives negative duals
-    dispatch *= -1
-    percent_of_zeroes = sum(dispatch == 0) / len(dispatch) * 100
-    # Don't include the zero-valued duals.
-    dispatch = dispatch.replace(0, tools.np.nan)
-    if dispatch.count().sum() != 0:
-        dispatch.plot.box(
-            ax=tools.get_axes(note=f"{percent_of_zeroes:.1f}% of duals are zero"),
-            xlabel='Period',
-            ylabel='Transmission limit duals ($/MW)',
-            showfliers=False
-        )
+# @graph(
+#     "transmission_limit_duals",
+#     title="Transmission limit duals per period",
+#     note="Note: Outliers and zero-valued duals are ignored from box plot.",
+#     is_long=True
+# )
+# def transmission_limits(tools):
+#     dispatch = tools.get_dataframe("transmission_dispatch")
+#     dispatch = tools.transform.timestamp(dispatch)
+#     dispatch["transmission_limit_dual"] = tools.pd.to_numeric(dispatch["transmission_limit_dual"], errors="coerce")
+#     dispatch = dispatch[["transmission_limit_dual", "time_row"]]
+#     dispatch = dispatch.pivot(columns="time_row", values="transmission_limit_dual")
+#     # Multiply the duals by -1 since the formulation gives negative duals
+#     dispatch *= -1
+#     percent_of_zeroes = sum(dispatch == 0) / len(dispatch) * 100
+#     # Don't include the zero-valued duals.
+#     dispatch = dispatch.replace(0, tools.np.nan)
+#     if dispatch.count().sum() != 0:
+#         dispatch.plot.box(
+#             ax=tools.get_axes(note=f"{percent_of_zeroes:.1f}% of duals are zero"),
+#             xlabel='Period',
+#             ylabel='Transmission limit duals ($/MW)',
+#             showfliers=False
+#         )
 
 
-@graph(
-    "transmission_dispatch",
-    title="Dispatched electricity over transmission lines during last period (in TWh)",
-    note="Blue dots are net importers, red dots are net exports, greener lines indicate more use. Lines carrying <1TWh total not shown.",
-    is_long=True
-)
-def transmission_dispatch(tools):
-    if not tools.maps.can_make_maps():
-        return
-    dispatch = tools.get_dataframe("transmission_dispatch.csv")
-    dispatch = tools.transform.timestamp(dispatch).astype({"period": int})
-    # Keep only the last period
-    last_period = dispatch["period"].max()
-    dispatch = dispatch[dispatch["period"] == last_period]
-    dispatch = dispatch.rename({"load_zone_from": "from", "load_zone_to": "to", "transmission_dispatch": "value"},
-                               axis=1)
-    dispatch["value"] *= dispatch["tp_duration"] * 1e-6  # Change from power value to energy value
-    dispatch = dispatch.groupby(["from", "to"], as_index=False)["value"].sum()
-    ax = tools.maps.graph_lines(dispatch, bins=(0, 10, 100, 1000, float("inf")), title="Transmission\nDispatch (TWh/yr)")
-    exports = dispatch[["from", "value"]].rename({"from": "gen_load_zone"}, axis=1).copy()
-    imports = dispatch[["to", "value"]].rename({"to": "gen_load_zone"}, axis=1).copy()
-    imports["value"] *= -1
-    exports = pd.concat([imports, exports])
-    exports = exports.groupby("gen_load_zone", as_index=False).sum()
-    tools.maps.graph_points(exports, ax=ax, bins=(float("-inf"), -100, -30, -10, 10, 30, 100, float("inf")), cmap="coolwarm", title="Exports (TWh)")
+# @graph(
+#     "transmission_dispatch",
+#     title="Dispatched electricity over transmission lines during last period (in TWh)",
+#     note="Blue dots are net importers, red dots are net exports, greener lines indicate more use. Lines carrying <1TWh total not shown.",
+#     is_long=True
+# )
+# def transmission_dispatch(tools):
+#     if not tools.maps.can_make_maps():
+#         return
+#     dispatch = tools.get_dataframe("transmission_dispatch.csv")
+#     dispatch = tools.transform.timestamp(dispatch).astype({"period": int})
+#     # Keep only the last period
+#     last_period = dispatch["period"].max()
+#     dispatch = dispatch[dispatch["period"] == last_period]
+#     dispatch = dispatch.rename({"load_zone_from": "from", "load_zone_to": "to", "transmission_dispatch": "value"},
+#                                axis=1)
+#     dispatch["value"] *= dispatch["tp_duration"] * 1e-6  # Change from power value to energy value
+#     dispatch = dispatch.groupby(["from", "to"], as_index=False)["value"].sum()
+#     ax = tools.maps.graph_lines(dispatch, bins=(0, 10, 100, 1000, float("inf")), title="Transmission\nDispatch (TWh/yr)")
+#     exports = dispatch[["from", "value"]].rename({"from": "gen_load_zone"}, axis=1).copy()
+#     imports = dispatch[["to", "value"]].rename({"to": "gen_load_zone"}, axis=1).copy()
+#     imports["value"] *= -1
+#     exports = pd.concat([imports, exports])
+#     exports = exports.groupby("gen_load_zone", as_index=False).sum()
+#     tools.maps.graph_points(exports, ax=ax, bins=(float("-inf"), -100, -30, -10, 10, 30, 100, float("inf")), cmap="coolwarm", title="Exports (TWh)")

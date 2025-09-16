@@ -327,62 +327,62 @@ def post_solve(instance, outdir):
     tx_build_df.set_index(["TRANSMISSION_LINE", "PERIOD"], inplace=True)
     write_table(instance, df=tx_build_df, output_file=os.path.join(outdir, "transmission.csv"))
 
-@graph(
-    "transmission_capacity",
-    title="Transmission capacity per period",
-    is_long=True
-)
-def transmission_capacity(tools):
-    transmission = tools.get_dataframe("transmission.csv", convert_dot_to_na=True).fillna(0)
-    transmission = transmission.groupby("PERIOD", as_index=False).sum()
-    transmission["Existing Capacity"] = transmission["TxCapacityNameplate"] - transmission["BuildTx"]
-    transmission = transmission[["PERIOD", "Existing Capacity", "BuildTx"]]
-    transmission = transmission.set_index("PERIOD")
-    transmission = transmission.rename({"BuildTx": "New Capacity"}, axis=1)
-    transmission *= 1e-3  # Convert to GW
+# @graph(
+#     "transmission_capacity",
+#     title="Transmission capacity per period",
+#     is_long=True
+# )
+# def transmission_capacity(tools):
+#     transmission = tools.get_dataframe("transmission.csv", convert_dot_to_na=True).fillna(0)
+#     transmission = transmission.groupby("PERIOD", as_index=False).sum()
+#     transmission["Existing Capacity"] = transmission["TxCapacityNameplate"] - transmission["BuildTx"]
+#     transmission = transmission[["PERIOD", "Existing Capacity", "BuildTx"]]
+#     transmission = transmission.set_index("PERIOD")
+#     transmission = transmission.rename({"BuildTx": "New Capacity"}, axis=1)
+#     transmission *= 1e-3  # Convert to GW
 
-    transmission.plot(
-        kind='bar',
-        stacked=True,
-        ax=tools.get_axes(),
-        xlabel="Period",
-        ylabel="Transmission capacity (GW)"
-    )
-    tools.bar_label()
+#     transmission.plot(
+#         kind='bar',
+#         stacked=True,
+#         ax=tools.get_axes(),
+#         xlabel="Period",
+#         ylabel="Transmission capacity (GW)"
+#     )
+#     tools.bar_label()
 
 
-@graph(
-    "transmission_map",
-    title="Total transmission capacity for the last period (in GW)",
-    note="Lines <1 GW not shown",
-    is_long=True
-)
-def transmission_map(tools):
-    if not tools.maps.can_make_maps():
-        return
-    transmission = tools.get_dataframe("transmission.csv", convert_dot_to_na=True).fillna(0)
-    # Keep only the last period
-    last_period = transmission["PERIOD"].max()
-    transmission = transmission[transmission["PERIOD"] == last_period].drop("PERIOD", axis=1)
-    # Rename the columns appropriately
-    transmission = transmission.rename({"trans_lz1": "from", "trans_lz2": "to", "TxCapacityNameplate": "value"}, axis=1)
-    transmission = transmission[["from", "to", "value"]]
-    transmission.value *= 1e-3
-    tools.maps.graph_transmission_capacity(transmission)
+# @graph(
+#     "transmission_map",
+#     title="Total transmission capacity for the last period (in GW)",
+#     note="Lines <1 GW not shown",
+#     is_long=True
+# )
+# def transmission_map(tools):
+#     if not tools.maps.can_make_maps():
+#         return
+#     transmission = tools.get_dataframe("transmission.csv", convert_dot_to_na=True).fillna(0)
+#     # Keep only the last period
+#     last_period = transmission["PERIOD"].max()
+#     transmission = transmission[transmission["PERIOD"] == last_period].drop("PERIOD", axis=1)
+#     # Rename the columns appropriately
+#     transmission = transmission.rename({"trans_lz1": "from", "trans_lz2": "to", "TxCapacityNameplate": "value"}, axis=1)
+#     transmission = transmission[["from", "to", "value"]]
+#     transmission.value *= 1e-3
+#     tools.maps.graph_transmission_capacity(transmission)
 
-@graph(
-    "transmission_buildout",
-    title="New transmission capacity built across all periods (in GW)",
-    note="Lines with <0.1 GW built not shown.",
-    is_long=True
-)
-def transmission_map(tools):
-    if not tools.maps.can_make_maps():
-        return
-    transmission = tools.get_dataframe("transmission.csv", convert_dot_to_na=True).fillna(0)
-    transmission = transmission.rename({"trans_lz1": "from", "trans_lz2": "to", "BuildTx": "value"}, axis=1)
-    transmission = transmission[["from", "to", "value", "PERIOD"]]
-    transmission = transmission.groupby(["from", "to", "PERIOD"], as_index=False).sum().drop("PERIOD", axis=1)
-    # Rename the columns appropriately
-    transmission.value *= 1e-3
-    tools.maps.graph_transmission_capacity(transmission)
+# @graph(
+#     "transmission_buildout",
+#     title="New transmission capacity built across all periods (in GW)",
+#     note="Lines with <0.1 GW built not shown.",
+#     is_long=True
+# )
+# def transmission_map(tools):
+#     if not tools.maps.can_make_maps():
+#         return
+#     transmission = tools.get_dataframe("transmission.csv", convert_dot_to_na=True).fillna(0)
+#     transmission = transmission.rename({"trans_lz1": "from", "trans_lz2": "to", "BuildTx": "value"}, axis=1)
+#     transmission = transmission[["from", "to", "value", "PERIOD"]]
+#     transmission = transmission.groupby(["from", "to", "PERIOD"], as_index=False).sum().drop("PERIOD", axis=1)
+#     # Rename the columns appropriately
+#     transmission.value *= 1e-3
+#     tools.maps.graph_transmission_capacity(transmission)
