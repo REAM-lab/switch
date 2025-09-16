@@ -557,14 +557,14 @@ def post_solve(m, outdir):
     # line to reduce the overall memory consumption during
     # the most intensive part of post-solve (this function)
     h2gen_dispatch_full_df = pd.DataFrame({
-        "generation_project": c(lambda g, t: g),
-        "gen_tech": c(lambda g, t: m.h2gen_tech[g]),
-        "gen_load_zone": c(lambda g, t: m.h2gen_load_zone[g]),
-        "gen_energy_source": "hydrogen",
+        "h2_generation_project": c(lambda g, t: g),
+        "h2gen_tech": c(lambda g, t: m.h2gen_tech[g]),
+        "h2gen_load_zone": c(lambda g, t: m.h2gen_load_zone[g]),
+        "h2gen_energy_source": "hydrogen",
         "timestamp": c(lambda g, t: m.tp_timestamp[t]),
         "tp_weight_in_year_hrs": c(lambda g, t: m.tp_weight_in_year[t]),
         "period": c(lambda g, t: m.tp_period[t]),
-        "DispatchGen_MW": c(lambda g, t: m.DispatchH2Gen[g, t]),
+        "DispatchH2Gen_MW": c(lambda g, t: m.DispatchH2Gen[g, t]),
         "Curtailment_MW": c(lambda g, t:
                             value(m.H2GenDispatchUpperLimit[g, t]) - value(m.DispatchH2Gen[g, t])),
         "Energy_GWh_typical_yr": c(lambda g, t:
@@ -572,11 +572,13 @@ def post_solve(m, outdir):
         "VariableOMCost_per_yr": c(lambda g, t:
                                    m.DispatchH2Gen[g, t] * m.h2gen_variable_om_per_mwh[g] *
                                    m.tp_weight_in_year[t]),
-        "DispatchEmissions_tNOx_per_typical_yr": c(lambda g, t:
+        "DispatchEmissions_tNOx_per_typical_yr": c(lambda g, t: # Units: [MW] * [h] * [MMBtu of H2/MWh] * [metric ton NOx/MMBtu of H2] = [metric ton NOx]
                                                    sum(
                                                        m.DispatchH2Gen[g, t] 
+                                                       * m.tp_weight_in_year[t]
+                                                       * m.h2gen_full_load_heat_rate[g]
                                                        * m.mt_nox_per_mmbtu_h2[g] 
-                                                       * m.tp_weight_in_year[t]))
+                                                       ))
     })
     h2gen_dispatch_full_df.set_index(["generation_project", "timestamp"], inplace=True)
     write_table(m, output_file=os.path.join(outdir, "h2gen_dispatch.csv"), df=h2gen_dispatch_full_df)

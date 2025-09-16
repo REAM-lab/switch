@@ -651,7 +651,7 @@ def post_solve(instance, outdir):
         values=lambda m, s, bld_yr: (
             s,
             bld_yr,
-            m.gen_load_zone[s],
+            m.h2stor_load_zone[s],
             m.BuildH2Storage[s, bld_yr],
         ),
     )
@@ -669,7 +669,7 @@ def post_solve(instance, outdir):
         values=lambda m, s, p: (
             s,
             p,
-            m.gen_load_zone[s],
+            m.h2stor_load_zone[s],
             m.H2StorageCapacity[s, p],
         ),
     )
@@ -683,16 +683,16 @@ def post_solve(instance, outdir):
             "h2_storage_project",
             "timepoint",
             "load_zone",
-            "ChargeMW",
-            "DischargeMW",
-            "H2StateOfFill",
+            "Fill_MW_H2",
+            "Withdraw_MW_H2",
+            "H2StateOfFill_kg",
         ),
         values=lambda m, s, t: (
             s,
             m.tp_timestamp[t],
-            m.gen_load_zone[s],
-            m.FillH2Storage_kg_per_hr[s, t],
-            m.WithdrawH2Storage_kg_per_hr[s, t],
+            m.h2stor_load_zone[s],
+            m.FillH2Storage[s, t],
+            m.WithdrawH2Storage[s, t],
             m.H2StateOfFill[s, t],
         ),
     )

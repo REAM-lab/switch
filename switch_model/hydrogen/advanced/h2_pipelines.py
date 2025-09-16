@@ -425,7 +425,7 @@ def post_solve(instance, outdir):
             "PipelineTotalAnnualCapitalCost": value(mod.PipelineCapitalCosts[pip, p]),
             "PipelineTotalAnnualFixedOMCost": value(mod.PipelineFixedOMCosts[pip, p]),
             "CompressorTotalAnnualCapitalCost": value(mod.H2PipelineCompAnnualInvCost[pip, p]),
-            "CompressorTotalAnnualFixedOMCost": value(mod.H2PipelineCompressorFixedCosts[pip, p])
+            "CompressorTotalAnnualFixedOMCost": value(mod.H2PipelineCompressorFixedOM[pip, p])
         } for pip, p in mod.H2_PIPELINES * mod.PERIODS
     ])
     h2pip_build_df.set_index(["PIPELINE", "PERIOD"], inplace=True)
