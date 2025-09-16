@@ -12,6 +12,7 @@ INPUT FILE FORMAT
         PRODUCTION_PROJECT, prod_tech, prod_load_zone, prod_energy_source,
         prod_max_age, mmbtu_fuel_per_kg_h2*, mwh_per_kg_h2, prod_variable_om_per_kg
     Optional columns are:
+        prod_electric_connect_cost_per_mw, prod_pip_connect_cost_per_mw,
         prod_av_outage_rate, prod_capacity_limit_mw, prod_ccs_equipped, 
         prod_is_onsite, prod_onsite_GENERATION_PROJECT, prod_onsite_gen_tech
     *Note: mmbtu_fuel_per_kg_h2 is only mandatory for fuel-consuming H2 production
@@ -734,6 +735,10 @@ def define_components(m):
     # Costs
     m.prod_variable_om_per_kg = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
                                 within=NonNegativeReals)
+    m.prod_electric_connect_cost_per_mw = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
+                                within=NonNegativeReals, default=0)
+    m.prod_pip_connect_cost_per_mw = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
+                                within=NonNegativeReals, default=0)
     m.min_data_check('prod_variable_om_per_kg')
 
     m.prod_overnight_cost_per_mw = Param(
@@ -750,7 +755,9 @@ def define_components(m):
     m.prod_capital_cost_annual = Param(
         m.PROD_BLD_YRS,
         initialize=lambda m, h, bld_yr: (
-            m.prod_overnight_cost_per_mw[h, bld_yr] *
+            (m.prod_overnight_cost_per_mw[h, bld_yr]
+             + m.prod_electric_connect_cost_per_mw[h]
+             + m.prod_pip_connect_cost_per_mw[h]) *
             crf(m.interest_rate, m.prod_max_age[h])))
 
     m.ProdCapitalCosts = Expression(
