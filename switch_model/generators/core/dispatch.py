@@ -634,403 +634,403 @@ def post_solve(instance, outdir):
     )
 
 
-@graph(
-    "dispatch",
-    title="Average daily dispatch",
-    is_long=True
-)
-def graph_hourly_dispatch(tools):
-    """
-    Generates a matrix of hourly dispatch plots for each time region
-    """
-    # Read dispatch.csv
-    df = tools.get_dataframe('dispatch.csv')
-    # Convert to GW
-    df["DispatchGen_MW"] /= 1e3
-    # Plot Dispatch
-    tools.graph_time_matrix(
-        df,
-        value_column="DispatchGen_MW",
-        ylabel="Average daily dispatch (GW)",
-    )
+# @graph(
+#     "dispatch",
+#     title="Average daily dispatch",
+#     is_long=True
+# )
+# def graph_hourly_dispatch(tools):
+#     """
+#     Generates a matrix of hourly dispatch plots for each time region
+#     """
+#     # Read dispatch.csv
+#     df = tools.get_dataframe('dispatch.csv')
+#     # Convert to GW
+#     df["DispatchGen_MW"] /= 1e3
+#     # Plot Dispatch
+#     tools.graph_time_matrix(
+#         df,
+#         value_column="DispatchGen_MW",
+#         ylabel="Average daily dispatch (GW)",
+#     )
 
-@graph(
-    "curtailment",
-    title="Average daily curtailment",
-    is_long=True
-)
-def graph_hourly_curtailment(tools):
-    # Read dispatch.csv
-    df = tools.get_dataframe('dispatch.csv')
-    # Keep only renewable
-    df = df[df["is_renewable"]]
-    df["Curtailment_MW"] /= 1e3 # Convert to GW
-    # Plot curtailment
-    tools.graph_time_matrix(
-        df,
-        value_column="Curtailment_MW",
-        ylabel="Average daily curtailment (GW)"
-    )
-
-
-@graph(
-    "dispatch_per_scenario",
-    title="Average daily dispatch",
-    requires_multi_scenario=True,
-    is_long=True,
-)
-def graph_hourly_dispatch(tools):
-    """
-    Generates a matrix of hourly dispatch plots for each time region
-    """
-    # Read dispatch.csv
-    df = tools.get_dataframe('dispatch.csv')
-    # Convert to GW
-    df["DispatchGen_MW"] /= 1e3
-    # Plot Dispatch
-    tools.graph_scenario_matrix(
-        df,
-        value_column="DispatchGen_MW",
-        ylabel="Average daily dispatch (GW)"
-    )
+# @graph(
+#     "curtailment",
+#     title="Average daily curtailment",
+#     is_long=True
+# )
+# def graph_hourly_curtailment(tools):
+#     # Read dispatch.csv
+#     df = tools.get_dataframe('dispatch.csv')
+#     # Keep only renewable
+#     df = df[df["is_renewable"]]
+#     df["Curtailment_MW"] /= 1e3 # Convert to GW
+#     # Plot curtailment
+#     tools.graph_time_matrix(
+#         df,
+#         value_column="Curtailment_MW",
+#         ylabel="Average daily curtailment (GW)"
+#     )
 
 
-@graph(
-    "curtailment_compare_scenarios",
-    title="Average daily curtailment by scenario",
-    requires_multi_scenario=True,
-    is_long=True,
-)
-def graph_hourly_curtailment(tools):
-    # Read dispatch.csv
-    df = tools.get_dataframe('dispatch.csv')
-    # Keep only renewable
-    df = df[df["is_renewable"]]
-    df["Curtailment_MW"] /= 1e3  # Convert to GW
-    tools.graph_scenario_matrix(
-        df,
-        value_column="Curtailment_MW",
-        ylabel="Average daily curtailment (GW)"
-    )
+# @graph(
+#     "dispatch_per_scenario",
+#     title="Average daily dispatch",
+#     requires_multi_scenario=True,
+#     is_long=True,
+# )
+# def graph_hourly_dispatch(tools):
+#     """
+#     Generates a matrix of hourly dispatch plots for each time region
+#     """
+#     # Read dispatch.csv
+#     df = tools.get_dataframe('dispatch.csv')
+#     # Convert to GW
+#     df["DispatchGen_MW"] /= 1e3
+#     # Plot Dispatch
+#     tools.graph_scenario_matrix(
+#         df,
+#         value_column="DispatchGen_MW",
+#         ylabel="Average daily dispatch (GW)"
+#     )
 
 
-@graph(
-    "total_dispatch",
-    title="Total dispatched electricity",
-    is_long=True
-)
-def graph_total_dispatch(tools):
-    # ---------------------------------- #
-    # total_dispatch.png                 #
-    # ---------------------------------- #
-    # read dispatch_annual_summary.csv
-    total_dispatch = tools.get_dataframe("dispatch_annual_summary.csv")
-    # add type column
-    total_dispatch = tools.transform.gen_type(total_dispatch)
-    # aggregate and pivot
-    total_dispatch = total_dispatch.pivot_table(columns="gen_type", index="period", values="Energy_GWh_typical_yr",
-                                                aggfunc=tools.np.sum)
-    # Convert values to TWh
-    total_dispatch *= 1E-3
-
-    # For generation types that make less than 2% in every period, group them under "Other"
-    # ---------
-    # sum the generation across the energy_sources for each period, 0.5% of that is the cutoff for that period
-    cutoff_per_period = total_dispatch.sum(axis=1) * 0.005
-    # Check for each technology if it's below the cutoff for every period
-    is_below_cutoff = total_dispatch.lt(cutoff_per_period, axis=0).all()
-    # groupby if the technology is below the cutoff
-    total_dispatch = total_dispatch.groupby(axis=1, by=lambda c: "Other" if is_below_cutoff[c] else c).sum()
-
-    # Sort columns by the last period
-    total_dispatch = total_dispatch.sort_values(by=total_dispatch.index[-1], axis=1)
-    # Give proper name for legend
-    total_dispatch = total_dispatch.rename_axis("Type", axis=1)
-    # Get axis
-    # Plot
-    total_dispatch.plot(
-        kind='bar',
-        stacked=True,
-        ax=tools.get_axes(),
-        color=tools.get_colors(len(total_dispatch)),
-        xlabel="Period",
-        ylabel="Total dispatched electricity (TWh)"
-    )
-
-    tools.bar_label()
-
-@graph(
-    "energy_balance",
-    title="Energy Balance For Every Month",
-    supports_multi_scenario=True,
-    is_long=True
-)
-def energy_balance(tools):
-    # Get dispatch dataframe
-    cols = ["timestamp", "gen_tech", "gen_energy_source", "DispatchGen_MW", "scenario_name", "scenario_index",
-            "Curtailment_MW"]
-    df = tools.get_dataframe("dispatch.csv", drop_scenario_info=False)[cols]
-    df = tools.transform.gen_type(df)
-
-    # Rename and add needed columns
-    df["Dispatch Limit"] = df["DispatchGen_MW"] + df["Curtailment_MW"]
-    df = df.drop("Curtailment_MW", axis=1)
-    df = df.rename({"DispatchGen_MW": "Dispatch"}, axis=1)
-    # Sum dispatch across all the projects of the same type and timepoint
-    key_columns = ["timestamp", "gen_type", "scenario_name", "scenario_index"]
-    df = df.groupby(key_columns, as_index=False).sum()
-    df = df.melt(id_vars=key_columns, value_vars=["Dispatch", "Dispatch Limit"], var_name="Type")
-    df = df.rename({"gen_type": "Source"}, axis=1)
-
-    discharge = df[(df["Source"] == "Storage") & (df["Type"] == "Dispatch")].drop(["Source", "Type"], axis=1).rename(
-        {"value": "discharge"}, axis=1)
-
-    # Get load dataframe
-    load = tools.get_dataframe("load_balance.csv", drop_scenario_info=False)
-    load = load.drop("normalized_energy_balance_duals_dollar_per_mwh", axis=1)
-
-    # Sum load across all the load zones
-    key_columns = ["timestamp", "scenario_name", "scenario_index"]
-    load = load.groupby(key_columns, as_index=False).sum()
-
-    # Subtract storage dispatch from generation and add it to the storage charge to get net flow
-    load = load.merge(
-        discharge,
-        how="left",
-        on=key_columns,
-        validate="one_to_one"
-    )
-    load["ZoneTotalCentralDispatch"] -= load["discharge"]
-    load["StorageNetCharge"] += load["discharge"]
-    load = load.drop("discharge", axis=1)
-
-    # Rename and convert from wide to long format
-    load = load.rename({
-        "ZoneTotalCentralDispatch": "Total Generation (excl. storage discharge)",
-        "TXPowerNet": "Transmission Losses",
-        "StorageNetCharge": "Storage Net Flow",
-        "zone_demand_mw": "Demand",
-    }, axis=1).sort_index(axis=1)
-    load = load.melt(id_vars=key_columns, var_name="Source")
-    load["Type"] = "Dispatch"
-
-    # Merge dispatch contributions with load contributions
-    df = pd.concat([load, df])
-
-    # Add the timestamp information and make period string to ensure it doesn't mess up the graphing
-    df = tools.transform.timestamp(df).astype({"period": str})
-
-    # Convert to TWh (incl. multiply by timepoint duration)
-    df["value"] *= df["tp_duration"] / 1e6
-
-    FREQUENCY = "1W"
-
-    def groupby_time(df):
-        return df.groupby([
-            "scenario_name",
-            "period",
-            "Source",
-            "Type",
-            tools.pd.Grouper(key="datetime", freq=FREQUENCY, origin="start")
-        ])["value"]
-
-    df = groupby_time(df).sum().reset_index()
-
-    # Get the state of charge data
-    soc = tools.get_dataframe("StateOfCharge.csv", dtype={"STORAGE_GEN_TPS_1": str}, drop_scenario_info=False)
-    soc = soc.rename({"STORAGE_GEN_TPS_2": "timepoint", "StateOfCharge": "value"}, axis=1)
-    # Sum over all the projects that are in the same scenario with the same timepoint
-    soc = soc.groupby(["timepoint", "scenario_name"], as_index=False).sum()
-    soc["Source"] = "State Of Charge"
-    soc["value"] /= 1e6  # Convert to TWh
-
-    # Group by time
-    soc = tools.transform.timestamp(soc, use_timepoint=True, key_col="timepoint").astype({"period": str})
-    soc["Type"] = "Dispatch"
-    soc = groupby_time(soc).mean().reset_index()
-
-    # Add state of charge to dataframe
-    df = pd.concat([df, soc])
-    # Add column for day since that's what we really care about
-    df["day"] = df["datetime"].dt.dayofyear
-
-    # Plot
-    # Get the colors for the lines
-    colors = tools.get_colors()
-    colors.update({
-        "Transmission Losses": "brown",
-        "Storage Net Flow": "cadetblue",
-        "Demand": "black",
-        "Total Generation (excl. storage discharge)": "black",
-        "State Of Charge": "green"
-    })
-
-    # plot
-    num_periods = df["period"].nunique()
-    pn = tools.pn
-    plot = pn.ggplot(df) + \
-           pn.geom_line(pn.aes(x="day", y="value", color="Source", linetype="Type")) + \
-           pn.facet_grid("period ~ scenario_name") + \
-           pn.labs(y="Contribution to Energy Balance (TWh)") + \
-           pn.scales.scale_color_manual(values=colors, aesthetics="color", na_value=colors["Other"]) + \
-           pn.scales.scale_x_continuous(
-               name="Month",
-               labels=["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"],
-               breaks=(15, 46, 76, 106, 137, 167, 198, 228, 259, 289, 319, 350),
-               limits=(0, 366)) + \
-           pn.scales.scale_linetype_manual(
-               values={"Dispatch Limit": "dotted", "Dispatch": "solid"}
-           ) + \
-           pn.theme(
-               figure_size=(pn.options.figure_size[0] * tools.num_scenarios, pn.options.figure_size[1] * num_periods))
-
-    tools.save_figure(plot.draw())
-
-@graph(
-    "curtailment_per_period",
-    title="Percent of total dispatchable capacity curtailed",
-    is_long=True
-)
-def graph_curtailment_per_tech(tools):
-    # Load dispatch.csv
-    df = tools.get_dataframe('dispatch.csv')
-    df = tools.transform.gen_type(df)
-    df["Total"] = df['DispatchGen_MW'] + df["Curtailment_MW"]
-    df = df[df["is_renewable"]]
-    # Make PERIOD a category to ensure x-axis labels don't fill in years between period
-    # TODO we should order this by period here to ensure they're in increasing order
-    df["period"] = df["period"].astype("category")
-    df = df.groupby(["period", "gen_type"], as_index=False).sum()
-    df["Percent Curtailed"] = df["Curtailment_MW"] / (df['DispatchGen_MW'] + df["Curtailment_MW"])
-    df = df.pivot(index="period", columns="gen_type", values="Percent Curtailed").fillna(0)
-    if len(df) == 0:  # No dispatch from renewable technologies
-        return
-    # Set the name of the legend.
-    df = df.rename_axis("Type", axis='columns')
-    # Get axes to graph on
-    ax = tools.get_axes()
-    # Plot
-    color = tools.get_colors()
-    kwargs = dict() if color is None else dict(color=color)
-    df.plot(ax=ax, kind='line',  xlabel='Period', marker="x", **kwargs)
-
-    # Set the y-axis to use percent
-    ax.yaxis.set_major_formatter(tools.plt.ticker.PercentFormatter(1.0))
-    # Horizontal line at 100%
-    # ax.axhline(y=1, linestyle="--", color='b')
+# @graph(
+#     "curtailment_compare_scenarios",
+#     title="Average daily curtailment by scenario",
+#     requires_multi_scenario=True,
+#     is_long=True,
+# )
+# def graph_hourly_curtailment(tools):
+#     # Read dispatch.csv
+#     df = tools.get_dataframe('dispatch.csv')
+#     # Keep only renewable
+#     df = df[df["is_renewable"]]
+#     df["Curtailment_MW"] /= 1e3  # Convert to GW
+#     tools.graph_scenario_matrix(
+#         df,
+#         value_column="Curtailment_MW",
+#         ylabel="Average daily curtailment (GW)"
+#     )
 
 
-@graph(
-    "energy_balance_2",
-    title="Balance between demand, generation and storage for last period",
-    note="Dashed green and red lines are total generation and total demand (incl. transmission losses),"
-         " respectively.\nDotted line is the total state of charge (scaled for readability)."
-         "\nWe used a 14-day rolling mean to smoothen out values.",
-    supports_multi_scenario=True,
-    is_long=True
-)
-def graph_energy_balance_2(tools):
-    # Get dispatch dataframe
-    dispatch = tools.get_dataframe("dispatch.csv", usecols=[
-        "timestamp", "gen_tech", "gen_energy_source", "DispatchGen_MW", "scenario_name"
-    ]).rename({"DispatchGen_MW": "value"}, axis=1)
-    dispatch = tools.transform.gen_type(dispatch)
+# @graph(
+#     "total_dispatch",
+#     title="Total dispatched electricity",
+#     is_long=True
+# )
+# def graph_total_dispatch(tools):
+#     # ---------------------------------- #
+#     # total_dispatch.png                 #
+#     # ---------------------------------- #
+#     # read dispatch_annual_summary.csv
+#     total_dispatch = tools.get_dataframe("dispatch_annual_summary.csv")
+#     # add type column
+#     total_dispatch = tools.transform.gen_type(total_dispatch)
+#     # aggregate and pivot
+#     total_dispatch = total_dispatch.pivot_table(columns="gen_type", index="period", values="Energy_GWh_typical_yr",
+#                                                 aggfunc=tools.np.sum)
+#     # Convert values to TWh
+#     total_dispatch *= 1E-3
 
-    # Sum dispatch across all the projects of the same type and timepoint
-    dispatch = dispatch.groupby(["timestamp", "gen_type"], as_index=False).sum()
-    dispatch = dispatch[dispatch["gen_type"] != "Storage"]
+#     # For generation types that make less than 2% in every period, group them under "Other"
+#     # ---------
+#     # sum the generation across the energy_sources for each period, 0.5% of that is the cutoff for that period
+#     cutoff_per_period = total_dispatch.sum(axis=1) * 0.005
+#     # Check for each technology if it's below the cutoff for every period
+#     is_below_cutoff = total_dispatch.lt(cutoff_per_period, axis=0).all()
+#     # groupby if the technology is below the cutoff
+#     total_dispatch = total_dispatch.groupby(axis=1, by=lambda c: "Other" if is_below_cutoff[c] else c).sum()
 
-    # Get load dataframe
-    load = tools.get_dataframe("load_balance.csv", usecols=[
-        "timestamp", "zone_demand_mw", "TXPowerNet", "scenario_name"
-    ])
+#     # Sort columns by the last period
+#     total_dispatch = total_dispatch.sort_values(by=total_dispatch.index[-1], axis=1)
+#     # Give proper name for legend
+#     total_dispatch = total_dispatch.rename_axis("Type", axis=1)
+#     # Get axis
+#     # Plot
+#     total_dispatch.plot(
+#         kind='bar',
+#         stacked=True,
+#         ax=tools.get_axes(),
+#         color=tools.get_colors(len(total_dispatch)),
+#         xlabel="Period",
+#         ylabel="Total dispatched electricity (TWh)"
+#     )
 
-    def process_time(df):
-        df = df.astype({"period": int})
-        df = df[df["period"] == df["period"].max()].drop(columns="period")
-        return df.set_index("datetime")
+#     tools.bar_label()
 
-    # Sum load across all the load zones
-    load = load.groupby(["timestamp"], as_index=False).sum()
+# @graph(
+#     "energy_balance",
+#     title="Energy Balance For Every Month",
+#     supports_multi_scenario=True,
+#     is_long=True
+# )
+# def energy_balance(tools):
+#     # Get dispatch dataframe
+#     cols = ["timestamp", "gen_tech", "gen_energy_source", "DispatchGen_MW", "scenario_name", "scenario_index",
+#             "Curtailment_MW"]
+#     df = tools.get_dataframe("dispatch.csv", drop_scenario_info=False)[cols]
+#     df = tools.transform.gen_type(df)
 
-    # Include Tx Losses in demand and flip sign
-    load["value"] = (load["zone_demand_mw"] + load["TXPowerNet"]) * -1
+#     # Rename and add needed columns
+#     df["Dispatch Limit"] = df["DispatchGen_MW"] + df["Curtailment_MW"]
+#     df = df.drop("Curtailment_MW", axis=1)
+#     df = df.rename({"DispatchGen_MW": "Dispatch"}, axis=1)
+#     # Sum dispatch across all the projects of the same type and timepoint
+#     key_columns = ["timestamp", "gen_type", "scenario_name", "scenario_index"]
+#     df = df.groupby(key_columns, as_index=False).sum()
+#     df = df.melt(id_vars=key_columns, value_vars=["Dispatch", "Dispatch Limit"], var_name="Type")
+#     df = df.rename({"gen_type": "Source"}, axis=1)
 
-    # Rename and convert from wide to long format
-    load = load[["timestamp", "value"]]
+#     discharge = df[(df["Source"] == "Storage") & (df["Type"] == "Dispatch")].drop(["Source", "Type"], axis=1).rename(
+#         {"value": "discharge"}, axis=1)
 
-    # Add the timestamp information and make period string to ensure it doesn't mess up the graphing
-    dispatch = process_time(tools.transform.timestamp(dispatch))
-    load = process_time(tools.transform.timestamp(load))
+#     # Get load dataframe
+#     load = tools.get_dataframe("load_balance.csv", drop_scenario_info=False)
+#     load = load.drop("normalized_energy_balance_duals_dollar_per_mwh", axis=1)
 
-    # Convert to TWh (incl. multiply by timepoint duration)
-    dispatch["value"] *= dispatch["tp_duration"] / 1e6
-    load["value"] *= load["tp_duration"] / 1e6
+#     # Sum load across all the load zones
+#     key_columns = ["timestamp", "scenario_name", "scenario_index"]
+#     load = load.groupby(key_columns, as_index=False).sum()
 
-    days = 14
-    freq = str(days) + "D"
-    offset = tools.pd.Timedelta(freq) / 2
+#     # Subtract storage dispatch from generation and add it to the storage charge to get net flow
+#     load = load.merge(
+#         discharge,
+#         how="left",
+#         on=key_columns,
+#         validate="one_to_one"
+#     )
+#     load["ZoneTotalCentralDispatch"] -= load["discharge"]
+#     load["StorageNetCharge"] += load["discharge"]
+#     load = load.drop("discharge", axis=1)
 
-    def rolling_sum(df):
-        df = df.rolling(freq, center=True).value.sum().reset_index()
-        df["value"] /= days
-        df = df[(df.datetime.min() + offset < df.datetime) & (df.datetime < df.datetime.max() - offset)]
-        return df
+#     # Rename and convert from wide to long format
+#     load = load.rename({
+#         "ZoneTotalCentralDispatch": "Total Generation (excl. storage discharge)",
+#         "TXPowerNet": "Transmission Losses",
+#         "StorageNetCharge": "Storage Net Flow",
+#         "zone_demand_mw": "Demand",
+#     }, axis=1).sort_index(axis=1)
+#     load = load.melt(id_vars=key_columns, var_name="Source")
+#     load["Type"] = "Dispatch"
 
-    dispatch = rolling_sum(dispatch.groupby("gen_type", as_index=False))
-    load = rolling_sum(load).set_index("datetime")["value"]
+#     # Merge dispatch contributions with load contributions
+#     df = pd.concat([load, df])
 
-    # Get the state of charge data
-    soc = tools.get_dataframe("StateOfCharge.csv", dtype={"STORAGE_GEN_TPS_1": str}) \
-        .rename(columns={"STORAGE_GEN_TPS_2": "timepoint", "StateOfCharge": "value"})
-    # Sum over all the projects that are in the same scenario with the same timepoint
-    soc = soc.groupby(["timepoint"], as_index=False).sum()
-    soc["value"] /= 1e6  # Convert to TWh
-    max_soc = soc["value"].max()
+#     # Add the timestamp information and make period string to ensure it doesn't mess up the graphing
+#     df = tools.transform.timestamp(df).astype({"period": str})
 
-    # Group by time
-    soc = process_time(tools.transform.timestamp(soc, use_timepoint=True, key_col="timepoint"))
-    soc = soc.rolling(freq, center=True)["value"].mean().reset_index()
-    soc = soc[(soc.datetime.min() + offset < soc.datetime) & (soc.datetime < soc.datetime.max() - offset)]
-    soc = soc.set_index("datetime")["value"]
+#     # Convert to TWh (incl. multiply by timepoint duration)
+#     df["value"] *= df["tp_duration"] / 1e6
+
+#     FREQUENCY = "1W"
+
+#     def groupby_time(df):
+#         return df.groupby([
+#             "scenario_name",
+#             "period",
+#             "Source",
+#             "Type",
+#             tools.pd.Grouper(key="datetime", freq=FREQUENCY, origin="start")
+#         ])["value"]
+
+#     df = groupby_time(df).sum().reset_index()
+
+#     # Get the state of charge data
+#     soc = tools.get_dataframe("StateOfCharge.csv", dtype={"STORAGE_GEN_TPS_1": str}, drop_scenario_info=False)
+#     soc = soc.rename({"STORAGE_GEN_TPS_2": "timepoint", "StateOfCharge": "value"}, axis=1)
+#     # Sum over all the projects that are in the same scenario with the same timepoint
+#     soc = soc.groupby(["timepoint", "scenario_name"], as_index=False).sum()
+#     soc["Source"] = "State Of Charge"
+#     soc["value"] /= 1e6  # Convert to TWh
+
+#     # Group by time
+#     soc = tools.transform.timestamp(soc, use_timepoint=True, key_col="timepoint").astype({"period": str})
+#     soc["Type"] = "Dispatch"
+#     soc = groupby_time(soc).mean().reset_index()
+
+#     # Add state of charge to dataframe
+#     df = pd.concat([df, soc])
+#     # Add column for day since that's what we really care about
+#     df["day"] = df["datetime"].dt.dayofyear
+
+#     # Plot
+#     # Get the colors for the lines
+#     colors = tools.get_colors()
+#     colors.update({
+#         "Transmission Losses": "brown",
+#         "Storage Net Flow": "cadetblue",
+#         "Demand": "black",
+#         "Total Generation (excl. storage discharge)": "black",
+#         "State Of Charge": "green"
+#     })
+
+#     # plot
+#     num_periods = df["period"].nunique()
+#     pn = tools.pn
+#     plot = pn.ggplot(df) + \
+#            pn.geom_line(pn.aes(x="day", y="value", color="Source", linetype="Type")) + \
+#            pn.facet_grid("period ~ scenario_name") + \
+#            pn.labs(y="Contribution to Energy Balance (TWh)") + \
+#            pn.scales.scale_color_manual(values=colors, aesthetics="color", na_value=colors["Other"]) + \
+#            pn.scales.scale_x_continuous(
+#                name="Month",
+#                labels=["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"],
+#                breaks=(15, 46, 76, 106, 137, 167, 198, 228, 259, 289, 319, 350),
+#                limits=(0, 366)) + \
+#            pn.scales.scale_linetype_manual(
+#                values={"Dispatch Limit": "dotted", "Dispatch": "solid"}
+#            ) + \
+#            pn.theme(
+#                figure_size=(pn.options.figure_size[0] * tools.num_scenarios, pn.options.figure_size[1] * num_periods))
+
+#     tools.save_figure(plot.draw())
+
+# @graph(
+#     "curtailment_per_period",
+#     title="Percent of total dispatchable capacity curtailed",
+#     is_long=True
+# )
+# def graph_curtailment_per_tech(tools):
+#     # Load dispatch.csv
+#     df = tools.get_dataframe('dispatch.csv')
+#     df = tools.transform.gen_type(df)
+#     df["Total"] = df['DispatchGen_MW'] + df["Curtailment_MW"]
+#     df = df[df["is_renewable"]]
+#     # Make PERIOD a category to ensure x-axis labels don't fill in years between period
+#     # TODO we should order this by period here to ensure they're in increasing order
+#     df["period"] = df["period"].astype("category")
+#     df = df.groupby(["period", "gen_type"], as_index=False).sum()
+#     df["Percent Curtailed"] = df["Curtailment_MW"] / (df['DispatchGen_MW'] + df["Curtailment_MW"])
+#     df = df.pivot(index="period", columns="gen_type", values="Percent Curtailed").fillna(0)
+#     if len(df) == 0:  # No dispatch from renewable technologies
+#         return
+#     # Set the name of the legend.
+#     df = df.rename_axis("Type", axis='columns')
+#     # Get axes to graph on
+#     ax = tools.get_axes()
+#     # Plot
+#     color = tools.get_colors()
+#     kwargs = dict() if color is None else dict(color=color)
+#     df.plot(ax=ax, kind='line',  xlabel='Period', marker="x", **kwargs)
+
+#     # Set the y-axis to use percent
+#     ax.yaxis.set_major_formatter(tools.plt.ticker.PercentFormatter(1.0))
+#     # Horizontal line at 100%
+#     # ax.axhline(y=1, linestyle="--", color='b')
 
 
-    dispatch = dispatch[dispatch["value"] != 0]
-    dispatch = dispatch.pivot(columns="gen_type", index="datetime", values="value")
-    dispatch = dispatch[dispatch.std().sort_values().index].rename_axis("Technology", axis=1)
-    total_dispatch = dispatch.sum(axis=1)
+# @graph(
+#     "energy_balance_2",
+#     title="Balance between demand, generation and storage for last period",
+#     note="Dashed green and red lines are total generation and total demand (incl. transmission losses),"
+#          " respectively.\nDotted line is the total state of charge (scaled for readability)."
+#          "\nWe used a 14-day rolling mean to smoothen out values.",
+#     supports_multi_scenario=True,
+#     is_long=True
+# )
+# def graph_energy_balance_2(tools):
+#     # Get dispatch dataframe
+#     dispatch = tools.get_dataframe("dispatch.csv", usecols=[
+#         "timestamp", "gen_tech", "gen_energy_source", "DispatchGen_MW", "scenario_name"
+#     ]).rename({"DispatchGen_MW": "value"}, axis=1)
+#     dispatch = tools.transform.gen_type(dispatch)
 
-    max_val = max(total_dispatch.max(), load.max())
+#     # Sum dispatch across all the projects of the same type and timepoint
+#     dispatch = dispatch.groupby(["timestamp", "gen_type"], as_index=False).sum()
+#     dispatch = dispatch[dispatch["gen_type"] != "Storage"]
 
-    # Scale soc to the graph
-    soc *= max_val / max_soc
+#     # Get load dataframe
+#     load = tools.get_dataframe("load_balance.csv", usecols=[
+#         "timestamp", "zone_demand_mw", "TXPowerNet", "scenario_name"
+#     ])
 
-    # Plot
-    # Get the colors for the lines
-    # plot
-    ax = tools.get_axes(ylabel="Average Daily Generation (TWh)")
-    ax.set_ylim(0, max_val * 1.05)
-    dispatch.plot(
-        ax=ax,
-        color=tools.get_colors()
-    )
-    soc.plot(ax=ax, color="black", linestyle="dotted")
-    load.plot(ax=ax, color="red", linestyle="dashed")
-    total_dispatch.plot(ax=ax, color="green", linestyle="dashed")
-    ax.fill_between(total_dispatch.index, total_dispatch.values, load.values, alpha=0.2, where=load<total_dispatch, facecolor="green")
-    ax.fill_between(total_dispatch.index, total_dispatch.values, load.values, alpha=0.2, where=load>total_dispatch, facecolor="red")
+#     def process_time(df):
+#         df = df.astype({"period": int})
+#         df = df[df["period"] == df["period"].max()].drop(columns="period")
+#         return df.set_index("datetime")
+
+#     # Sum load across all the load zones
+#     load = load.groupby(["timestamp"], as_index=False).sum()
+
+#     # Include Tx Losses in demand and flip sign
+#     load["value"] = (load["zone_demand_mw"] + load["TXPowerNet"]) * -1
+
+#     # Rename and convert from wide to long format
+#     load = load[["timestamp", "value"]]
+
+#     # Add the timestamp information and make period string to ensure it doesn't mess up the graphing
+#     dispatch = process_time(tools.transform.timestamp(dispatch))
+#     load = process_time(tools.transform.timestamp(load))
+
+#     # Convert to TWh (incl. multiply by timepoint duration)
+#     dispatch["value"] *= dispatch["tp_duration"] / 1e6
+#     load["value"] *= load["tp_duration"] / 1e6
+
+#     days = 14
+#     freq = str(days) + "D"
+#     offset = tools.pd.Timedelta(freq) / 2
+
+#     def rolling_sum(df):
+#         df = df.rolling(freq, center=True).value.sum().reset_index()
+#         df["value"] /= days
+#         df = df[(df.datetime.min() + offset < df.datetime) & (df.datetime < df.datetime.max() - offset)]
+#         return df
+
+#     dispatch = rolling_sum(dispatch.groupby("gen_type", as_index=False))
+#     load = rolling_sum(load).set_index("datetime")["value"]
+
+#     # Get the state of charge data
+#     soc = tools.get_dataframe("StateOfCharge.csv", dtype={"STORAGE_GEN_TPS_1": str}) \
+#         .rename(columns={"STORAGE_GEN_TPS_2": "timepoint", "StateOfCharge": "value"})
+#     # Sum over all the projects that are in the same scenario with the same timepoint
+#     soc = soc.groupby(["timepoint"], as_index=False).sum()
+#     soc["value"] /= 1e6  # Convert to TWh
+#     max_soc = soc["value"].max()
+
+#     # Group by time
+#     soc = process_time(tools.transform.timestamp(soc, use_timepoint=True, key_col="timepoint"))
+#     soc = soc.rolling(freq, center=True)["value"].mean().reset_index()
+#     soc = soc[(soc.datetime.min() + offset < soc.datetime) & (soc.datetime < soc.datetime.max() - offset)]
+#     soc = soc.set_index("datetime")["value"]
 
 
-@graph(
-    "dispatch_map",
-    title="Dispatched electricity per load zone",
-    is_long=True
-)
-def dispatch_map(tools):
-    if not tools.maps.can_make_maps():
-        return
-    dispatch = tools.get_dataframe("dispatch_zonal_annual_summary.csv").rename({"Energy_GWh_typical_yr": "value"},                                                                           axis=1)
-    dispatch = tools.transform.gen_type(dispatch)
-    dispatch = dispatch.groupby(["gen_type", "gen_load_zone"], as_index=False)["value"].sum()
-    dispatch["value"] *= 1e-3
-    tools.maps.graph_pie_chart(dispatch, bins=(0, 10, 100, 200, float("inf")), title="Yearly Dispatch (TWh)")
+#     dispatch = dispatch[dispatch["value"] != 0]
+#     dispatch = dispatch.pivot(columns="gen_type", index="datetime", values="value")
+#     dispatch = dispatch[dispatch.std().sort_values().index].rename_axis("Technology", axis=1)
+#     total_dispatch = dispatch.sum(axis=1)
+
+#     max_val = max(total_dispatch.max(), load.max())
+
+#     # Scale soc to the graph
+#     soc *= max_val / max_soc
+
+#     # Plot
+#     # Get the colors for the lines
+#     # plot
+#     ax = tools.get_axes(ylabel="Average Daily Generation (TWh)")
+#     ax.set_ylim(0, max_val * 1.05)
+#     dispatch.plot(
+#         ax=ax,
+#         color=tools.get_colors()
+#     )
+#     soc.plot(ax=ax, color="black", linestyle="dotted")
+#     load.plot(ax=ax, color="red", linestyle="dashed")
+#     total_dispatch.plot(ax=ax, color="green", linestyle="dashed")
+#     ax.fill_between(total_dispatch.index, total_dispatch.values, load.values, alpha=0.2, where=load<total_dispatch, facecolor="green")
+#     ax.fill_between(total_dispatch.index, total_dispatch.values, load.values, alpha=0.2, where=load>total_dispatch, facecolor="red")
+
+
+# @graph(
+#     "dispatch_map",
+#     title="Dispatched electricity per load zone",
+#     is_long=True
+# )
+# def dispatch_map(tools):
+#     if not tools.maps.can_make_maps():
+#         return
+#     dispatch = tools.get_dataframe("dispatch_zonal_annual_summary.csv").rename({"Energy_GWh_typical_yr": "value"},                                                                           axis=1)
+#     dispatch = tools.transform.gen_type(dispatch)
+#     dispatch = dispatch.groupby(["gen_type", "gen_load_zone"], as_index=False)["value"].sum()
+#     dispatch["value"] *= 1e-3
+#     tools.maps.graph_pie_chart(dispatch, bins=(0, 10, 100, 200, float("inf")), title="Yearly Dispatch (TWh)")
