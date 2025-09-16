@@ -269,7 +269,7 @@ def define_components(mod):
     # (see note in h2stor_build_can_operate_in_period)
     mod.h2stor_no_predetermined_bld_yr_vs_period_conflict = BuildCheck(
         mod.PREDETERMINED_H2_STORAGE_BLD_YRS, mod.PERIODS,
-        rule=lambda m, bld_yr, p: bld_yr != p
+        rule=lambda m, s, bld_yr, p: bld_yr != p
     )
 
     mod.BLD_YRS_FOR_H2_STORAGE = Set(
