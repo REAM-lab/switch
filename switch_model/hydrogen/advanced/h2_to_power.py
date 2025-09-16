@@ -572,13 +572,11 @@ def post_solve(m, outdir):
         "VariableOMCost_per_yr": c(lambda g, t:
                                    m.DispatchH2Gen[g, t] * m.h2gen_variable_om_per_mwh[g] *
                                    m.tp_weight_in_year[t]),
-        "DispatchEmissions_tNOx_per_typical_yr": c(lambda g, t: # Units: [MW] * [h] * [MMBtu of H2/MWh] * [metric ton NOx/MMBtu of H2] = [metric ton NOx]
-                                                   sum(
-                                                       m.DispatchH2Gen[g, t] 
-                                                       * m.tp_weight_in_year[t]
-                                                       * m.h2gen_full_load_heat_rate[g]
-                                                       * m.mt_nox_per_mmbtu_h2[g] 
-                                                       ))
+        "DispatchEmissions_tNOx": c(lambda g, t: # Units: [MW] * [h] * [MMBtu of H2/MWh] * [metric ton NOx/MMBtu of H2] = [metric ton NOx]
+                                                   m.DispatchH2Gen[g, t] 
+                                                   * m.tp_weight_in_year[t]
+                                                   * m.h2gen_full_load_heat_rate[g]
+                                                   * m.mt_nox_per_mmbtu_h2[g])
     })
     h2gen_dispatch_full_df.set_index(["generation_project", "timestamp"], inplace=True)
     write_table(m, output_file=os.path.join(outdir, "h2gen_dispatch.csv"), df=h2gen_dispatch_full_df)

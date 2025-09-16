@@ -428,7 +428,7 @@ def post_solve(instance, outdir):
             "CompressorTotalAnnualFixedOMCost": value(mod.H2PipelineCompressorFixedOM[pip, p])
         } for pip, p in mod.H2_PIPELINES * mod.PERIODS
     ])
-    h2pip_build_df.set_index(["PIPELINE", "PERIOD"], inplace=True)
+    h2pip_build_df.set_index(["H2_PIPELINE", "PERIOD"], inplace=True)
     write_table(instance, df=h2pip_build_df, output_file=os.path.join(outdir, "h2_pipelines.csv"))
     
     write_table(
