@@ -21,8 +21,7 @@ INPUT FILE FORMAT
     the second row.
 
     h2_pipeline_params.csv
-        h2pip_capital_cost_per_mw_km, h2pip_capital_cost_y_int_per_km, 
-        h2pip_fixed_om_pc, h2pip_lifetime_yrs, 
+        h2pip_capital_cost_per_mw_km, h2pip_fixed_om_per_mw_km_yr, h2pip_lifetime_yrs, 
     Optional columns:
         h2pip_leakage_rate, h2pip_comp_overnight_cost_per_mw, 
         h2pip_comp_fixed_om_cost_per_mw_yr, h2pip_comp_mwh_per_kg, h2pip_comp_life_years
@@ -105,26 +104,28 @@ def define_components(mod):
 
     h2pip_capital_cost_per_mw_km describes the investment costs of building a
     new pipeline in units of $BASE_YEAR per MW of H2 transfer capacity per
-    km. This is optional and defaults to $180/(km * MW_H2). 
-    pip_capital_cost_y_int_per_km describes the y-intercept of the investment 
-    costs of building a new pipeline in units of $BASE_YEAR per km of pipeline. 
-    This is optional and defaults to $408,000/km. These values both come from the 
-    linearized costs originally in
-    https://www.sciencedirect.com/science/article/pii/S0360319918338552 and cited 
-    in https://www.sciencedirect.com/science/article/pii/S0360319919338625. We 
-    adapt the units to be per km rather than m and per MW_H2 rather than GW_H2.
-    The full equation for investment cost of pipelines is 
-    (h2pip_capital_cost_per_mw_km * BuildH2Pip + h2pip_capital_cost_y_int_per_km) * h2pip_length_km,
-    where BuildH2Pip is in MW of H2. See the 1st paragraph above for details on MW_H2.
+    km. This is optional and defaults to $843.90/MW-km. This value comes from NREL's
+    ReEDS model, which draws their values from the SERA model. We convert from $2004 
+    to $2018 using 32.9% inflation rate from https://www.usinflationcalculator.com/. 
+    We convert the units from $/[(metric ton of H2/h)*mi] to $/[MW of H2*mi]. See 
+    the 1st paragraph above for details on MW_H2.
     
-    h2pip_fixed_om_pc describes the fixed Operations and
-    Maintenance costs of pipelines as a percent of capital costs. This is optional 
-    and defaults to 5%, which comes from the ReEDS model and
-    https://iopscience.iop.org/article/10.1088/1748-9326/acacb5.
+    h2pip_fixed_om_per_mw_km_yr describes the fixed Operations and
+    Maintenance costs of pipelines. This is optional and defaults to $23.86/MW-km-yr, 
+    which comes from NREL's ReEDS model, which draws their values from the SERA model.
+    We convert from $2004 to $2018 using 32.9% inflation rate from 
+    https://www.usinflationcalculator.com/. We convert the units from 
+    $/[(metric ton of H2/h)*mi] to $/[MW of H2*mi].
+    
+    h2_pip_intrareg_inv_cost_per_kg is the normalized cost for intra-zonal H2 transport
+    in $/kg of H2 produced. This is optional and defaults to $0.43/kg, which comes from 
+    NREL's ReEDS model, which draws their values from the 2023 DOE clean hydrogen liftoff 
+    report. We convert from $2004 to $2018 using 32.9% inflation rate from 
+    https://www.usinflationcalculator.com/.
 
     pip_lifetime_yrs is the number of years in which a capital
     construction loan for a new pipeline is repaid. This
-    optional parameter defaults to 40 years based on 
+    optional parameter defaults to 40 years based on the ReEDS model and 
     https://www.sciencedirect.com/science/article/pii/S0360319919338625.  
     At the end of this time, we assume pipelines will be rebuilt at the same cost.
 
@@ -213,13 +214,13 @@ def define_components(mod):
     mod.min_data_check('h2pip_lz1', 'h2pip_lz2','h2pip_length_km', 'existing_h2pip_cap_mw')
     mod.h2pip_capital_cost_per_mw_km = Param(
         within=NonNegativeReals,
-        default=180, input_file="h2_pipeline_params.csv")
-    mod.h2pip_capital_cost_y_int_per_km = Param(
+        default=843.90, input_file="h2_pipeline_params.csv")
+    mod.h2pip_fixed_om_per_mw_km_yr = Param(
         within=NonNegativeReals,
-        default=408000, input_file="h2_pipeline_params.csv")
-    mod.h2pip_fixed_om_pc = Param(
-        within=PercentFraction,
-        default=0.05, input_file="h2_pipeline_params.csv")
+        default=23.86, input_file="h2_pipeline_params.csv")
+    mod.h2_pip_intrareg_inv_cost_per_kg = Param(
+        within=NonNegativeReals,
+        default=0.43, input_file="h2_pipeline_params.csv")
     mod.h2pip_lifetime_yrs = Param(
         within=NonNegativeReals,
         default=40, input_file="h2_pipeline_params.csv")
@@ -263,14 +264,15 @@ def define_components(mod):
     mod.PipelineCapitalCosts = Expression(
         mod.H2_PIPELINES, mod.PERIODS,
         rule=lambda m, pip, p: 
-        (m.NewPipCapacity[pip, p] * m.h2pip_capital_cost_per_mw_km + m.h2pip_capital_cost_y_int_per_km) 
-        * m.h2pip_length_km[pip] * m.h2pip_terrain_multiplier[pip] * crf(m.interest_rate, m.h2pip_lifetime_yrs)
+        m.NewPipCapacity[pip, p] * m.h2pip_capital_cost_per_mw_km 
+        * m.h2pip_length_km[pip] * m.h2pip_terrain_multiplier[pip] 
+        * crf(m.interest_rate, m.h2pip_lifetime_yrs)
         if (pip, p) in m.H2_PIP_BLD_YRS else 0
     )
     mod.PipelineFixedOMCosts = Expression(
         mod.H2_PIPELINES, mod.PERIODS,
         rule=lambda m, pip, p: 
-        m.PipelineCapitalCosts[pip, p] * m.h2pip_fixed_om_pc 
+        m.NewPipCapacity[pip, p] * m.h2pip_length_km[pip] * m.h2pip_fixed_om_per_mw_km_yr 
         if (pip, p) in m.H2_PIP_BLD_YRS else 0
     )
     mod.PipFixedCosts = Expression(
@@ -281,6 +283,16 @@ def define_components(mod):
     )
     mod.Cost_Components_Per_Period.append('PipFixedCosts')
 
+    mod.IntraZonalPipInvCost = Expression(
+        mod.PERIODS,
+        rule=lambda m, p: sum(
+            m.ZoneTotalCentralH2Dispatch[z,t] * m.tp_weight_in_year[t]
+            for z in m.LOAD_ZONES 
+            for t in m.TPS_IN_PERIOD[p]
+            ) * (1000 / 33.32) * m.h2_pip_intrareg_inv_cost_per_kg,
+		doc="Summarize annual intra-zonal H2 pipeline costs per kg of H2 produced in each period for the objective function"
+    )
+m.ZoneTotalCentralH2Dispatch
     def init_DIRECTIONAL_H2_PIP(model):
         pip_dir = set()
         for pip in model.H2_PIPELINES:
