@@ -283,7 +283,7 @@ def define_components(mod):
     )
     mod.Cost_Components_Per_Period.append('PipFixedCosts')
 
-    mod.IntraZonalPipInvCost = Expression(
+    mod.FlatIntraZonalPipInvCost = Expression(
         mod.PERIODS,
         rule=lambda m, p: sum(
             m.ZoneTotalCentralH2Dispatch[z,t] * m.tp_weight_in_year[t]
@@ -292,6 +292,8 @@ def define_components(mod):
             ) * (1000 / 33.32) * m.h2_pip_intrareg_inv_cost_per_kg,
 		doc="Summarize annual intra-zonal H2 pipeline costs per kg of H2 produced in each period for the objective function"
     )
+    mod.Cost_Components_Per_Period.append('FlatIntraZonalPipInvCost')
+
 m.ZoneTotalCentralH2Dispatch
     def init_DIRECTIONAL_H2_PIP(model):
         pip_dir = set()
