@@ -12,7 +12,7 @@ INPUT FILE FORMAT
         PRODUCTION_PROJECT, prod_tech, prod_load_zone, prod_energy_source,
         prod_max_age, mmbtu_fuel_per_kg_h2*, mwh_per_kg_h2, prod_variable_om_per_kg
     Optional columns are:
-        prod_electric_connect_cost_per_mw, prod_pip_connect_cost_per_mw,
+        prod_electric_connect_cost_per_mw, prod_intrazonal_pip_inv_cost_per_kg,
         prod_av_outage_rate, prod_capacity_limit_mw, prod_ccs_equipped, 
         prod_is_onsite, prod_onsite_GENERATION_PROJECT, prod_onsite_gen_tech
     *Note: mmbtu_fuel_per_kg_h2 is only mandatory for fuel-consuming H2 production
@@ -315,6 +315,12 @@ def define_components(m):
     
     prod_variable_om_per_kg[h] is the variable Operations and Maintenance
     costs (O&M) per kg of H2 produced for a given H2 production project.
+    
+    prod_intrazonal_pip_inv_cost_per_kg[h] is the normalized cost for intra-zonal 
+    H2 transport in $/kg of H2 produced. This is optional and defaults to $0.43/kg, 
+    which comes from NREL's ReEDS model, which draws their values from the 2023 DOE 
+    clean hydrogen liftoff report. We convert from $2004 to $2018 using 32.9% 
+    inflation rate from https://www.usinflationcalculator.com/.
 
     -- Derived cost parameters --
 
@@ -737,7 +743,7 @@ def define_components(m):
                                 within=NonNegativeReals)
     m.prod_electric_connect_cost_per_mw = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
                                 within=NonNegativeReals, default=0)
-    m.prod_pip_connect_cost_per_mw = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
+    m.prod_intrazonal_pip_inv_cost_per_kg = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
                                 within=NonNegativeReals, default=0)
     m.min_data_check('prod_variable_om_per_kg')
 
@@ -756,8 +762,7 @@ def define_components(m):
         m.PROD_BLD_YRS,
         initialize=lambda m, h, bld_yr: (
             (m.prod_overnight_cost_per_mw[h, bld_yr]
-             + m.prod_electric_connect_cost_per_mw[h]
-             + m.prod_pip_connect_cost_per_mw[h]) *
+             + m.prod_electric_connect_cost_per_mw[h]) *
             crf(m.interest_rate, m.prod_max_age[h])))
 
     m.ProdCapitalCosts = Expression(
@@ -780,7 +785,7 @@ def define_components(m):
             m.ProdCapitalCosts[h, p] + m.ProdFixedOMCosts[h, p]
             for h in m.PRODUCTION_PROJECTS))
     m.Cost_Components_Per_Period.append('TotalProdFixedCosts')
-    
+
     ### DISPATCH ###
 
     def period_active_prod_rule(m, period):
@@ -1051,6 +1056,16 @@ def define_components(m):
 		doc="Summarize variable OM costs per kg of H2 produced in each period for the objective function"
 	)
     m.Cost_Components_Per_Period.append('H2ProdVariableOMCostsInPeriod')
+
+    m.FlatIntraZonalPipInvCost = Expression(
+        mod.PERIODS,
+        rule=lambda m, p: sum(
+            m.DispatchProd[h, t] * m.tp_weight_in_year[t] * (1000 / 33.32) * m.prod_intrazonal_pip_inv_cost_per_kg[h]
+            for t in m.TPS_IN_PERIOD[p]
+			for h in m.PROD_IN_PERIOD[m.tp_period[t]],
+		doc="Summarize annual intra-zonal H2 pipeline costs per kg of H2 produced in each period for the objective function"
+    )
+    m.Cost_Components_Per_Period.append('FlatIntraZonalPipInvCost')
 
     m.ProdDispatchUpperLimit = Expression(
         m.PROD_TPS,

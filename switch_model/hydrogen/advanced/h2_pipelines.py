@@ -116,12 +116,6 @@ def define_components(mod):
     We convert from $2004 to $2018 using 32.9% inflation rate from 
     https://www.usinflationcalculator.com/. We convert the units from 
     $/[(metric ton of H2/h)*mi] to $/[MW of H2*mi].
-    
-    h2_pip_intrareg_inv_cost_per_kg is the normalized cost for intra-zonal H2 transport
-    in $/kg of H2 produced. This is optional and defaults to $0.43/kg, which comes from 
-    NREL's ReEDS model, which draws their values from the 2023 DOE clean hydrogen liftoff 
-    report. We convert from $2004 to $2018 using 32.9% inflation rate from 
-    https://www.usinflationcalculator.com/.
 
     pip_lifetime_yrs is the number of years in which a capital
     construction loan for a new pipeline is repaid. This
@@ -218,9 +212,6 @@ def define_components(mod):
     mod.h2pip_fixed_om_per_mw_km_yr = Param(
         within=NonNegativeReals,
         default=23.86, input_file="h2_pipeline_params.csv")
-    mod.h2_pip_intrareg_inv_cost_per_kg = Param(
-        within=NonNegativeReals,
-        default=0.43, input_file="h2_pipeline_params.csv")
     mod.h2pip_lifetime_yrs = Param(
         within=NonNegativeReals,
         default=40, input_file="h2_pipeline_params.csv")
@@ -283,18 +274,6 @@ def define_components(mod):
     )
     mod.Cost_Components_Per_Period.append('PipFixedCosts')
 
-    mod.FlatIntraZonalPipInvCost = Expression(
-        mod.PERIODS,
-        rule=lambda m, p: sum(
-            m.ZoneTotalCentralH2Dispatch[z,t] * m.tp_weight_in_year[t]
-            for z in m.LOAD_ZONES 
-            for t in m.TPS_IN_PERIOD[p]
-            ) * (1000 / 33.32) * m.h2_pip_intrareg_inv_cost_per_kg,
-		doc="Summarize annual intra-zonal H2 pipeline costs per kg of H2 produced in each period for the objective function"
-    )
-    mod.Cost_Components_Per_Period.append('FlatIntraZonalPipInvCost')
-
-m.ZoneTotalCentralH2Dispatch
     def init_DIRECTIONAL_H2_PIP(model):
         pip_dir = set()
         for pip in model.H2_PIPELINES:
