@@ -317,10 +317,11 @@ def define_components(m):
     costs (O&M) per kg of H2 produced for a given H2 production project.
     
     prod_intrazonal_pip_inv_cost_per_kg[h] is the normalized cost for intra-zonal 
-    H2 transport in $/kg of H2 produced. This is optional and defaults to $0.43/kg, 
-    which comes from NREL's ReEDS model, which draws their values from the 2023 DOE 
-    clean hydrogen liftoff report. We convert from $2004 to $2018 using 32.9% 
-    inflation rate from https://www.usinflationcalculator.com/.
+    H2 transport in $/kg of H2 produced. This is optional and defaults to $0. A 
+    recommended value to use is $0.43/kg, which comes from NREL's ReEDS model, 
+    which draws their values from the 2023 DOE clean hydrogen liftoff report. We 
+    convert from $2004 to $2018 using 32.9% inflation rate from 
+    https://www.usinflationcalculator.com/.
 
     -- Derived cost parameters --
 
