@@ -1064,7 +1064,7 @@ def define_components(m):
             for t in m.TPS_IN_PERIOD[p]
 			for h in m.PROD_IN_PERIOD[m.tp_period[t]]),
 		doc="Summarize annual intra-zonal H2 pipeline costs per kg of H2 produced in each period for the objective function"
-	)
+    )
     m.Cost_Components_Per_Period.append('FlatIntraZonalPipInvCost')
 
     m.ProdDispatchUpperLimit = Expression(
