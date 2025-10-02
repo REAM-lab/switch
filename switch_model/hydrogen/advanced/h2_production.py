@@ -21,7 +21,7 @@ INPUT FILE FORMAT
     The following file lists existing builds of H2 production projects, and is
     optional for simulations where there is no existing capacity:
 
-    h2_prod_predetermined.csv.csv
+    h2_prod_predetermined.csv
         PRODUCTION_PROJECT, build_year, prod_predetermined_cap_mw
 
     The following file is mandatory, because it sets cost parameters for
@@ -1058,13 +1058,13 @@ def define_components(m):
     m.Cost_Components_Per_Period.append('H2ProdVariableOMCostsInPeriod')
 
     m.FlatIntraZonalPipInvCost = Expression(
-        mod.PERIODS,
+        m.PERIODS,
         rule=lambda m, p: sum(
             m.DispatchProd[h, t] * m.tp_weight_in_year[t] * (1000 / 33.32) * m.prod_intrazonal_pip_inv_cost_per_kg[h]
             for t in m.TPS_IN_PERIOD[p]
-			for h in m.PROD_IN_PERIOD[m.tp_period[t]],
+			for h in m.PROD_IN_PERIOD[m.tp_period[t]]),
 		doc="Summarize annual intra-zonal H2 pipeline costs per kg of H2 produced in each period for the objective function"
-    )
+	)
     m.Cost_Components_Per_Period.append('FlatIntraZonalPipInvCost')
 
     m.ProdDispatchUpperLimit = Expression(
