@@ -10,22 +10,19 @@ INPUT FILE FORMAT
 
     h2_storage_projects_info.csv
         H2_STORAGE_PROJECT, h2stor_load_zone, h2stor_life_years, 
-        h2stor_maximum_size_kg, h2stor_leakage_rate, h2stor_type
+        h2stor_maximum_size_kg, h2stor_leakage_rate, h2stor_type,
+        comp_life_years
     Optional columns are: 
-        h2stor_max_cycles_per_year
+        h2stor_cap_frac_withdraw_limit, h2stor_max_cycles_per_year
 
     h2_storage_build_costs.csv
         H2_STORAGE_PROJECT, build_year, h2stor_overnight_cost_per_kg, 
-        h2stor_fixed_om_cost_per_kg
+        h2stor_fixed_om_cost_per_kg, comp_overnight_cost_per_mw, 
+        comp_fixed_om_cost_per_mw_yr, comp_mwh_per_kg
     
     h2_storage_predetermined.csv
-        H2_STORAGE_PROJECT, build_year, h2stor_predetermined_kg
-        
-    h2_storage_compressors.csv
-        h2stor_type, comp_overnight_cost_per_mw, comp_fixed_om_cost_per_mw_yr, 
-        comp_mwh_per_kg, h2stor_comp_life_years
-    Optional columns are:
-        h2stor_cap_frac_withdraw_limit
+        H2_STORAGE_PROJECT, build_year, h2stor_predetermined_kg,
+        h2stor_comp_predetermined_mw
 
 """
 from pyomo.environ import *
@@ -88,6 +85,11 @@ def define_components(mod):
     installation and is not a free decision variable. This is analogous to 
     gen_predetermined_cap, but in units of hydrogen storage capacity (kg) rather than power (MW). 
 
+    h2stor_comp_predetermined_mw[(s, bld_yr) in PREDETERMINED_H2_STORAGE_BLD_YRS] is the amount
+    of existing hydrogen compressor capacity in MW for storage project s in build year bld_yr.
+    There is no max capacity for compressors, so we assume they can be infinitely expanded, at a 
+    cost. 
+
     h2stor_maximum_size_kg[s] is a parameter which specifies the maximum possible H2 storage 
     capacity that can be built for a given H2 storage project, in kg of H2. 
     If the project has predetermined capacity but can be expanded, then the amount of additional 
@@ -108,20 +110,42 @@ def define_components(mod):
     which calculates total H2 leakage in metric tons of H2 per zone at each tp, which is summed
     and addeed to the Period_Fugitive_H2 dynamic list, which tracks H2 leakage across all H2 system 
     components.
-    
-    h2stor_overnight_cost_per_kg[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the overnight 
-    capital cost per kg of hydrogen capacity for building the given storage technology 
-    installed in the given investment period in $/kg.
-    
-    h2stor_fixed_om_cost_per_kg[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the fixed O&M cost
-    per kg of hydrogen capacity per year for building the given storage technology installed 
-    in the given investment period in $/kg per year.
-    
+
+    comp_life_years[s] is the financial lifetime for H2 storage compressors. We do not currently
+    enforce retirement for compressors. This is only for annualizing costs.
+
+    h2stor_comp_mwh_per_kg[s] is the amount of electrical energy in MWh drawn by H2 storage
+    compressors for every kg of H2 compressed. This is accounted for in the power balance
+    equation.
+
+    h2stor_cap_frac_withdraw_limit[s] is an optional parameter which specifies the daily limit
+    on H2 withdrawal from H2 storage as a fraction of its total capacity. For example, if this 
+    is set to 0.25, then the fastest complete withdrawal of a full tank/cavern would take 4 days. 
+    This is to limit the withdrawal to a reasonable rate as to limit SWITCH from building a 
+    dramatically high capacity of compressors in order to drain the storage at an unreasonably 
+    fast rate.
+
     h2stor_max_cycles_per_year[s], if specified, restricts
     the number of charge/discharge cycles each H2 storage project can perform
     per year; one cycle is defined as discharging an amount of H2
     equal to the H2 storage capacity of the project.  
+    
+    h2stor_overnight_cost_per_kg[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the overnight 
+    capital cost per kg of hydrogen capacity for building the given storage project 
+    installed in the given build year in $/kg.
+    
+    h2stor_fixed_om_cost_per_kg[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the fixed O&M cost
+    per kg of hydrogen capacity per year for building the given storage project installed 
+    in the given build year in $/kg per year.
 
+    h2stor_comp_overnight_cost_per_mw[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the overnight 
+    capital cost per MW of capacity for building the compressor for the corresponding 
+    storage project installed in the given build year in $/MW.
+
+    h2stor_comp_fixed_om_cost_per_mw_yr[(s, bld_yr) in H2_STORAGE_BLD_YRS] is the fixed O&M 
+    cost per MW of capacity per year for building the compressor for the corresponding 
+    storage project installed in the given build year in $/MW per year.
+    
     -- CONSTRUCTION --
 
     BuildH2Storage[(s, bld_yr) in H2_STORAGE_BLD_YRS] is a decision variable for how much 
@@ -196,10 +220,6 @@ def define_components(mod):
     mod.h2stor_load_zone = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage_projects_info.csv",
                               within=mod.LOAD_ZONES)
     mod.h2stor_type = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage_projects_info.csv",within=Any)
-    mod.H2_STORAGE_TECHNOLOGIES = Set(ordered=False, 
-                                      dimen=1,
-                                      initialize=lambda m:
-                                          {m.h2stor_type[s] for s in m.H2_STORAGE_PROJECTS})
     mod.h2stor_life_years = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage_projects_info.csv",
                             within=PositiveIntegers)
     mod.h2stor_leakage_rate = Param(mod.H2_STORAGE_PROJECTS, input_file="h2_storage_projects_info.csv",
@@ -225,8 +245,13 @@ def define_components(mod):
         mod.PREDETERMINED_H2_STORAGE_BLD_YRS,
         input_file="h2_storage_predetermined.csv",
         within=NonNegativeReals)
-    
-    # inputs from h2_storage_build_costs.csv
+    mod.h2stor_comp_predetermined_mw = Param(
+        mod.PREDETERMINED_H2_STORAGE_BLD_YRS,
+        input_file="h2_storage_predetermined.csv",
+        within=NonNegativeReals,
+    )
+
+    # H2 storage inputs from h2_storage_build_costs.csv
     mod.H2_STORAGE_BLD_YRS = Set(
         dimen=2,
         input_file="h2_storage_build_costs.csv",
@@ -244,7 +269,6 @@ def define_components(mod):
         within=NonNegativeReals,
     )
     mod.min_data_check("h2stor_overnight_cost_per_kg","h2stor_fixed_om_cost_per_kg")
-    
 
     def h2stor_build_can_operate_in_period(m, s, build_year, period):
         # If a period has the same name as a predetermined build year then we have a problem.
@@ -401,28 +425,41 @@ def define_components(mod):
     mod.Cost_Components_Per_Period.append("H2StorageFixedCost")
 
     # -- H2 storage compressors -- 
-    mod.h2stor_comp_overnight_cost_per_mw = Param(mod.H2_STORAGE_TECHNOLOGIES, within=NonNegativeReals,
-		input_file="h2_storage_compressors.csv", input_column="comp_overnight_cost_per_mw")
-    mod.h2stor_comp_fixed_om_cost_per_mw_yr = Param(mod.H2_STORAGE_TECHNOLOGIES, within=NonNegativeReals,
-		input_file="h2_storage_compressors.csv", input_column="comp_fixed_om_cost_per_mw_yr")
+    mod.h2stor_comp_overnight_cost_per_mw = Param(mod.H2_STORAGE_BLD_YRS, within=NonNegativeReals,
+		input_file="h2_storage_build_costs.csv", input_column="comp_overnight_cost_per_mw")
+    mod.h2stor_comp_fixed_om_cost_per_mw_yr = Param(mod.H2_STORAGE_BLD_YRS, within=NonNegativeReals,
+		input_file="h2_storage_build_costs.csv", input_column="comp_fixed_om_cost_per_mw_yr")
+    # compressor financial lifetime
+    mod.h2stor_comp_life_years = Param(mod.H2_STORAGE_PROJECTS, within=NonNegativeReals,
+		default=30, input_file="h2_storage_projects_info.csv", input_column="comp_life_years")
 	# compressor electric load
-    mod.h2stor_comp_mwh_per_kg = Param(mod.H2_STORAGE_TECHNOLOGIES, within=NonNegativeReals,
-		input_file="h2_storage_compressors.csv", input_column="comp_mwh_per_kg")
+    mod.h2stor_comp_mwh_per_kg = Param(mod.H2_STORAGE_PROJECTS, within=NonNegativeReals,
+		input_file="h2_storage_projects_info.csv", input_column="comp_mwh_per_kg")
 	# optional withdrawal limit per H2 storage type as a fraction of H2 storage project capacity per hour 
 	# example: [fraction between 0 and 1] * [kg of storage capacity] * [33.32 kWh/kg of H2] * [1 MWh/1000 kWh] = [MW of H2]
 	# the resulting MW of H2 would be an upper limit on the withdrawal rate of the H2 storage technology
-    mod.h2stor_cap_frac_withdraw_limit = Param(mod.H2_STORAGE_TECHNOLOGIES, within=NonNegativeReals,
-		default=1, input_file="h2_storage_compressors.csv", input_column="h2stor_cap_frac_withdraw_limit")
-    mod.h2stor_comp_life_years = Param(mod.H2_STORAGE_TECHNOLOGIES, within=NonNegativeReals,
-		default=25, input_file="h2_storage_compressors.csv", input_column="h2stor_comp_life_years")
+    mod.h2stor_cap_frac_withdraw_limit = Param(mod.H2_STORAGE_PROJECTS, within=NonNegativeReals,
+		default=1, input_file="h2_storage_projects_info.csv", input_column="h2stor_cap_frac_withdraw_limit")
+
     mod.min_data_check("h2stor_comp_overnight_cost_per_mw","h2stor_comp_fixed_om_cost_per_mw_yr","h2stor_comp_mwh_per_kg")
 
     # Units for BuildH2StorageCompressors are MW of H2
+    def bounds_BuildH2StorageCompressors(mod, s, bld_yr):
+        if((s, bld_yr) in mod.PREDETERMINED_H2_STORAGE_BLD_YRS):
+            return (mod.h2stor_comp_predetermined_mw[s, bld_yr],
+                    mod.h2stor_comp_predetermined_mw[s, bld_yr])
+        else:
+            return (0, None)
     mod.BuildH2StorageCompressors = Var(
         mod.H2_STORAGE_BLD_YRS,
         within=NonNegativeReals,
-        bounds=(0, None)
+        bounds=bounds_BuildH2StorageCompressors
     )
+    
+    # As a starting point we assign an appropriate value to all the existing projects here.
+    mod.BuildH2StorageCompressors_assign_default_value = BuildAction(
+        mod.PREDETERMINED_H2_STORAGE_BLD_YRS,
+        rule=get_assign_default_value_rule("BuildH2StorageCompressors", "h2stor_comp_predetermined_mw"))
 
     mod.H2StorageCompressorCapacity = Expression(
         mod.H2_STORAGE_PROJECTS,
@@ -439,9 +476,9 @@ def define_components(mod):
         rule=lambda m, p: sum(
             sum(
                 m.BuildH2StorageCompressors[s, bld_yr]
-                * m.h2stor_comp_overnight_cost_per_mw[m.h2stor_type[s]]
-                * crf(m.interest_rate, m.h2stor_comp_life_years[m.h2stor_type[s]])
-                + m.BuildH2StorageCompressors[s, bld_yr] * m.h2stor_comp_fixed_om_cost_per_mw_yr[m.h2stor_type[s]]
+                * m.h2stor_comp_overnight_cost_per_mw[s, bld_yr]
+                * crf(m.interest_rate, m.h2stor_comp_life_years[s])
+                + m.BuildH2StorageCompressors[s, bld_yr] * m.h2stor_comp_fixed_om_cost_per_mw_yr[s, bld_yr]
                 for bld_yr in m.BLD_YRS_FOR_H2_STORAGE_PERIOD[s, p]
             )
             for s in m.H2_STORAGE_PROJECTS
@@ -487,7 +524,7 @@ def define_components(mod):
 		#         * [33.32 kWh/kg] * [1 MWh/1000 kWh] = [MW of H2]
         daily_limit = (
             m.H2StorageCapacity[s, m.tp_period[t]] 
-            * m.h2stor_cap_frac_withdraw_limit[m.h2stor_type[s]] 
+            * m.h2stor_cap_frac_withdraw_limit[s] 
             * 33.32 / (1000 * 24)
         )
 		
@@ -532,7 +569,7 @@ def define_components(mod):
     mod.H2StorageCompressorLoad = Expression(
         mod.LOAD_ZONES, mod.TIMEPOINTS,
         rule=lambda m, z, t: \
-            sum((m.WithdrawH2Storage[s, t] + m.FillH2Storage[s, t]) * m.h2stor_comp_mwh_per_kg[m.h2stor_type[s]] * (1000/33.32) for s in m.H2_STORAGE_FOR_ZONE_TPS[z, t]),
+            sum((m.WithdrawH2Storage[s, t] + m.FillH2Storage[s, t]) * m.h2stor_comp_mwh_per_kg[s] * (1000/33.32) for s in m.H2_STORAGE_FOR_ZONE_TPS[z, t]),
         doc=("[MW] Average power used at each TP in each zone by H2 storage compressors."))
     mod.Zone_Power_Injections.append('H2StorageCompressorLoad')
 
@@ -644,12 +681,14 @@ def post_solve(instance, outdir):
         output_file=os.path.join(outdir, "h2_storage_builds.csv"),
         headings=(
             "h2_storage_project",
+            "h2_storage_type",
             "build_year",
             "load_zone",
             "IncrementalCapacitykgH2",
         ),
         values=lambda m, s, bld_yr: (
             s,
+            m.h2stor_type[s],
             bld_yr,
             m.h2stor_load_zone[s],
             m.BuildH2Storage[s, bld_yr],
@@ -662,12 +701,14 @@ def post_solve(instance, outdir):
         output_file=os.path.join(outdir, "h2_storage_capacity.csv"),
         headings=(
             "h2_storage_project",
+            "h2_storage_type",
             "period",
             "load_zone",
             "OnlineCapacitykgH2",
         ),
         values=lambda m, s, p: (
             s,
+            m.h2stor_type[s],
             p,
             m.h2stor_load_zone[s],
             m.H2StorageCapacity[s, p],
@@ -681,6 +722,7 @@ def post_solve(instance, outdir):
         # TODO renaming heading to timestamp (and update graphing accordingly)
         headings=(
             "h2_storage_project",
+            "h2_storage_type",
             "timepoint",
             "load_zone",
             "Fill_MW_H2",
@@ -689,6 +731,7 @@ def post_solve(instance, outdir):
         ),
         values=lambda m, s, t: (
             s,
+            m.h2stor_type[s],
             m.tp_timestamp[t],
             m.h2stor_load_zone[s],
             m.FillH2Storage[s, t],
