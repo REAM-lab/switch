@@ -9,7 +9,7 @@ INPUT FILE FORMAT
     You may drop optional columns entirely or mark blank
     values with a dot '.' for select rows for which the column does not
     apply. Mandatory columns are:
-        PRODUCTION_PROJECT, prod_tech, prod_load_zone, prod_energy_source,
+        PRODUCTION_PROJECT, prod_tech, prod_tech_group, prod_load_zone, prod_energy_source,
         prod_max_age, mmbtu_fuel_per_kg_h2*, mwh_per_kg_h2, prod_variable_om_per_kg
     Optional columns are:
         prod_electric_connect_cost_per_mw, prod_intrazonal_pip_inv_cost_per_kg,
@@ -29,6 +29,20 @@ INPUT FILE FORMAT
 
     h2_prod_build_costs.csv
         PRODUCTION_PROJECT, build_year, prod_overnight_cost_per_mw, prod_fixed_om_per_mw_yr
+
+    h2_prod_group_limits.csv:
+    This input file sets the max capacity potential in MW for each tech group in each load 
+    zone. This represents the total capacity that can fit in all suitable sites in each 
+    load zone for each tech group. Since some techs that are in the same group have the same 
+    suitable land, we cannot set this limit by project instead of by group. For example, 
+    natural gas SMR, natural gas ATR, natural gas SMR + CCS, and natural gas ATR + CCS all
+    have the same suitable land areas. If there is only 50 MW worth of land area, you can 
+    only build up to 50 MW of natural gas SMR PLUS natural gas ATR PLUS natural gas SMR + CCS
+    PLUS natural gas ATR + CCS capacity, not 50 MW of each tech. The max_potential_mw column
+    can have '.' for LOAD_ZONE, prod_tech_group combos with no capacity limit.
+
+    h2_prod_group_limits.csv
+        LOAD_ZONE, prod_tech_group, max_potential_mw
         
     h2_demand.csv:
     This input file imports the hydrogen demand profile for the hydrogen balancing 
@@ -198,7 +212,12 @@ def define_components(m):
     h for H2). Use of p instead of g is discouraged because p is reserved for period.
 
     prod_tech[h] describes what kind of technology an H2 production project is
-    using (electrolyzer, SMR, etc.).
+    using (solar electrolyzer, natural gas SMR, etc.).
+
+    prod_tech_group[h] describes what technology group an H2 production project is
+    part of (electrolyzer, gas reforming, coal gasification, etc.). It is used to 
+    ensure each load zone does not build more than the total capacity potential 
+    in each zone for each prod_tech_group.
 
     prod_load_zone[h] is the load zone this H2 production project is built in.
 
@@ -489,6 +508,10 @@ def define_components(m):
     m.prod_tech = Param(m.PRODUCTION_PROJECTS,
                          input_file="h2_production_projects_info.csv",
                          within=Any)
+    
+    m.prod_tech_group = Param(m.PRODUCTION_PROJECTS,
+                         input_file="h2_production_projects_info.csv",
+                         within=Any)
 
     m.PRODUCTION_TECHNOLOGIES = Set(
         dimen=1,
@@ -738,6 +761,18 @@ def define_components(m):
         rule=lambda m, h, p: (
                 m.prod_capacity_limit_mw[h] * max_build_potential_scaling_factor >= 
                 m.ProdCapacity[h, p] * max_build_potential_scaling_factor))
+    
+    m.PROD_LOAD_ZONE_TECH_GROUP = Set(dimen=2, input_file="h2_prod_group_limits.csv")
+
+    m.prod_tech_group_max_potential_mw = Param(
+        m.PROD_LOAD_ZONE_TECH_GROUP, input_file="h2_production_projects_info.csv",
+        default=float('inf'), within=NonNegativeReals, input_column="max_potential_mw")
+    
+    m.Max_Prod_Group_Build_Potential = Constraint(
+        m.PROD_LOAD_ZONE_TECH_GROUP,
+        rule=lambda m, z, ptg: (
+                m.prod_tech_group_max_potential_mw[z, ptg] * max_build_potential_scaling_factor >= 
+                sum(m.ProdCapacity[h, p] for h in m.PROD_IN_ZONE[z] for p in m.PERIODS) * max_build_potential_scaling_factor))
 
     # Costs
     m.prod_variable_om_per_kg = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
