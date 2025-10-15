@@ -511,7 +511,7 @@ def define_components(m):
     
     m.prod_tech_group = Param(m.PRODUCTION_PROJECTS,
                          input_file="h2_production_projects_info.csv",
-                         within=Any)
+                         within=Any, input_optional=True)
 
     m.PRODUCTION_TECHNOLOGIES = Set(
         dimen=1,
@@ -762,17 +762,19 @@ def define_components(m):
                 m.prod_capacity_limit_mw[h] * max_build_potential_scaling_factor >= 
                 m.ProdCapacity[h, p] * max_build_potential_scaling_factor))
     
-    m.PROD_LOAD_ZONE_TECH_GROUP = Set(dimen=2, input_file="h2_prod_group_limits.csv")
+    m.PROD_LOAD_ZONE_TECH_GROUP = Set(dimen=2, input_file="h2_prod_group_limits.csv", input_optional=True)
 
-    m.prod_tech_group_max_potential_mw = Param(
-        m.PROD_LOAD_ZONE_TECH_GROUP, input_file="h2_production_projects_info.csv",
-        default=float('inf'), within=NonNegativeReals, input_column="max_potential_mw")
-    
-    m.Max_Prod_Group_Build_Potential = Constraint(
-        m.PROD_LOAD_ZONE_TECH_GROUP,
-        rule=lambda m, z, ptg: (
-                m.prod_tech_group_max_potential_mw[z, ptg] * max_build_potential_scaling_factor >= 
-                sum(m.ProdCapacity[h, p] for h in m.PROD_IN_ZONE[z] for p in m.PERIODS) * max_build_potential_scaling_factor))
+    if hasattr(m, "prod_tech_group") and hasattr(m, "PROD_LOAD_ZONE_TECH_GROUP"):
+
+        m.prod_tech_group_max_potential_mw = Param(
+            m.PROD_LOAD_ZONE_TECH_GROUP, input_file="h2_prod_group_limits.csv",
+            default=float('inf'), within=NonNegativeReals, input_column="max_potential_mw")
+        
+        m.Max_Prod_Group_Build_Potential = Constraint(
+            m.PROD_LOAD_ZONE_TECH_GROUP,
+            rule=lambda m, z, ptg: (
+                    m.prod_tech_group_max_potential_mw[z, ptg] * max_build_potential_scaling_factor >= 
+                    sum(m.ProdCapacity[h, p] for h in m.PROD_IN_ZONE[z]for p in m.PERIODS if m.prod_tech_group[h] == ptg) * max_build_potential_scaling_factor))
 
     # Costs
     m.prod_variable_om_per_kg = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
