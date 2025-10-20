@@ -535,20 +535,23 @@ def define_components(mod):
         rule=lambda m, g, p: (
                 m.BuildGen[g, p] <= m.BuildMinGenCap[g, p] *
                 mod._gen_max_cap_for_binary_constraints))
-    
-    mod.GEN_LOAD_ZONE_TECH_GROUP = Set(dimen=2, input_file="gen_group_limits.csv", input_optional=True)
 
-    if hasattr(mod, "gen_tech_group") and hasattr(mod, "GEN_LOAD_ZONE_TECH_GROUP"):
+    mod.GEN_PERIOD_ZONE_TECH_GROUP = Set(dimen=3, input_file="gen_group_limits.csv", input_optional=True)
+
+    if hasattr(mod, "gen_tech_group") and hasattr(mod, "GEN_PERIOD_ZONE_TECH_GROUP"):
 
         mod.gen_tech_group_max_potential_mw = Param(
-            mod.GEN_LOAD_ZONE_TECH_GROUP, input_file="gen_group_limits.csv",
+            mod.GEN_PERIOD_ZONE_TECH_GROUP, input_file="gen_group_limits.csv",
             default=float('inf'), within=NonNegativeReals, input_column="max_potential_mw")
-        
+
         mod.Max_Gen_Group_Build_Potential = Constraint(
-            mod.GEN_LOAD_ZONE_TECH_GROUP,
-            rule=lambda m, z, gtg: (
-                    m.gen_tech_group_max_potential_mw[z, gtg] * max_build_potential_scaling_factor >= 
-                    sum(m.GenCapacity[g, p] for g in m.GENS_IN_ZONE[z]for p in m.PERIODS if m.gen_tech_group[g] == gtg) * max_build_potential_scaling_factor))
+            mod.GEN_PERIOD_ZONE_TECH_GROUP,
+            rule=lambda m, period, z, gtg: (
+                    m.gen_tech_group_max_potential_mw[period, z, gtg] * max_build_potential_scaling_factor >= 
+                    sum(m.BuildGen[g, bld_yr] 
+                    for g in m.GENS_IN_ZONE[z] 
+                    for bld_yr in m.BLD_YRS_FOR_GEN_PERIOD[g, period] 
+                    if (g, bld_yr) not in m.PREDETERMINED_GEN_BLD_YRS and m.gen_tech_group[g] == gtg) * max_build_potential_scaling_factor))
 
     # Costs
     mod.gen_variable_om = Param(mod.GENERATION_PROJECTS, input_file="generation_projects_info.csv",

@@ -761,20 +761,23 @@ def define_components(m):
         rule=lambda m, h, p: (
                 m.prod_capacity_limit_mw[h] * max_build_potential_scaling_factor >= 
                 m.ProdCapacity[h, p] * max_build_potential_scaling_factor))
-    
-    m.PROD_LOAD_ZONE_TECH_GROUP = Set(dimen=2, input_file="h2_prod_group_limits.csv", input_optional=True)
 
-    if hasattr(m, "prod_tech_group") and hasattr(m, "PROD_LOAD_ZONE_TECH_GROUP"):
+    m.PROD_PERIOD_ZONE_TECH_GROUP = Set(dimen=3, input_file="h2_prod_group_limits.csv", input_optional=True)
+
+    if hasattr(m, "prod_tech_group") and hasattr(m, "PROD_PERIOD_ZONE_TECH_GROUP"):
 
         m.prod_tech_group_max_potential_mw = Param(
-            m.PROD_LOAD_ZONE_TECH_GROUP, input_file="h2_prod_group_limits.csv",
+            m.PROD_PERIOD_ZONE_TECH_GROUP, input_file="h2_prod_group_limits.csv",
             default=float('inf'), within=NonNegativeReals, input_column="max_potential_mw")
-        
+
         m.Max_Prod_Group_Build_Potential = Constraint(
-            m.PROD_LOAD_ZONE_TECH_GROUP,
-            rule=lambda m, z, ptg: (
+            m.PROD_PERIOD_ZONE_TECH_GROUP,
+            rule=lambda m, period, z, ptg: (
                     m.prod_tech_group_max_potential_mw[z, ptg] * max_build_potential_scaling_factor >= 
-                    sum(m.ProdCapacity[h, p] for h in m.PROD_IN_ZONE[z]for p in m.PERIODS if m.prod_tech_group[h] == ptg) * max_build_potential_scaling_factor))
+                    sum(m.BuildProd[h, bld_yr] 
+                    for h in m.PROD_IN_ZONE[z]
+                    for bld_yr in m.BLD_YRS_FOR_PROD_PERIOD[h, period] 
+                    if (h, bld_yr) not in m.PREDETERMINED_PROD_BLD_YRS and m.prod_tech_group[h] == ptg) * max_build_potential_scaling_factor))
 
     # Costs
     m.prod_variable_om_per_kg = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
