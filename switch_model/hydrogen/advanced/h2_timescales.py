@@ -11,7 +11,7 @@ def define_components(m):
     ------------------------------------------
     h2_timepoints.csv:
     The h2_timepoints.csv input file must include all the timepoint_ids in the 
-    switch timepoints.csv input file. The hydrogen_timeseries column contains the new
+    switch timepoints.csv input file. The h2_timeseries column contains the new
     timeseries names that correspond to the maximum frequency at which hydrogen will 
     be stored or withdrawn from storage. For example, if hydrogen can be stored 
     daily (but not hourly) to the tank, timepoints would be grouped into daily time 
@@ -19,9 +19,14 @@ def define_components(m):
     input file. The only requirement is that the hydrogen timeseries (hgts) must be
     equal to or of a longer duration than the timepoints it includes. The "timestamp"
     column does not get used in the formulation, but it is included to give meaning to
-    the timepoint_id values for data analysis purposes, formatted YYYMMDDHH.
+    the timepoint_id values for data analysis purposes, formatted YYYMMDDHH. The 
+    h2_daily_ts column assigns daily timeseries labels to corresponding timepoints
+    for the purpose of accounting for daily H2 demand that is more flexible than 
+    hourly demand. For example, demand from the aviation sector may be defined on a 
+    daily rather than hourly basis. The timpoints in this timeseries have the same 
+    duration as the main SWITCH timepoints.
     h2_timepoints.csv
-        timepoint_id, timestamp, hydrogen_timeseries
+        timepoint_id, timestamp, h2_timeseries, h2_daily_ts
 
     ------------------------------------------
     h2_timeseries.csv:
@@ -49,15 +54,31 @@ def define_components(m):
     m.tp_to_hgts = Param(
         m.TIMEPOINTS,
         input_file='h2_timepoints.csv',
-        input_column='hydrogen_timeseries',
+        input_column='h2_timeseries',
         default=lambda m, tp: m.tp_ts[tp], #default is to use the main model time series 
-        doc="Mapping of timepoints to a hydrogen timeseries.",
+        doc="Mapping of timepoints to a hydrogen timeseries for timpoint H2 balance.",
         within=Any
+    )
+    m.tp_to_daily_hgts = Param(
+        m.TIMEPOINTS,
+        input_file='h2_timepoints.csv',
+        input_column='h2_daily_ts',
+        default=lambda m, tp: m.tp_ts[tp], #default is to use the main model time series 
+        doc="Mapping of timepoints to a daily hydrogen timeseries for daily H2 balance.",
+        within=Any,
+        input_optional=True
     )
     m.HGTS = Set(
         dimen=1,
         ordered=True,
         initialize=lambda m: sorted(set(m.tp_to_hgts[tp] for tp in m.TIMEPOINTS)),
+        doc="Set of hydrogen timeseries that correspond to max storage frequency as defined in the mapping."
+    )
+    
+    m.DAILY_HGTS = Set(
+        dimen=1,
+        ordered=True,
+        initialize=lambda m: sorted(set(m.tp_to_daily_hgts[tp] for tp in m.TIMEPOINTS)),
         doc="Set of hydrogen timeseries that correspond to max storage frequency as defined in the mapping."
     )
 
@@ -74,6 +95,16 @@ def define_components(m):
         ordered=True,
         initialize=lambda m, hgts: sorted(
 			[t for t in m.TIMEPOINTS if m.tp_to_hgts[t] == hgts],
+			key=lambda t: m.tp_timestamp[t]
+		),
+        doc="Set of ordered timepoints in each hydrogen timeseries."
+    )
+    m.TPS_IN_DAILY_HGTS = Set(
+        m.DAILY_HGTS,
+        within=m.TIMEPOINTS,
+        ordered=True,
+        initialize=lambda m, dhgts: sorted(
+			[t for t in m.TIMEPOINTS if m.tp_to_daily_hgts[t] == dhgts],
 			key=lambda t: m.tp_timestamp[t]
 		),
         doc="Set of ordered timepoints in each hydrogen timeseries."

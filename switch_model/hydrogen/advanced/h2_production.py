@@ -44,7 +44,7 @@ INPUT FILE FORMAT
     h2_prod_group_limits.csv
         LOAD_ZONE, prod_tech_group, max_potential_mw
         
-    h2_demand.csv:
+    h2_timepoint_demand.csv:
     This input file imports the hydrogen demand profile for the hydrogen balancing 
     constraint (H2 supply = demand in each load zone at each timepoint). Each row 
     lists a load zone (LOAD_ZONE), a timepoint (TIMEPOINT) (which has a frequency of 
@@ -54,8 +54,20 @@ INPUT FILE FORMAT
     zone at that timepoint has a demand of 10 MW of H2, then we assume the demand in that
     zone is 10 MW for the whole 4 hours corresponding to that timepoint.
     
-    h2_demand.csv:
+    h2_timepoint_demand.csv:
         LOAD_ZONE, TIMEPOINT, zone_demand_mw_h2
+        
+    h2_daily_demand.csv:
+    This input file imports the hydrogen demand profile for the daily hydrogen balancing 
+    constraint (H2 supply = demand in each load zone at each daily timeseries). Each row 
+    lists a load zone (LOAD_ZONE), a daily timeseries (DHGTS) (which has a frequency of 
+    at most 1-day), and the corresponding hydrogen demand (zone_daily_demand_mwh_h2) in 
+    units of MWh of H2. This is assumed to be the total daily demand for the corresponding
+    daily H2 timeseries. This is for H2 demand that can be satisfied on a daily basis 
+    rather than a strict hourly basis, like aviation.
+    
+    h2_daily_demand.csv:
+        LOAD_ZONE, h2_daily_ts, zone_daily_demand_mwh_h2
     
     h2_emissions_factors.csv:
     This input file imports prod_tech emissions factor data. To skip optional 
@@ -761,23 +773,20 @@ def define_components(m):
         rule=lambda m, h, p: (
                 m.prod_capacity_limit_mw[h] * max_build_potential_scaling_factor >= 
                 m.ProdCapacity[h, p] * max_build_potential_scaling_factor))
+    
+    m.PROD_LOAD_ZONE_TECH_GROUP = Set(dimen=2, input_file="h2_prod_group_limits.csv", input_optional=True)
 
-    m.PROD_PERIOD_ZONE_TECH_GROUP = Set(dimen=3, input_file="h2_prod_group_limits.csv", input_optional=True)
-
-    if hasattr(m, "prod_tech_group") and hasattr(m, "PROD_PERIOD_ZONE_TECH_GROUP"):
+    if hasattr(m, "prod_tech_group") and hasattr(m, "PROD_LOAD_ZONE_TECH_GROUP"):
 
         m.prod_tech_group_max_potential_mw = Param(
-            m.PROD_PERIOD_ZONE_TECH_GROUP, input_file="h2_prod_group_limits.csv",
+            m.PROD_LOAD_ZONE_TECH_GROUP, input_file="h2_prod_group_limits.csv",
             default=float('inf'), within=NonNegativeReals, input_column="max_potential_mw")
-
+        
         m.Max_Prod_Group_Build_Potential = Constraint(
-            m.PROD_PERIOD_ZONE_TECH_GROUP,
-            rule=lambda m, period, z, ptg: (
+            m.PROD_LOAD_ZONE_TECH_GROUP,
+            rule=lambda m, z, ptg: (
                     m.prod_tech_group_max_potential_mw[z, ptg] * max_build_potential_scaling_factor >= 
-                    sum(m.BuildProd[h, bld_yr] 
-                    for h in m.PROD_IN_ZONE[z]
-                    for bld_yr in m.BLD_YRS_FOR_PROD_PERIOD[h, period] 
-                    if (h, bld_yr) not in m.PREDETERMINED_PROD_BLD_YRS and m.prod_tech_group[h] == ptg) * max_build_potential_scaling_factor))
+                    sum(m.ProdCapacity[h, p] for h in m.PROD_IN_ZONE[z]for p in m.PERIODS if m.prod_tech_group[h] == ptg) * max_build_potential_scaling_factor))
 
     # Costs
     m.prod_variable_om_per_kg = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
@@ -1126,14 +1135,39 @@ def define_components(m):
         m.PROD_TP_FUELS,
         rule=lambda m, h, t, f: m.ProdFuelUseRate[h, t, f] == m.DispatchProdByFuel[h, t, f] * m.mmbtu_fuel_per_kg_h2[h] * (1000 / 33.32)
     )
-    
+
     ### BALANCING ###
-    
+
     m.zone_demand_mw_h2 = Param(
         m.ZONE_TIMEPOINTS,
-        input_file="h2_demand.csv",
+        input_file="h2_timepoint_demand.csv",
         within=NonNegativeReals)
     m.Zone_H2_Withdrawals.append('zone_demand_mw_h2')
+
+    m.ZONE_DAILY_HGTS = Set(dimen=2,
+        initialize=lambda m: m.LOAD_ZONES * m.DAILY_HGTS,
+        doc="The cross product of load zones and H2 daily timepoints, used for indexing.")
+
+    m.zone_daily_demand_mwh_h2 = Param(
+        m.ZONE_DAILY_HGTS,
+        input_file="h2_daily_demand.csv",
+        within=NonNegativeReals)
+
+    m.ZoneAllocateDailyH2 = Var(
+        m.ZONE_TIMEPOINTS,
+        within=NonNegativeReals,
+        doc=("Decision of how much of daily H2 demand to allocate to each timepoint")
+    )
+    m.Zone_H2_Withdrawals.append('ZoneAllocateDailyH2')
+
+    # [MW of H2] * [hrs] = [MWh of H2]
+    m.ZoneDailyH2Balance = Constraint(
+        m.ZONE_DAILY_HGTS,
+        rule=lambda m, z, dhgts:
+            sum(m.ZoneAllocateDailyH2[z,t] * m.tp_weight_in_year[t]
+                for t in m.TPS_IN_DAILY_HGTS[dhgts])
+            == m.zone_daily_demand_mwh_h2[z, dhgts]
+    )
 
 def load_inputs(m, switch_data, inputs_dir):
     # Construct set of capacity-limited projects. This set includes projects for 
