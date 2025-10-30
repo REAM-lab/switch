@@ -13,7 +13,7 @@ INPUT FILE FORMAT
         prod_max_age, mmbtu_fuel_per_kg_h2*, mwh_per_kg_h2, prod_variable_om_per_kg
     Optional columns are:
         prod_electric_connect_cost_per_mw, prod_intrazonal_pip_inv_cost_per_kg,
-        prod_av_outage_rate, prod_capacity_limit_mw, prod_ccs_equipped, 
+        prod_av_outage_rate, prod_capacity_limit_mw, prod_leakage_rate, prod_ccs_equipped, 
         prod_is_onsite, prod_onsite_GENERATION_PROJECT, prod_onsite_gen_tech
     *Note: mmbtu_fuel_per_kg_h2 is only mandatory for fuel-consuming H2 production
     projects. For example, '.' can be put in rows corresponding to electrolyzers.
@@ -349,7 +349,7 @@ def define_components(m):
     
     prod_intrazonal_pip_inv_cost_per_kg[h] is the normalized cost for intra-zonal 
     H2 transport in $/kg of H2 produced. This is optional and defaults to $0. A 
-    recommended value to use is $0.43/kg, which comes from NREL's ReEDS model, 
+    recommended value to use is $0.43/kg ($2018), which comes from NREL's ReEDS model, 
     which draws their values from the 2023 DOE clean hydrogen liftoff report. We 
     convert from $2004 to $2018 using 32.9% inflation rate from 
     https://www.usinflationcalculator.com/.
