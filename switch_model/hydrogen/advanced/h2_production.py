@@ -258,8 +258,9 @@ def define_components(m):
     usually non-zero, as it represents the electrical load needed to operate 
     the hydrogen production facility.
     
-    prod_leakage_rate[h] is the leakage rate which specifies the % of H2 produced that
-    is leaked as fugitive H2 emissions during production. 
+    prod_leakage_rate[h] is the leakage rate which specifies the % fraction of
+    H2 produced that is leaked as fugitive H2 emissions during production. A
+    leakage rate of 0.1% would be entered as 0.001.
     
     prod_ccs_equipped[h] is a TRUE/FALSE parameter which specifies if the H2 production
     project is equipped with Carbon Capture and Sequestration (CCS). 

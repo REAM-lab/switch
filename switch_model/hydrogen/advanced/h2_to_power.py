@@ -18,7 +18,7 @@ INPUT FILE FORMAT
         H2_GENERATION_PROJECT, h2gen_build_yr, h2gen_tech, h2gen_load_zone, h2gen_max_age, 
         h2gen_full_load_heat_rate, h2gen_connect_cost_per_mw,  h2gen_variable_om_per_mwh, 
         h2gen_capacity_limit_mw, h2gen_scheduled_outage_rate, h2gen_forced_outage_rate, 
-        h2gen_can_provide_cap_reserves, mt_nox_per_mmbtu_h2
+        h2gen_can_provide_cap_reserves, mt_nox_per_mmbtu_h2, h2gen_leakage_rate
 
     h2_to_power_predetermined.csv
         H2_GENERATION_PROJECT, build_year, h2gen_predetermined_cap_mw
@@ -195,6 +195,8 @@ def define_components(mod):
                                              within=Boolean, default=True, 
                                              doc="Indicates whether an H2-fueled generator can provide capacity reserves.")
     mod.mt_nox_per_mmbtu_h2 = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
+                                         within=NonNegativeReals, default=0)
+    mod.h2gen_leakage_rate = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
                                          within=NonNegativeReals, default=0)
     mod.min_data_check('H2_GENERATION_PROJECTS', 'h2gen_tech', 'h2gen_load_zone', 'h2gen_max_age')
 
@@ -494,6 +496,29 @@ def define_components(mod):
         rule=lambda m, z, t: sum(m.DispatchH2Gen[g, t] * m.h2gen_full_load_heat_rate[g] * 0.293071 for g in m.H2_GENS_FOR_ZONE_TPS[z, t]),
         doc="Total H2 consumed from H2-fueled electricity generators per zone at each timepoint in MW of H2.")
     mod.Zone_H2_Withdrawals.append('ZoneTotalH2GeneratorH2Use')
+
+    # Keep track of annual fugitive H2 emissions in each part of the H2 system 
+    # in metric tons of kg per zone from each timepoint
+    # Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] * [1 metric ton/1000 kg] * [frac of H2 leaked] = [metric ton of H2]
+	# 1000/1000 cancels, hence (1/33.32)
+    mod.H2GeneratorTotalLeakage_ZoneTP = Expression(
+        mod.LOAD_ZONES, mod.TIMEPOINTS,
+        rule=lambda m, z, t: sum(
+            m.ZoneTotalH2GeneratorH2Use[z1, z2, tp] *
+            m.h2gen_leakage_rate * m.tp_weight_in_year[tp] * (1/33.32)
+			for (z1, z2, tp) in m.H2_PIP_TIMEPOINTS
+            if tp == t and z1 == z
+            )
+    )
+    # Annual per period
+    mod.H2GeneratorTotalAnnualLeakage = Expression(
+        mod.PERIODS,
+        rule=lambda m, p: sum(
+            m.H2GeneratorTotalLeakage_ZoneTP[z, t]
+			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
+            )
+    )
+    mod.Period_Fugitive_H2.append("H2GeneratorTotalAnnualLeakage")
 
     mod.H2GenVariableOMCostsInTP = Expression(
         mod.TIMEPOINTS,

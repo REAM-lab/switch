@@ -25,6 +25,7 @@ INPUT FILE FORMAT
         h2stor_comp_predetermined_mw
 
 """
+import math
 from pyomo.environ import *
 import os, collections
 from switch_model.financials import capital_recovery_factor as crf
@@ -106,10 +107,7 @@ def define_components(mod):
     years.
 
     h2stor_leakage_rate[s] is the rate (as a percent fraction) in which H2 leaks out
-    of storage as a percentage. This is tracked in the H2Storage_Zonal_H2_Leakage expression,
-    which calculates total H2 leakage in metric tons of H2 per zone at each tp, which is summed
-    and addeed to the Period_Fugitive_H2 dynamic list, which tracks H2 leakage across all H2 system 
-    components.
+    of storage per day in storage. A leakage rate of 0.1% per day would be entered as 0.001.
 
     comp_life_years[s] is the financial lifetime for H2 storage compressors. We do not currently
     enforce retirement for compressors. This is only for annualizing costs.
@@ -189,9 +187,11 @@ def define_components(mod):
     project contributes to the load zone hydrogen supply in the H2 balance equation.
     
     H2Storage_Zonal_H2_Leakage[LOAD_ZONES, TIMEPOINTS] is an expression that calculates the total
-    H2 leakage (fugitive H2) in metric ton of H2, which we assume is proportional to the amount
-    of H2 withdrawn from each storage project at each timepoint by a factor of 
-    h2stor_leakage_rate[s]. This is appended to the Period_Fugitive_H2 dynamic list to keep track of 
+    H2 leakage (fugitive H2) in kg of H2 at each timepoint in each zone, which is a factor of 
+    the daily leakage rate h2stor_leakage_rate[s].
+     
+    H2StorageTotalLeakage is the total annual H2 leakage from storage in metric tons of H2
+    (indexed by period). This is appended to the Period_Fugitive_H2 dynamic list to keep track of 
     fugitive H2 emissions, which have a high global warming potential (GWP).
 
     H2StateOfFill[(s, t) in H2_STORAGE_TPS] is a decision variable for controlling the state of 
@@ -552,7 +552,7 @@ def define_components(mod):
                 m.H2_Storage_Withdraw_Summation_dict[z2, t2].add(s)
         # Use pop to free memory
         relevant_projects_w = m.H2_Storage_Withdraw_Summation_dict.pop((z, t), {})
-        return sum(m.WithdrawH2Storage[s, t]*(1-m.h2stor_leakage_rate[s]) for s in relevant_projects_w)
+        return sum(m.WithdrawH2Storage[s, t] for s in relevant_projects_w)
 
     mod.H2StorageTotalWithdrawal = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_w)
     # Register net withdrawal with zonal energy balance. 
@@ -573,32 +573,6 @@ def define_components(mod):
         doc=("[MW] Average power used at each TP in each zone by H2 storage compressors."))
     mod.Zone_Power_Injections.append('H2StorageCompressorLoad')
 
-    # Summarize hydrogen leakage in storage
-    # (sum for a zone)
-    def rule_l(m, z, t):
-        # Construct and cache a set for summation as needed
-        if not hasattr(m, "H2_Storage_Leakage_Summation_dict"):
-            m.H2_Storage_Leakage_Summation_dict = collections.defaultdict(set)
-            for s, t2 in m.H2_STORAGE_TPS:
-                z2 = m.h2stor_load_zone[s]
-                m.H2_Storage_Leakage_Summation_dict[z2, t2].add(s)
-        # Use pop to free memory
-        relevant_projects_l = m.H2_Storage_Leakage_Summation_dict.pop((z, t), {})
-        return sum(m.WithdrawH2Storage[s, t]*(m.h2stor_leakage_rate[s]) for s in relevant_projects_l)
-
-    mod.H2Storage_Zonal_H2_Leakage = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_l)
-    # Annual leakage of H2 (fugitive H2 emissions) in each period
-	# Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] * [1 metric ton/1000 kg] = [metric ton of H2]
-	# 1000/1000 cancels, hence (1/33.32)
-    def total_stor_leakage_rule(m, p):
-        return sum(
-			m.H2Storage_Zonal_H2_Leakage[z, t] * m.tp_weight_in_year[t] * (1/33.32)
-			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
-		)
-    mod.H2StorageTotalLeakage = Expression(mod.PERIODS, rule=total_stor_leakage_rule)
-    # Keep track of fugitive H2 emissions in each part of the H2 system in metric tons of kg
-    mod.Period_Fugitive_H2.append("H2StorageTotalLeakage")
-
     mod.H2StateOfFill = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
 
     mod.H2StorageFlow = Expression(
@@ -608,12 +582,30 @@ def define_components(mod):
     )
 
     def H2_Track_State_Of_Fill_rule(m, s, t):
-		# Carry-over is just previous fill level (no decay over time like batteries)
-        carry_over_h2 = m.H2StateOfFill[s, m.h2_tp_previous[t]]
+        h2_storage_efficiency = 1 - m.h2stor_leakage_rate[s]
+        tp_duration_days = m.hgts_duration_of_tp[m.tp_to_hgts[t]] / 24
+		# H2 in storage that remains from the energy in storage at the previous timepoint (leakage rate is per day)
+        carry_over_h2 = (
+            m.H2StateOfFill[s, m.h2_tp_previous[t]]
+            * h2_storage_efficiency**tp_duration_days)
 	
 		# Net storage change: net fill level in kg of H2
 		# Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] = [kg of H2]
-        net_flow = m.H2StorageFlow[s, t] * m.hgts_duration_of_tp[m.tp_to_hgts[t]] * (1000/33.32)
+
+        net_flow = m.H2StorageFlow[s, t] * (
+        # If there's no decay, it's simply H2StorageFlow * tp_duration_hrs * conversion factor 
+            m.hgts_duration_of_tp[m.tp_to_hgts[t]] * (1000/33.32)
+            if h2_storage_efficiency == 1
+            else
+            # If there is decay, we need to account for energy decay during the timepoint duration.
+            # To derive the following expression, simply solve the differential equation:
+            # dZ/dt = -rZ + StorageFlow
+            # where r is the instantaneous decay rate, Z is the state of charge and t is time.
+            # Note that exp(-24r) = (1 - daily_decay_rate).
+            24
+            * (h2_storage_efficiency**tp_duration_days - 1)
+            / math.log(h2_storage_efficiency)
+        )
 	
         return m.H2StateOfFill[s, t] == carry_over_h2 + net_flow
 	
@@ -627,6 +619,60 @@ def define_components(mod):
     mod.H2_State_Of_Fill_Upper_Limit = Constraint(
 		mod.H2_STORAGE_TPS, rule=H2_State_Of_Fill_Upper_Limit_rule
 	)
+
+    # Summarize hydrogen leakage in storage
+    def H2_Leakage_kg_rule(m, s, t):
+        h2_storage_efficiency = 1 - m.h2stor_leakage_rate[s]
+
+        carry_over_h2_no_decay = m.H2StateOfFill[s, m.h2_tp_previous[t]]
+
+        # Net storage change: net fill level in kg of H2
+		# Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] = [kg of H2]
+
+        # Net flow without decay
+        net_flow_no_decay = m.H2StorageFlow[s, t] * m.hgts_duration_of_tp[m.tp_to_hgts[t]] * (1000/33.32)
+
+        # kg of H2 that entered storage during interval without decay:
+        total_before_decay = carry_over_h2_no_decay + net_flow_no_decay
+
+        # kg of H2 remaining after decay (tracked by state-of-fill):
+        total_after_decay = m.H2StateOfFill[s, t]
+
+        # Leakage = difference between State of Fill without decay and with decay
+        h2_stor_leakage = (
+            0 
+            if h2_storage_efficiency == 1
+            else 
+            total_before_decay - total_after_decay
+        )
+
+        return h2_stor_leakage
+
+    mod.H2_Leakage_kg = Expression(mod.H2_STORAGE_TPS, rule=H2_Leakage_kg_rule)
+
+    # (sum for a zone in kg at each timepoint)
+    def rule_l(m, z, t):
+        # Construct and cache a set for summation as needed
+        if not hasattr(m, "H2_Storage_Leakage_Summation_dict"):
+            m.H2_Storage_Leakage_Summation_dict = collections.defaultdict(set)
+            for s, t2 in m.H2_STORAGE_TPS:
+                z2 = m.h2stor_load_zone[s]
+                m.H2_Storage_Leakage_Summation_dict[z2, t2].add(s)
+        # Use pop to free memory
+        relevant_projects_l = m.H2_Storage_Leakage_Summation_dict.pop((z, t), {})
+        return sum(m.H2_Leakage_kg[s, t] for s in relevant_projects_l)
+
+    mod.H2Storage_Zonal_H2_Leakage = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_l)
+    # Annual leakage of H2 (fugitive H2 emissions) in each period
+	# Units: [kg at each timepoint] * [hours timepoint represents in 1 year] * [1 metric ton/1000 kg] = [metric ton of H2 per year]
+    def total_stor_leakage_rule(m, p):
+        return sum(
+			m.H2Storage_Zonal_H2_Leakage[z, t] * m.tp_weight_in_year[t] * (1/1000)
+			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
+		)
+    mod.H2StorageTotalLeakage = Expression(mod.PERIODS, rule=total_stor_leakage_rule)
+    # Keep track of fugitive H2 emissions in each part of the H2 system in metric tons of kg
+    mod.Period_Fugitive_H2.append("H2StorageTotalLeakage")
 
     # some H2 storage techs can only complete the specified number of cycles per year, averaged over each period
     # (switch period, not hydrogen period, since the number of cycles is defined per year)

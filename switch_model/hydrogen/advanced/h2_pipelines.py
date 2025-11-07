@@ -126,9 +126,9 @@ def define_components(mod):
     h2pip_leakage_rate is an optional parameter that defines the proportion of hydrogen 
     sent down a line that is leaked. For example, if 0.1% percent of H2 sent down 
     a line is leaked, the amount delivered (in kg) would be 0.999 times the amount 
-    sent. We assume a default of 0.1% H2 losses per kg of hydrogen sent in 
-    long-distance pipelines, as stated in Table 2 of 
-    https://www.oxfordenergy.org/wpcms/wp-content/uploads/2024/11/ET41-Review-of-Hydrogen-Leakage-along-the-Supply-Chain.pdf.
+    sent. We assume a default of 0.02% H2 losses per kg of hydrogen sent in 
+    long-distance pipelines, as stated in 
+    https://assets.publishing.service.gov.uk/media/624ec79cd3bf7f600d4055d1/fugitive-hydrogen-emissions-future-hydrogen-economy.pdf.
     These H2 losses are quantified and considered fugitive H2 emissions,
     which contribute to the carbon constraint, as H2 is an indirect GHG.
 
@@ -217,7 +217,7 @@ def define_components(mod):
         default=40, input_file="h2_pipeline_params.csv")
     mod.h2pip_leakage_rate = Param(
         within=NonNegativeReals,
-        default=0.001, input_file="h2_pipeline_params.csv")
+        default=0.0002, input_file="h2_pipeline_params.csv")
     mod.h2pip_comp_overnight_cost_per_mw = Param(
         within=NonNegativeReals,
         default=0, input_file="h2_pipeline_params.csv")
@@ -323,8 +323,10 @@ def define_components(mod):
             (1- m.h2pip_leakage_rate)
             )
     )
-    # Keep track of fugitive H2 emissions in each part of the H2 system in metric tons of kg
-    # Per zone at each timepoint
+    # Keep track of annual fugitive H2 emissions in each part of the H2 system 
+    # in metric tons of kg per zone from each timepoint
+    # Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] * [1 metric ton/1000 kg] * [frac of H2 leaked] = [metric ton of H2]
+	# 1000/1000 cancels, hence (1/33.32)
     mod.H2PipTotalLeakage_ZoneTP = Expression(
         mod.LOAD_ZONES, mod.TIMEPOINTS,
         rule=lambda m, z, t: sum(
