@@ -502,11 +502,9 @@ def define_components(mod):
     mod.H2GeneratorTotalLeakage_ZoneTP = Expression(
         mod.LOAD_ZONES, mod.TIMEPOINTS,
         rule=lambda m, z, t: sum(
-            m.ZoneTotalH2GeneratorH2Use[z1, z2, tp] *
-            m.h2gen_leakage_rate * m.tp_weight_in_year[tp] * (1/33.32)
-			for (z1, z2, tp) in m.H2_PIP_TIMEPOINTS
-            if tp == t and z1 == z
-            )
+            m.ZoneTotalH2GeneratorH2Use[z, t] *
+            m.h2gen_leakage_rate * m.tp_weight_in_year[t] * (1/33.32)
+			)
     )
     # Annual per period
     mod.H2GeneratorTotalAnnualLeakage = Expression(
