@@ -17,8 +17,8 @@ INPUT FILE FORMAT
     h2_to_power_projects_info.csv
         H2_GENERATION_PROJECT, h2gen_build_yr, h2gen_tech, h2gen_load_zone, h2gen_max_age, 
         h2gen_full_load_heat_rate, h2gen_connect_cost_per_mw,  h2gen_variable_om_per_mwh, 
-        h2gen_capacity_limit_mw, h2gen_scheduled_outage_rate, h2gen_forced_outage_rate, 
-        h2gen_can_provide_cap_reserves, mt_nox_per_mmbtu_h2, h2gen_leakage_rate
+        h2gen_capacity_limit_mw, h2gen_forced_outage_rate, h2gen_can_provide_cap_reserves, 
+        mt_nox_per_mmbtu_h2, h2gen_leakage_rate
 
     h2_to_power_predetermined.csv
         H2_GENERATION_PROJECT, build_year, h2gen_predetermined_cap_mw
@@ -187,8 +187,6 @@ def define_components(mod):
                               within=PositiveIntegers)
     mod.h2gen_full_load_heat_rate = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
                                           within=NonNegativeReals) 
-    mod.h2gen_scheduled_outage_rate = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
-                                            within=PercentFraction, default=0)
     mod.h2gen_forced_outage_rate = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
                                          within=PercentFraction, default=0)
     mod.h2gen_can_provide_cap_reserves = Param(mod.H2_GENERATION_PROJECTS, input_file='generation_projects_info.csv',
