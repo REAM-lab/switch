@@ -782,8 +782,7 @@ def define_components(m):
         
         m.prod_tech_group_max_potential_mw = Param(
             m.PROD_PERIOD_ZONE_TECH_GROUP, input_file="h2_prod_group_limits.csv",
-            input_optional=True, default=float('inf'), 
-            within=NonNegativeReals, input_column="max_potential_mw")
+            input_optional=True, within=NonNegativeReals, input_column="max_potential_mw")
         
         def max_prod_group_rule(m, period, z, ptg): 
             

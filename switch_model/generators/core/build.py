@@ -542,8 +542,7 @@ def define_components(mod):
         max_build_potential_scaling_factor = 1e-1
         mod.gen_tech_group_max_potential_mw = Param(
             mod.GEN_PERIOD_ZONE_TECH_GROUP, input_file="gen_group_limits.csv",
-            input_optional=True, default=float('inf'), 
-            within=NonNegativeReals, input_column="max_potential_mw")
+            input_optional=True, within=NonNegativeReals, input_column="max_potential_mw")
         
         def max_gen_group_rule(m, period, z, gtg): 
             
