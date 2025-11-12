@@ -779,27 +779,24 @@ def define_components(m):
 
     if hasattr(m, "prod_tech_group") and hasattr(m, "PROD_PERIOD_ZONE_TECH_GROUP"):
         max_build_potential_scaling_factor = 1e-1
-        
-        m.prod_tech_group_max_potential_mw = Param(
-            m.PROD_PERIOD_ZONE_TECH_GROUP, input_file="h2_prod_group_limits.csv",
-            input_optional=True, within=NonNegativeReals, input_column="max_potential_mw")
-        
-        def max_prod_group_rule(m, period, z, ptg): 
-            
-            group_build = sum(
+
+        m.ProdTechGroupBuild = Expression(
+            m.PROD_PERIOD_ZONE_TECH_GROUP,
+            rule=lambda m, period, z, ptg: sum(
                 m.ProdCapacity[h, period] 
                 for h in m.PROD_IN_ZONE[z]
                 for bld_yr in m.BLD_YRS_FOR_PROD_PERIOD[h, period]
-                if (h, bld_yr) not in m.PREDETERMINED_PROD_BLD_YRS and m.prod_tech_group[h] == ptg)
-            
-            return (
-                group_build * max_build_potential_scaling_factor 
-                <= m.prod_tech_group_max_potential_mw[period, z, ptg] * max_build_potential_scaling_factor
-            )
+                if (h, bld_yr) not in m.PREDETERMINED_PROD_BLD_YRS and m.prod_tech_group[h] == ptg))
+        
+        m.prod_tech_group_max_potential_mw = Param(
+            m.PROD_PERIOD_ZONE_TECH_GROUP, input_file="h2_prod_group_limits.csv",
+            within=NonNegativeReals, input_column="max_potential_mw")
         
         m.Max_Prod_Group_Build_Potential = Constraint(
             m.PROD_PERIOD_ZONE_TECH_GROUP,
-            rule=max_prod_group_rule)
+            rule=lambda m, period, z, ptg: (
+                m.prod_tech_group_max_potential_mw[period, z, ptg] * max_build_potential_scaling_factor >=
+                m.ProdTechGroupBuild[period, z, ptg] * max_build_potential_scaling_factor))
 
     # Costs
     m.prod_variable_om_per_kg = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
