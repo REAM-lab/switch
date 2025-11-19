@@ -177,17 +177,17 @@ def post_solve(model, outdir):
                              ])
 
 
-@graph(
-    "emissions_CA",
-    "California's Total Emissions",
-    is_long=True
-)
-def graph(tools):
-    # Plot emissions over time
-    df = tools.get_dataframe("ca_policies.csv").set_index("PERIOD")["AnnualEmissions_tCO2_per_yr_CA"]
-    df.plot(
-        ax=tools.get_axes(),
-        kind='bar',
-        ylabel="Annual Emissions (tCO2)",
-        xlabel="Year"
-    )
+# @graph(
+#     "emissions_CA",
+#     "California's Total Emissions",
+#     is_long=True
+# )
+# def graph(tools):
+#     # Plot emissions over time
+#     df = tools.get_dataframe("ca_policies.csv").set_index("PERIOD")["AnnualEmissions_tCO2_per_yr_CA"]
+#     df.plot(
+#         ax=tools.get_axes(),
+#         kind='bar',
+#         ylabel="Annual Emissions (tCO2)",
+#         xlabel="Year"
+#     )

@@ -216,41 +216,41 @@ def post_solve(model, outdir):
         values=get_row)
 
 
-@graph(
-    "emissions",
-    "Emissions per period",
-    is_long=True
-)
-def graph_emissions(tools):
-    df = tools.get_dataframe("emissions.csv", convert_dot_to_na=True)
-    # Plot emissions over time
-    df['AnnualEmissions_tCO2_per_yr'] *= 1e-6  # Convert to MMtCO2
-    if df["AnnualEmissions_tCO2_per_yr"].sum() == 0:
-        results_info.add_info("CO2 Emissions", "No Emissions")
-        return
-    tools.sns.barplot(
-        x='PERIOD',
-        y='AnnualEmissions_tCO2_per_yr',
-        data=df,
-        ax=tools.get_axes(ylabel='CO2 Emissions (MMtCO2/yr)'),
-        color='gray'
-    )
+# @graph(
+#     "emissions",
+#     "Emissions per period",
+#     is_long=True
+# )
+# def graph_emissions(tools):
+#     df = tools.get_dataframe("emissions.csv", convert_dot_to_na=True)
+#     # Plot emissions over time
+#     df['AnnualEmissions_tCO2_per_yr'] *= 1e-6  # Convert to MMtCO2
+#     if df["AnnualEmissions_tCO2_per_yr"].sum() == 0:
+#         results_info.add_info("CO2 Emissions", "No Emissions")
+#         return
+#     tools.sns.barplot(
+#         x='PERIOD',
+#         y='AnnualEmissions_tCO2_per_yr',
+#         data=df,
+#         ax=tools.get_axes(ylabel='CO2 Emissions (MMtCO2/yr)'),
+#         color='gray'
+#     )
 
-@graph(
-    "emissions_duals",
-    "Carbon cap dual values per period",
-    is_long=True
-)
-def graph_emissions_duals(tools):
-    df = tools.get_dataframe("emissions.csv", convert_dot_to_na=True)
-    # Keep only the duals for every period
-    df = df.set_index("PERIOD")["carbon_cap_dual_future_dollar_per_tco2"]
-    df = df.dropna()
-    if df.empty:
-        return
-    df *= -1  # Flip to positive values since duals are negative by default
-    df.plot(
-        kind="bar",
-        ax=tools.get_axes(ylabel='Dual values ($/tCO2)'),
-        color='gray'
-    )
+# @graph(
+#     "emissions_duals",
+#     "Carbon cap dual values per period",
+#     is_long=True
+# )
+# def graph_emissions_duals(tools):
+#     df = tools.get_dataframe("emissions.csv", convert_dot_to_na=True)
+#     # Keep only the duals for every period
+#     df = df.set_index("PERIOD")["carbon_cap_dual_future_dollar_per_tco2"]
+#     df = df.dropna()
+#     if df.empty:
+#         return
+#     df *= -1  # Flip to positive values since duals are negative by default
+#     df.plot(
+#         kind="bar",
+#         ax=tools.get_axes(ylabel='Dual values ($/tCO2)'),
+#         color='gray'
+#     )

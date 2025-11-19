@@ -449,13 +449,13 @@ def define_components(mod):
     	doc="The annual cost in dollars of CCS pipelines connecting each load zone to a carbon sink.")
     mod.Cost_Components_Per_Period.append('AnnualCCSPipelineCosts')
     	
-    mod.AnnualCCS45QTaxCredit = Expression(
-    	mod.PERIODS,
-    	rule = lambda m, period: sum(
-    		-70.05 * m.AnnualCapturedEmissions_by_z[z, period]
-    		for z in m.LOAD_ZONES),
-    	doc="The annual savings in dollars from 45Q tax credit, which grants $85/tonne ($2023) of CO2 captured.")
-    mod.Cost_Components_Per_Period.append('AnnualCCS45QTaxCredit')
+    # mod.AnnualCCS45QTaxCredit = Expression(
+    # 	mod.PERIODS,
+    # 	rule = lambda m, period: sum(
+    # 		-70.05 * m.AnnualCapturedEmissions_by_z[z, period]
+    # 		for z in m.LOAD_ZONES),
+    # 	doc="The annual savings in dollars from 45Q tax credit, which grants $85/tonne ($2023) of CO2 captured.")
+    # mod.Cost_Components_Per_Period.append('AnnualCCS45QTaxCredit')
 
     mod.AnnualEmissionsNOx = Expression(
         mod.PERIODS,
