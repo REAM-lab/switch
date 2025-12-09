@@ -1388,3 +1388,11 @@ def post_solve(m, outdir):
         + tuple(-sum(get_component_per_year(m, z, p, component) for z in m.LOAD_ZONES)
                 for component in m.Zone_H2_Withdrawals)
     )
+    write_table(
+        m, m.PERIODS,
+        output_file=os.path.join(outdir, "h2_fugitive_annual.csv"),
+        headings=("period",) + tuple(m.Period_Fugitive_H2),
+        values=lambda m, p:
+        (p,)
+        + tuple(getattr(m, component)[p] for component in m.Period_Fugitive_H2)
+    )
