@@ -571,7 +571,7 @@ def define_components(mod):
         rule=lambda m, z, t: \
             sum((m.WithdrawH2Storage[s, t] + m.FillH2Storage[s, t]) * m.h2stor_comp_mwh_per_mt[s] * (1/33.32) for s in m.H2_STORAGE_FOR_ZONE_TPS[z, t]),
         doc=("[MW] Average power used at each TP in each zone by H2 storage compressors."))
-    mod.Zone_Power_Injections.append('H2StorageCompressorLoad')
+    mod.Zone_Power_Withdrawals.append('H2StorageCompressorLoad')
 
     mod.H2StateOfFill = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
 
@@ -667,7 +667,9 @@ def define_components(mod):
 	# Units: [kg at each timepoint] * [hours timepoint represents in 1 year] * [1 metric ton/1000 kg] = [metric ton of H2 per year]
     def total_stor_leakage_rule(m, p):
         return sum(
-			m.H2Storage_Zonal_H2_Leakage[z, t] * m.tp_weight_in_year[t] * (1/1000)
+			m.H2_Leakage_kg[s, t]
+			* (m.tp_weight_in_year[t] / m.hgts_duration_of_tp[m.tp_to_hgts[t]]) # in case m.tp_weight_in_year[t] != m.hgts_duration_of_tp[m.tp_to_hgts[t]]
+			* (1/1000)   # kg to metric tons
 			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
 		)
     mod.H2StorageTotalLeakage = Expression(mod.PERIODS, rule=total_stor_leakage_rule)
