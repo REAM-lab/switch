@@ -667,7 +667,7 @@ def define_components(mod):
 	# Units: [kg at each timepoint] * [hours timepoint represents in 1 year] * [1 metric ton/1000 kg] = [metric ton of H2 per year]
     def total_stor_leakage_rule(m, p):
         return sum(
-			m.H2_Leakage_kg[s, t]
+			m.H2Storage_Zonal_H2_Leakage[z, t]
 			* (m.tp_weight_in_year[t] / m.hgts_duration_of_tp[m.tp_to_hgts[t]]) # in case m.tp_weight_in_year[t] != m.hgts_duration_of_tp[m.tp_to_hgts[t]]
 			* (1/1000)   # kg to metric tons
 			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
