@@ -224,6 +224,12 @@ def define_components(mod):
             (g, tp)
                 for g in m.GENERATION_PROJECTS
                     for tp in m.TPS_FOR_GEN[g]))
+    mod.CCS_GEN_TPS = Set(
+        dimen=2,
+        initialize=lambda m: (
+            (g, tp)
+                for g in m.CCS_EQUIPPED_GENS
+                    for tp in m.TPS_FOR_GEN[g]))
     mod.VARIABLE_GEN_TPS = Set(
         dimen=2,
         initialize=lambda m: (
@@ -301,19 +307,53 @@ def define_components(mod):
     # If we use the local_td module, divide distributed generation into a separate expression so that we can
     # put it in the distributed node's power balance equations
     using_local_td = hasattr(mod, "Distributed_Power_Injections")
+    
+    if hasattr(mod, "ONSITE_PROD_GEN_TPS"):
+        mod.GENS_WITH_ONSITE_ELZ = Set(
+            initialize=lambda m: (g for (_, g, _) in m.ONSITE_PROD_GEN_TPS),
+            doc="Generators that have onsite electrolyzers."
+        )
 
+        mod.ONSITE_GEN_TPS = Set(
+            dimen=2,
+            initialize=mod.GEN_TPS,
+            filter=lambda m, g, t: g in m.GENS_WITH_ONSITE_ELZ,
+            doc="GEN_TPS restricted to generators with onsite electrolyzers."
+        )
+    
+        mod.GenOnsiteElectrolysisLoad = Expression(
+            mod.ONSITE_GEN_TPS,
+            rule=lambda m, g, t:
+                sum(m.DispatchProd[h, t] * m.mwh_per_kg_h2[h] * (1000 / 33.32)
+                    for (h, g2, tp) in m.ONSITE_PROD_GEN_TPS
+                    if g2 == g and tp == t
+                ),
+            doc="Electricity (MW) diverted from generator g to its onsite electrolyzer."
+        )
+        mod.GenOnsitePowerSplitConstraint = Constraint(
+            mod.ONSITE_GEN_TPS,
+            rule=lambda m, g, t:
+                m.DispatchGen[g, t] >= m.GenOnsiteElectrolysisLoad[g, t]
+        )
+
+    mod.CCSEnergyPenalty = Expression(
+        mod.CCS_GEN_TPS,
+        rule=lambda m, g, t:
+            m.DispatchGen[g, t] * m.gen_ccs_energy_load[g]
+    )
     mod.ZoneTotalCentralDispatch = Expression(
         mod.LOAD_ZONES, mod.TIMEPOINTS,
         rule=lambda m, z, t: \
         sum(m.DispatchGen[g, t]
-            for g in m.GENS_FOR_ZONE_TPS[z, t] if not using_local_td or not m.gen_is_distributed[g]) -
-        sum(m.DispatchGen[g, t] * m.gen_ccs_energy_load[g]
-            for g in m.CCS_EQUIPPED_GENS if g in m.GENS_FOR_ZONE_TPS[z, t]) -
-        (sum(m.DispatchProd[h, t] * m.mwh_per_kg_h2[h] * (1000/33.32) 
-             for (h, g2, tp) in m.ONSITE_PROD_GEN_TPS 
-             if tp == t and g2 in m.GENS_FOR_ZONE_TPS[z, t]) 
-             if hasattr(m, "ONSITE_PROD_GEN_TPS") else 0), 
-             doc="Net power from grid-tied generation projects." 
+            for g in m.GENS_FOR_ZONE_TPS[z, t] if not using_local_td or not m.gen_is_distributed[g]) 
+        - sum(m.CCSEnergyPenalty[g, t]
+              for (g, t2) in m.CCS_GEN_TPS
+              if t2 == t and g in m.GENS_FOR_ZONE_TPS[z, t]) 
+        - (sum(m.GenOnsiteElectrolysisLoad[g, t]
+               for g in m.GENS_FOR_ZONE_TPS[z, t]
+               if g in m.GENS_WITH_ONSITE_ELZ) 
+           if hasattr(m, "ONSITE_PROD_GEN_TPS") else 0), 
+        doc="Net power from grid-tied generation projects." 
         )
     mod.Zone_Power_Injections.append('ZoneTotalCentralDispatch')
 
@@ -632,7 +672,25 @@ def post_solve(instance, outdir):
                  "DispatchEmissions_tNH3_per_typical_yr", "DispatchEmissions_tPM25_per_typical_yr",
                  "DispatchCapturedEmissions_tCO2_per_typical_yr"]
     )
+    
+    write_table(
+        instance,
+        instance.CCS_GEN_TPS,
+        output_file=os.path.join(outdir, "ccs_energy_penalty_MW.csv"),
+        headings=("generation_project", "timepoint", "MW_penalty"),
+        values=lambda m, g, t:
+            (g, t, value(m.CCSEnergyPenalty[g, t]))
+    )
 
+    if hasattr(instance, "ONSITE_GEN_TPS"):
+        write_table(
+            instance,
+            instance.ONSITE_GEN_TPS,
+            output_file=os.path.join(outdir, "onsite_electrolyzer_power_MW.csv"),
+            headings=("generation_project", "timepoint", "MW_diverted_to_elz"),
+            values=lambda m, g, t:
+                (g, t, value(m.GenOnsiteElectrolysisLoad[g, t]))
+        )
 
 # @graph(
 #     "dispatch",
