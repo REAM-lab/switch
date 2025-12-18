@@ -315,12 +315,11 @@ def define_components(mod):
         )
 
         mod.ONSITE_GEN_TPS = Set(
-            dimen=2,
-            initialize=mod.GEN_TPS,
-            filter=lambda m, g, t: g in m.GENS_WITH_ONSITE_ELZ,
-            doc="GEN_TPS restricted to generators with onsite electrolyzers."
-        )
-    
+			dimen=2,
+			initialize=lambda m: ((g, t) for (_, g, t) in m.ONSITE_PROD_GEN_TPS),
+			doc="(g,t) pairs where generator g supplies an onsite electrolyzer at time t."
+		)
+
         mod.GenOnsiteElectrolysisLoad = Expression(
             mod.ONSITE_GEN_TPS,
             rule=lambda m, g, t:
@@ -682,14 +681,23 @@ def post_solve(instance, outdir):
             (g, t, value(m.CCSEnergyPenalty[g, t]))
     )
 
-    if hasattr(instance, "ONSITE_GEN_TPS"):
+    if hasattr(instance, "ONSITE_PROD_GEN_TPS"):
         write_table(
             instance,
-            instance.ONSITE_GEN_TPS,
+            instance.ONSITE_PROD_GEN_TPS,
             output_file=os.path.join(outdir, "onsite_electrolyzer_power_MW.csv"),
-            headings=("generation_project", "timepoint", "MW_diverted_to_elz"),
-            values=lambda m, g, t:
-                (g, t, value(m.GenOnsiteElectrolysisLoad[g, t]))
+            headings=("production_project","generation_project", "timepoint", "GenOnsiteElectrolysisLoad", "calculated_elz_load_mw"),
+            values=lambda m, h, g, t: (
+                h, 
+                g, 
+                t, 
+                value(m.GenOnsiteElectrolysisLoad[g, t]),
+                value(
+                    m.DispatchProd[h, t]
+                    * m.mwh_per_kg_h2[h]
+                    * (1000 / 33.32)
+                )
+            )
         )
 
 # @graph(

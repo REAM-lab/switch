@@ -589,7 +589,7 @@ def define_components(m):
     )
     m.prod_onsite_GENERATION_PROJECT = Param(
         m.ONSITE_PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        within=m.GENERATION_PROJECTS, input_optional=True)
+        within=m.GENERATION_PROJECTS)
     
     m.GRID_CONNECTED_PRODUCTION_PROJECTS = Set(
 		within=m.PRODUCTION_PROJECTS,
@@ -601,7 +601,6 @@ def define_components(m):
 		initialize=lambda m: [
 			(h, m.prod_onsite_GENERATION_PROJECT[h])
 			for h in m.ONSITE_PRODUCTION_PROJECTS
-            if h in m.prod_onsite_GENERATION_PROJECT
 		]
 	)
 
