@@ -308,27 +308,7 @@ def define_components(mod):
     # put it in the distributed node's power balance equations
     using_local_td = hasattr(mod, "Distributed_Power_Injections")
     
-    if hasattr(mod, "ONSITE_PROD_GEN_TPS"):
-        mod.GENS_WITH_ONSITE_ELZ = Set(
-            initialize=lambda m: (g for (_, g, _) in m.ONSITE_PROD_GEN_TPS),
-            doc="Generators that have onsite electrolyzers."
-        )
-
-        mod.ONSITE_GEN_TPS = Set(
-			dimen=2,
-			initialize=lambda m: ((g, t) for (_, g, t) in m.ONSITE_PROD_GEN_TPS),
-			doc="(g,t) pairs where generator g supplies an onsite electrolyzer at time t."
-		)
-
-        mod.GenOnsiteElectrolysisLoad = Expression(
-            mod.ONSITE_GEN_TPS,
-            rule=lambda m, g, t:
-                sum(m.DispatchProd[h, t] * m.mwh_per_kg_h2[h] * (1000 / 33.32)
-                    for (h, g2, tp) in m.ONSITE_PROD_GEN_TPS
-                    if g2 == g and tp == t
-                ),
-            doc="Electricity (MW) diverted from generator g to its onsite electrolyzer."
-        )
+    if hasattr(mod, "ONSITE_GEN_TPS"):
         mod.GenOnsitePowerSplitConstraint = Constraint(
             mod.ONSITE_GEN_TPS,
             rule=lambda m, g, t:

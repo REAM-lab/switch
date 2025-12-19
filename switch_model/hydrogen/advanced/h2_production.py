@@ -940,6 +940,38 @@ def define_components(m):
         m.PROD_TP_FUELS,
         rule=lambda m, h, t, f: m.DispatchProd[h, t]
     )
+    
+    m.GENS_WITH_ONSITE_ELZ = Set(
+        initialize=lambda m: (g for (_, g, _) in m.ONSITE_PROD_GEN_TPS),
+        doc="Generators that have onsite electrolyzers."
+    )
+
+    m.ONSITE_GEN_TPS = Set(
+        dimen=2,
+        initialize=lambda m: ((g, t) for (_, g, t) in m.ONSITE_PROD_GEN_TPS),
+        doc="(g,t) pairs where generator g supplies an onsite electrolyzer at time t."
+    )
+
+    m.GenOnsiteElectrolysisLoad = Expression(
+        m.ONSITE_GEN_TPS,
+        rule=lambda m, g, t:
+            sum(m.DispatchProd[h, t] * m.mwh_per_kg_h2[h] * (1000 / 33.32)
+                for (h, g2, tp) in m.ONSITE_PROD_GEN_TPS
+                if g2 == g and tp == t
+            ),
+        doc="Electricity (MW) diverted from generator g to its onsite electrolyzer."
+    )
+    def onsite_prod_requires_gen_rule(m, h, t):
+        g = m.prod_onsite_GENERATION_PROJECT[h]
+        return (
+            m.DispatchProd[h, t] == 0
+            if m.tp_period[t] not in m.PERIODS_FOR_GEN[g]
+            else Constraint.Skip
+        )
+    m.OnsiteProdRequiresGen = Constraint(
+        m.ONSITE_PROD_TPS,
+        rule=onsite_prod_requires_gen_rule
+    )
 
     # Only used to improve the performance of calculating ZoneTotalCentralH2Dispatch and H2ProdGridCntdPowerZonalUse
     m.PROD_FOR_ZONE_TPS = Set(
