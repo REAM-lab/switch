@@ -901,7 +901,8 @@ def define_components(m):
         initialize=lambda m: (
             (h, g, tp)
                 for (h, g) in m.ONSITE_PROD_AND_GEN
-                    for tp in m.TPS_FOR_PROD[h]))
+                    for tp in m.TPS_FOR_PROD[h]
+                    if m.tp_period[tp] in m.PERIODS_FOR_GEN[g]))
     m.GRID_CONNECTED_PROD_TPS = Set(
         dimen=2,
         initialize=lambda m: (
