@@ -941,12 +941,12 @@ def define_components(m):
         rule=lambda m, h, t, f: m.DispatchProd[h, t]
     )
 
-	m.GENS_WITH_ONSITE_ELZ = Set(
+    m.GENS_WITH_ONSITE_ELZ = Set(
 		initialize=lambda m: set(g for (_, g) in m.ONSITE_PROD_AND_GEN),
 		doc="Generators that have onsite electrolyzers."
 	)
 
-	m.ONSITE_GEN_TPS = Set(
+    m.ONSITE_GEN_TPS = Set(
 		dimen=2,
 		initialize=lambda m: {
 			(g, t)
