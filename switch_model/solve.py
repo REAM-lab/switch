@@ -130,7 +130,9 @@ def main(args=None, return_model=False, return_instance=False, attach_data_porta
                 print("Iteration modules:", iterate_modules)
             print("=======================================================================\n")
             print(f"Model created in {timer.step_time_as_str()}.")
-
+        # Enable detailed Pyomo component construction timing output
+        import pyomo.common.timing as timing
+        timing.report_timing = True
         # create an instance (also reports time spent reading data and loading into model)
         instance = model.load_inputs(attach_data_portal=attach_data_portal)
 
