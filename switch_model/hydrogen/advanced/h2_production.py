@@ -940,17 +940,21 @@ def define_components(m):
         m.PROD_TP_FUELS,
         rule=lambda m, h, t, f: m.DispatchProd[h, t]
     )
-    
-    m.GENS_WITH_ONSITE_ELZ = Set(
-        initialize=lambda m: (g for (_, g, _) in m.ONSITE_PROD_GEN_TPS),
-        doc="Generators that have onsite electrolyzers."
-    )
 
-    m.ONSITE_GEN_TPS = Set(
-        dimen=2,
-        initialize=lambda m: ((g, t) for (_, g, t) in m.ONSITE_PROD_GEN_TPS),
-        doc="(g,t) pairs where generator g supplies an onsite electrolyzer at time t."
-    )
+	m.GENS_WITH_ONSITE_ELZ = Set(
+		initialize=lambda m: set(g for (_, g) in m.ONSITE_PROD_AND_GEN),
+		doc="Generators that have onsite electrolyzers."
+	)
+
+	m.ONSITE_GEN_TPS = Set(
+		dimen=2,
+		initialize=lambda m: {
+			(g, t)
+			for (h, g) in m.ONSITE_PROD_AND_GEN
+			for t in m.TPS_FOR_PROD[h]
+		},
+		doc="(g,t) pairs where generator g supplies an onsite electrolyzer at time t."
+	)
 
     m.GenOnsiteElectrolysisLoad = Expression(
         m.ONSITE_GEN_TPS,
