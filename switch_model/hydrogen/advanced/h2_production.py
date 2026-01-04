@@ -595,14 +595,6 @@ def define_components(m):
 		within=m.PRODUCTION_PROJECTS,
 		initialize=lambda m: m.PRODUCTION_PROJECTS - m.ONSITE_PRODUCTION_PROJECTS
 	)
-    m.ONSITE_PROD_AND_GEN = Set(
-		dimen=2,
-		within=m.PRODUCTION_PROJECTS * m.GENERATION_PROJECTS,
-		initialize=lambda m: [
-			(h, m.prod_onsite_GENERATION_PROJECT[h])
-			for h in m.ONSITE_PRODUCTION_PROJECTS
-		]
-	)
 
     m.prod_uses_fuel = Param(
         m.PRODUCTION_PROJECTS,
@@ -896,13 +888,7 @@ def define_components(m):
             (h, tp)
                 for h in m.ONSITE_PRODUCTION_PROJECTS
                     for tp in m.TPS_FOR_PROD[h]))
-    m.ONSITE_PROD_GEN_TPS = Set(
-        dimen=3,
-        initialize=lambda m: (
-            (h, g, tp)
-                for (h, g) in m.ONSITE_PROD_AND_GEN
-                    for tp in m.TPS_FOR_PROD[h]
-                    if m.tp_period[tp] in m.PERIODS_FOR_GEN[g]))
+
     m.GRID_CONNECTED_PROD_TPS = Set(
         dimen=2,
         initialize=lambda m: (
@@ -941,27 +927,41 @@ def define_components(m):
         rule=lambda m, h, t, f: m.DispatchProd[h, t]
     )
 
-    m.GENS_WITH_ONSITE_ELZ = Set(
-        initialize=lambda m: sorted(
-            {g for (_, g, _) in m.ONSITE_PROD_GEN_TPS}
-        ),
-        doc="Generators that have onsite electrolyzers."
-    )
+    def build_onsite_gen_tps(m):
+        onsite_gen_tps = set()
+        for h in m.ONSITE_PRODUCTION_PROJECTS:
+            g = m.prod_onsite_GENERATION_PROJECT[h]
+            valid_periods = m.PERIODS_FOR_GEN[g]
+            for tp in m.TPS_FOR_PROD[h]:
+                if m.tp_period[tp] in valid_periods:
+                    onsite_gen_tps.add((g, tp))
+        return onsite_gen_tps
 
-    m.ONSITE_GEN_TPS = Set(
-        dimen=2,
-        initialize=lambda m: sorted(
-            {(g, t) for (_, g, t) in m.ONSITE_PROD_GEN_TPS}
-        ),
-        doc="(g,t) pairs where generator g supplies an onsite electrolyzer at time t."
+    m.ONSITE_GEN_TPS = Set(dimen=2, initialize=build_onsite_gen_tps,
+        doc="(g,t) pairs where generator g supplies an onsite electrolyzer at time t.")
+    
+    def build_onsite_prod_gen_tps(m):
+        onsite_prod_gen_tps = set()
+        for h in m.ONSITE_PRODUCTION_PROJECTS:
+            g = m.prod_onsite_GENERATION_PROJECT[h]
+            valid_periods = m.PERIODS_FOR_GEN[g]
+            for tp in m.TPS_FOR_PROD[h]:
+                if m.tp_period[tp] in valid_periods:
+                    onsite_prod_gen_tps.add((h, g, tp))
+        return onsite_prod_gen_tps
+
+    m.ONSITE_PROD_GEN_TPS = Set(
+        dimen=3,
+        initialize=build_onsite_prod_gen_tps,
+        doc="(h,g,t) pairs where generator g supplies an onsite electrolyzer h at time t."
     )
 
     m.GenOnsiteElectrolysisLoad = Expression(
         m.ONSITE_GEN_TPS,
         rule=lambda m, g, t:
             sum(m.DispatchProd[h, t] * m.mwh_per_kg_h2[h] * (1000 / 33.32)
-                for (h, g2, tp) in m.ONSITE_PROD_GEN_TPS
-                if g2 == g and tp == t
+                for h in m.ONSITE_PRODUCTION_PROJECTS
+                if m.prod_onsite_GENERATION_PROJECT[h] == g
             ),
         doc="Electricity (MW) diverted from generator g to its onsite electrolyzer."
     )

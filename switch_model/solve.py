@@ -15,9 +15,6 @@ import platform
 
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
 
-import logging
-import pyomo.common.timing as timing
-
 import switch_model
 from switch_model.utilities import (
     create_model, _ArgumentParser, StepTimer, make_iterable, LogOutput, warn, query_yes_no,
@@ -42,12 +39,6 @@ def main(args=None, return_model=False, return_instance=False, attach_data_porta
 
     # Get options needed before any modules are loaded
     pre_module_options = parse_pre_module_options(args)
-    
-    logging.getLogger("pyomo").setLevel(logging.INFO)
-    logging.getLogger("pyomo.core").setLevel(logging.INFO)
-    logging.getLogger("pyomo.solvers").setLevel(logging.INFO)
-    logging.getLogger("pyomo.common.timing").setLevel(logging.INFO)
-    timing.report_timing = True
 
     # turn on post-mortem debugging mode if requested
     # (from http://stackoverflow.com/a/1237407 ; more options available there)
