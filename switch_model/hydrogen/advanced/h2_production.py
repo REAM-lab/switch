@@ -582,19 +582,28 @@ def define_components(m):
 
     m.prod_is_onsite = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        input_optional=True, within=Boolean)
+        input_optional=True, within=Boolean
+    )
     m.ONSITE_PRODUCTION_PROJECTS = Set(
         within=m.PRODUCTION_PROJECTS,
         initialize=lambda m: sorted(set(h for h in m.PRODUCTION_PROJECTS if m.prod_is_onsite[h]))
     )
     m.prod_onsite_GENERATION_PROJECT = Param(
         m.ONSITE_PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        within=m.GENERATION_PROJECTS)
-    
+        within=m.GENERATION_PROJECTS
+    )
     m.GRID_CONNECTED_PRODUCTION_PROJECTS = Set(
 		within=m.PRODUCTION_PROJECTS,
 		initialize=lambda m: m.PRODUCTION_PROJECTS - m.ONSITE_PRODUCTION_PROJECTS
 	)
+    m.GENS_WITH_ONSITE_ELZ = Set(
+        dimen=1, 
+        within=m.GENERATION_PROJECTS, 
+        initialize=lambda m: (
+            m.prod_onsite_GENERATION_PROJECT[h] 
+            for h in m.ONSITE_PRODUCTION_PROJECTS), 
+        doc="Generators that have onsite electrolyzers." 
+    )
 
     m.prod_uses_fuel = Param(
         m.PRODUCTION_PROJECTS,
