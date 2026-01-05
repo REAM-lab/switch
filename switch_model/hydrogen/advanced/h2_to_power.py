@@ -613,7 +613,7 @@ def post_solve(m, outdir):
     ).sum()
     write_table(
         m,
-        output_file=os.path.join(outdir, "dispatch_zonal_annual_summary.csv"),
+        output_file=os.path.join(outdir, "h2gen_dispatch_zonal_annual_summary.csv"),
         df=h2gen_zonal_annual_summary,
         columns=["Energy_GWh_typical_yr", "VariableOMCost_per_yr",
                  "DispatchEmissions_tNOx"]
