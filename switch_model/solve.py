@@ -708,6 +708,7 @@ def solve(model):
     solver_type = model.options.solver
     gurobi_types = ("gurobi", "gurobi_direct", "gurobi_aug")
     cplex_types = ("cplex", "cplex_direct")
+    mosek_types = ("mosek", "mosek_direct", "mosek_persistent")
 
     if model.options.warm_start is not None or model.options.save_warm_start:
         if solver_type not in gurobi_types:
@@ -729,7 +730,14 @@ def solve(model):
         # unused solver object, or get errors if the solver options are invalid.
         #
         # Note previously solver was saved in model however this is very memory inefficient.
-        solver = SolverFactory(solver_type, solver_io=model.options.solver_io)
+        solver_kwargs = {}
+        if solver_type in mosek_types:
+            # Use interior-point solution if basis identification is disabled
+            if 'iparam.intpnt_basis=0' in options_string.replace(' ', ''):
+                solver_kwargs["soltype"] = "itr"
+                print("MOSEK: Using interior-point solution (soltype='itr') because iparam.intpnt_basis=0 detected.")
+        
+        solver = SolverFactory(solver_type, solver_io=model.options.solver_io, **solver_kwargs)
         solver_manager = SolverManagerFactory(model.options.solver_manager)
 
     if model.options.gurobi_find_iis and model.options.gurobi_make_mps:
