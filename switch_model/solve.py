@@ -719,23 +719,23 @@ def solve(model):
         if model.options.warm_start is not None:
             method = 1
 
-    if hasattr(model, "solver"):
-        solver = model.solver
-        solver_manager = model.solver_manager
-    else:
-        # Create a solver object the first time in. We don't do this until a solve is
-        # requested, because sometimes a different solve function may be used,
-        # with its own solver object (e.g., with runph or a parallel solver server).
-        # In those cases, we don't want to go through the expense of creating an
-        # unused solver object, or get errors if the solver options are invalid.
-        #
-        # Note previously solver was saved in model however this is very memory inefficient.
-        solver_kwargs = {}
-        if solver_type in mosek_types:
-            # Use interior-point solution if basis identification is disabled
-            if 'iparam.intpnt_basis=0' in options_string.replace(' ', ''):
-                solver_kwargs["soltype"] = "itr"
-                print("MOSEK: Using interior-point solution (soltype='itr') because iparam.intpnt_basis=0 detected.")
+    # if hasattr(model, "solver"):
+    #     solver = model.solver
+    #     solver_manager = model.solver_manager
+    # else:
+    # Create a solver object the first time in. We don't do this until a solve is
+    # requested, because sometimes a different solve function may be used,
+    # with its own solver object (e.g., with runph or a parallel solver server).
+    # In those cases, we don't want to go through the expense of creating an
+    # unused solver object, or get errors if the solver options are invalid.
+    #
+    # Note previously solver was saved in model however this is very memory inefficient.
+    solver_kwargs = {}
+    if solver_type in mosek_types:
+        # Use interior-point solution if basis identification is disabled
+        if 'iparam.intpnt_basis=0' in options_string.replace(' ', ''):
+            solver_kwargs["soltype"] = "itr"
+            print("MOSEK: Using interior-point solution (soltype='itr') because iparam.intpnt_basis=0 detected.")
         
         solver = SolverFactory(solver_type, solver_io=model.options.solver_io, **solver_kwargs)
         solver_manager = SolverManagerFactory(model.options.solver_manager)
