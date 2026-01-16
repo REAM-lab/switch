@@ -572,6 +572,25 @@ def define_components(mod):
             sum((m.WithdrawH2Storage[s, t] + m.FillH2Storage[s, t]) * m.h2stor_comp_mwh_per_mt[s] * (1/33.32) for s in m.H2_STORAGE_FOR_ZONE_TPS[z, t]),
         doc=("[MW] Average power used at each TP in each zone by H2 storage compressors."))
     mod.Zone_Power_Withdrawals.append('H2StorageCompressorLoad')
+    
+    # Add $0.05/MWh of H2 variable O&M cost to throughput to get rid of same TP fill and withdraw behavior
+    # storage projects available in each HGTS (sparse index)
+    mod.H2_STORAGE_PROJECTS_IN_HGTS = Set(
+        mod.HGTS,
+        within=mod.H2_STORAGE_PROJECTS,
+        initialize=lambda m, hgts: (s for s in m.H2_STORAGE_PROJECTS if hgts in m.HGTS_FOR_H2_STORAGE[s]))
+
+    def h2stor_var_om_rule(m, p):
+        return sum(
+            (m.FillH2Storage[s, tp] + m.WithdrawH2Storage[s, tp])
+            * 0.05
+            * m.hgts_duration_of_tp[m.tp_to_hgts[tp]]
+            for hgts in m.HGTS_IN_PERIOD[p]
+            for tp in m.TPS_IN_HGTS[hgts]
+            for s in m.H2_STORAGE_PROJECTS_IN_HGTS[hgts])
+
+    mod.H2StorageVarOMCost = Expression(mod.PERIODS, rule=h2stor_var_om_rule)
+    mod.Cost_Components_Per_Period.append("H2StorageVarOMCost")
 
     mod.H2StateOfFill = Var(mod.H2_STORAGE_TPS, within=NonNegativeReals)
 
