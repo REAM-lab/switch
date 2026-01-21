@@ -714,18 +714,6 @@ def define_components(mod):
             * m.period_length_years[p]
         ),
     )
-    
-    mod.H2_Storage_Conservation_of_Mass_Annual = Constraint(
-        mod.LOAD_ZONES, 
-        mod.PERIODS, 
-        rule=lambda m, z, p:
-        sum(
-            (m.H2StorageTotalFill[z, tp] - m.H2StorageTotalWithdrawal[z, tp]) 
-            * m.tp_weight_in_year[tp]
-            for hgts in m.HGTS_IN_PERIOD[p] 
-            for tp in m.TPS_IN_HGTS[hgts] 
-        ) == 0
-    )
 
 def load_inputs(m, switch_data, inputs_dir):
     # Construct set of capacity-limited projects. This set includes projects for 
