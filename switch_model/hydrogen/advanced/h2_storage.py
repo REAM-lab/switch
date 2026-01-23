@@ -573,7 +573,7 @@ def define_components(mod):
         doc=("[MW] Average power used at each TP in each zone by H2 storage compressors."))
     mod.Zone_Power_Withdrawals.append('H2StorageCompressorLoad')
     
-    # Add $0.05/MWh of H2 variable O&M cost to throughput to get rid of same TP fill and withdraw behavior
+    # Add $0.01/MWh of H2 variable O&M cost to throughput to get rid of same TP fill and withdraw behavior
     # storage projects available in each HGTS (sparse index)
     mod.H2_STORAGE_PROJECTS_IN_HGTS = Set(
         mod.HGTS,
@@ -583,7 +583,7 @@ def define_components(mod):
     def h2stor_var_om_rule(m, p):
         return sum(
             (m.FillH2Storage[s, tp] + m.WithdrawH2Storage[s, tp])
-            * 0.05
+            * 0.01
             * m.hgts_duration_of_tp[m.tp_to_hgts[tp]]
             for hgts in m.HGTS_IN_PERIOD[p]
             for tp in m.TPS_IN_HGTS[hgts]
@@ -603,6 +603,9 @@ def define_components(mod):
     def H2_Track_State_Of_Fill_rule(m, s, t):
         h2_storage_efficiency = 1 - m.h2stor_leakage_rate[s]
         tp_duration_days = m.hgts_duration_of_tp[m.tp_to_hgts[t]] / 24
+        # Units: [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] = 1000/33.32 [kg of H2/MWh]
+        kg_per_MWh_H2 = 1000.0 / 33.32
+        
 		# H2 in storage that remains from the energy in storage at the previous timepoint (leakage rate is per day)
         carry_over_h2 = (
             m.H2StateOfFill[s, m.h2_tp_previous[t]]
@@ -612,18 +615,17 @@ def define_components(mod):
 		# Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] = [kg of H2]
 
         net_flow = m.H2StorageFlow[s, t] * (
-        # If there's no decay, it's simply H2StorageFlow * tp_duration_hrs * conversion factor 
-            m.hgts_duration_of_tp[m.tp_to_hgts[t]] * (1000/33.32)
+        # If there's no decay, it's simply H2StorageFlow * tp duration (hrs) * conversion factor 
+            m.hgts_duration_of_tp[m.tp_to_hgts[t]] * kg_per_MWh_H2
             if h2_storage_efficiency == 1
             else
-            # If there is decay, we need to account for energy decay during the timepoint duration.
-            # To derive the following expression, simply solve the differential equation:
-            # dZ/dt = -rZ + StorageFlow
-            # where r is the instantaneous decay rate, Z is the state of charge and t is time.
-            # Note that exp(-24r) = (1 - daily_decay_rate).
-            24
-            * (h2_storage_efficiency**tp_duration_days - 1)
-            / math.log(h2_storage_efficiency)
+                # If there is decay, we need to account for energy decay during the timepoint duration.
+                # To derive the following expression, simply solve the differential equation:
+                # dZ/dt = -rZ + StorageFlow
+                # where r is the instantaneous decay rate, Z is the state of charge and t is time.
+                # Note that exp(-24r) = (1 - daily_decay_rate).
+                (24 * (h2_storage_efficiency**tp_duration_days - 1)
+                / math.log(h2_storage_efficiency)) * kg_per_MWh_H2
         )
 	
         return m.H2StateOfFill[s, t] == carry_over_h2 + net_flow
@@ -644,12 +646,15 @@ def define_components(mod):
         h2_storage_efficiency = 1 - m.h2stor_leakage_rate[s]
 
         carry_over_h2_no_decay = m.H2StateOfFill[s, m.h2_tp_previous[t]]
+        
+        # Units: [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] = 1000/33.32 [kg of H2/MWh]
+        kg_per_MWh_H2 = 1000.0 / 33.32
 
         # Net storage change: net fill level in kg of H2
 		# Units: [MW of H2] * [hours] * [1 kg of H2/33.32 kWh] * [1000 kWh/1 MWh] = [kg of H2]
 
         # Net flow without decay
-        net_flow_no_decay = m.H2StorageFlow[s, t] * m.hgts_duration_of_tp[m.tp_to_hgts[t]] * (1000/33.32)
+        net_flow_no_decay = m.H2StorageFlow[s, t] * m.hgts_duration_of_tp[m.tp_to_hgts[t]] * kg_per_MWh_H2
 
         # kg of H2 that entered storage during interval without decay:
         total_before_decay = carry_over_h2_no_decay + net_flow_no_decay
@@ -684,10 +689,14 @@ def define_components(mod):
     mod.H2Storage_Zonal_H2_Leakage = Expression(mod.LOAD_ZONES, mod.TIMEPOINTS, rule=rule_l)
     # Annual leakage of H2 (fugitive H2 emissions) in each period
 	# Units: [kg at each timepoint] * [hours timepoint represents in 1 year] * [1 metric ton/1000 kg] = [metric ton of H2 per year]
+    # Me use (m.tp_weight_in_year[t] / m.hgts_duration_of_tp[m.tp_to_hgts[t]]) to annualize the leakage value in case 
+    # m.tp_weight_in_year[t] != m.hgts_duration_of_tp[m.tp_to_hgts[t]]. Hours are already baked into the kg value (when converting from 
+    # a rate to mass using m.hgts_duration_of_tp[m.tp_to_hgts[t]]). For example, a 4 hour duration may weigh 4.013 hours in the year 
+    # according to m.tp_weight_in_year[t] (due to year and period length values). So we would weigh the kg by 4.013/4
     def total_stor_leakage_rule(m, p):
         return sum(
 			m.H2Storage_Zonal_H2_Leakage[z, t]
-			* (m.tp_weight_in_year[t] / m.hgts_duration_of_tp[m.tp_to_hgts[t]]) # in case m.tp_weight_in_year[t] != m.hgts_duration_of_tp[m.tp_to_hgts[t]]
+			* (m.tp_weight_in_year[t] / m.hgts_duration_of_tp[m.tp_to_hgts[t]]) 
 			* (1/1000)   # kg to metric tons
 			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
 		)
@@ -706,7 +715,7 @@ def define_components(mod):
         if m.h2stor_max_cycles_per_year[s] == float("inf")
         else (
             sum(
-                m.WithdrawH2Storage[s, tp] * m.tp_duration_hrs[tp] * (1000/33.32)
+                m.WithdrawH2Storage[s, tp] * m.hgts_duration_of_tp[m.tp_to_hgts[tp]] * (1000/33.32)
                 for hgts in m.HGTS_IN_PERIOD[p] for tp in m.TPS_IN_HGTS[hgts]
             )
             <= m.h2stor_max_cycles_per_year[s]
