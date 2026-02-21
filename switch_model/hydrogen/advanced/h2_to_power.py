@@ -18,7 +18,7 @@ INPUT FILE FORMAT
         H2_GENERATION_PROJECT, h2gen_build_yr, h2gen_tech, h2gen_load_zone, h2gen_max_age, 
         h2gen_full_load_heat_rate, h2gen_connect_cost_per_mw,  h2gen_variable_om_per_mwh, 
         h2gen_capacity_limit_mw, h2gen_forced_outage_rate, h2gen_can_provide_cap_reserves, 
-        mt_nox_per_mmbtu_h2, h2gen_leakage_rate
+        g_nox_per_mmbtu_h2, h2gen_leakage_rate
 
     h2_to_power_predetermined.csv
         H2_GENERATION_PROJECT, build_year, h2gen_predetermined_cap_mw
@@ -192,7 +192,7 @@ def define_components(mod):
     mod.h2gen_can_provide_cap_reserves = Param(mod.H2_GENERATION_PROJECTS, input_file='generation_projects_info.csv',
                                              within=Boolean, default=True, 
                                              doc="Indicates whether an H2-fueled generator can provide capacity reserves.")
-    mod.mt_nox_per_mmbtu_h2 = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
+    mod.g_nox_per_mmbtu_h2 = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
                                          within=NonNegativeReals, default=0)
     mod.h2gen_leakage_rate = Param(mod.H2_GENERATION_PROJECTS, input_file="h2_to_power_projects_info.csv",
                                          within=NonNegativeReals, default=0)
@@ -502,7 +502,7 @@ def define_components(mod):
     mod.H2GeneratorTotalLeakage_ZoneTP = Expression(
         mod.LOAD_ZONES, mod.TIMEPOINTS,
         rule=lambda m, z, t: sum(
-            m.ZoneTotalH2GeneratorH2Use[z, t] *
+            m.DispatchH2Gen[g, t] * m.h2gen_full_load_heat_rate[g] * 0.293071 *
             m.h2gen_leakage_rate[g] * m.tp_weight_in_year[t] * (1/33.32)
 			for g in m.H2_GENS_FOR_ZONE_TPS[z,t])
     )
@@ -523,15 +523,15 @@ def define_components(mod):
             for g in m.H2_GENS_IN_PERIOD[m.tp_period[t]]),
         doc="Summarize H2-fueled generator variable O&M costs for the objective function")
     mod.Cost_Components_Per_TP.append('H2GenVariableOMCostsInTP')
-                 
+
+    # Units: [MW] * [h] * [MMBtu of H2/MWh] * [g NOx/MMBtu of H2] * [tonne/1e6 g] = [tonne NOx]
     mod.H2GenAnnualNOxEmissions = Expression(
         mod.PERIODS,
         rule=lambda m, period: sum(
-            m.DispatchH2Gen[g, t] * m.mt_nox_per_mmbtu_h2[g] * m.tp_weight_in_year[t]
+            m.DispatchH2Gen[g, t] * m.tp_weight_in_year[t] * m.h2gen_full_load_heat_rate[g] * m.g_nox_per_mmbtu_h2[g] * 1e-6 
             for (g, t) in m.H2_GEN_TPS
             if m.tp_period[t] == period),
         doc="The system's annual NOx emissions from H2-fueled electricity generators in metric tonnes of NOx per year.")
-
 
 def load_inputs(mod, switch_data, inputs_dir):
     # Construct set of capacity-limited projects. This set includes projects for which 
@@ -593,11 +593,12 @@ def post_solve(m, outdir):
         "VariableOMCost_per_yr": c(lambda g, t:
                                    m.DispatchH2Gen[g, t] * m.h2gen_variable_om_per_mwh[g] *
                                    m.tp_weight_in_year[t]),
-        "DispatchEmissions_tNOx": c(lambda g, t: # Units: [MW] * [h] * [MMBtu of H2/MWh] * [metric ton NOx/MMBtu of H2] = [metric ton NOx]
+        "DispatchEmissions_tNOx": c(lambda g, t: # Units: [MW] * [h] * [MMBtu of H2/MWh] * [g NOx/MMBtu of H2] * [tonne/1e6 g] = [tonne NOx]
                                                    m.DispatchH2Gen[g, t] 
                                                    * m.tp_weight_in_year[t]
                                                    * m.h2gen_full_load_heat_rate[g]
-                                                   * m.mt_nox_per_mmbtu_h2[g])
+                                                   * m.g_nox_per_mmbtu_h2[g]
+                                                   * 1e-6)
     })
     h2gen_dispatch_full_df.set_index(["h2_generation_project", "timestamp"], inplace=True)
     write_table(m, output_file=os.path.join(outdir, "h2gen_dispatch.csv"), df=h2gen_dispatch_full_df)

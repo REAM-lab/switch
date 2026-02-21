@@ -86,14 +86,16 @@ def define_components(mod):
     fuels, including biomass. Currently the only fuel that can have a
     value of 0 for this is uranium.
 
-    f_nox_intensity[f], f_so2_intensity[f] and f_ch4_intensity[f]
-    describe the amount of nitrous oxide, sulphur
-    dioxide and methane emitted during electricity production for
-    a given fuel. Unlike f_co2_intensity, units are in metric tonnes
-    per MWh. Upstream emissions if any should be included in these parameters.
-    Defaults to 0. One potential source for these coefficients can be found
-    in this paper from the Argonne National Laboratory.
-    https://greet.es.anl.gov/publication-updated-elec-emissions
+    f_nox_intensity[f], f_so2_intensity[f], f_ch4_intensity[f], 
+    f_nh3_intensity[f], f_pm2_5_intensity[f], and f_voc_intensity[f] describe 
+    the amount of nitrous oxide, sulphur dioxide, methane, ammonia, particulate 
+    matter (2.5µm diameter or smaller), and volatile organic compounds emitted 
+    during electricity production for a given fuel. Unlike f_co2_intensity, 
+    units are in grams of pollutant per MWh. Upstream emissions if any should 
+    be included in these parameters. Defaults to 0. One potential source for 
+    these coefficients can be found in these papers from the Argonne National Laboratory:
+    https://greet.es.anl.gov/publication-updated-elec-emissions OR 
+    https://publications.anl.gov/anlpubs/2020/09/162084.pdf#page=22 (NER-region specific)
 
     f_upstream_co2_intensity[f] is the carbon emissions attributable to
     a fuel before it is consumed in units of tCO2/MMBTU. For sustainably
@@ -125,20 +127,24 @@ def define_components(mod):
     mod.NON_FUEL_ENERGY_SOURCES = Set(input_file='non_fuel_energy_sources.csv', input_optional=True)
     mod.FUELS = Set(dimen=1, input_file="fuels.csv")
 
+    # Units: [tonne CO2/MMBtu of fuel consumed]
     mod.f_co2_intensity = Param(mod.FUELS, within=NonNegativeReals, input_file="fuels.csv",
-                                input_column="co2_intensity", )
+                                input_column="co2_intensity")
     mod.f_upstream_co2_intensity = Param(mod.FUELS, within=Reals, input_file="fuels.csv",
                                          input_column="upstream_co2_intensity", default=0)
+    # Units: [g of pollutant/MWh of electricity generated]
     mod.f_nox_intensity = Param(mod.FUELS, within=NonNegativeReals, default=0, input_file="fuels.csv",
-                                input_column="nox_intensity", )
+                                input_column="nox_intensity")
     mod.f_so2_intensity = Param(mod.FUELS, within=NonNegativeReals, default=0, input_file="fuels.csv",
-                                input_column="so2_intensity", )
+                                input_column="so2_intensity")
     mod.f_ch4_intensity = Param(mod.FUELS, within=NonNegativeReals, default=0, input_file="fuels.csv",
-                                input_column="ch4_intensity", )
+                                input_column="ch4_intensity")
     mod.f_nh3_intensity = Param(mod.FUELS, within=NonNegativeReals, default=0, input_file="fuels.csv",
-                                input_column="nh3_intensity", )
-    mod.f_pm25_intensity = Param(mod.FUELS, within=NonNegativeReals, default=0, input_file="fuels.csv",
-                                input_column="pm25_intensity", )
+                                input_column="nh3_intensity")
+    mod.f_pm2_5_intensity = Param(mod.FUELS, within=NonNegativeReals, default=0, input_file="fuels.csv",
+                                input_column="pm2_5_intensity")
+    mod.f_voc_intensity = Param(mod.FUELS, within=NonNegativeReals, default=0, input_file="fuels.csv",
+                                input_column="voc_intensity")
 
     mod.min_data_check('f_co2_intensity')
     # Ensure that fuel and non-fuel sets have no overlap.

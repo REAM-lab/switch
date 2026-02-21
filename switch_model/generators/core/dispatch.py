@@ -150,7 +150,7 @@ def define_components(mod):
     DispatchEmissionsSO2[(g, t, f) in GEN_TP_FUELS], 
     DispatchEmissionsCH4[(g, t, f) in GEN_TP_FUELS], 
     DispatchEmissionsNH3[(g, t, f) in GEN_TP_FUELS],
-    DispatchEmissionsPM25[(g, t, f) in GEN_TP_FUELS], and are the nitrogen
+    DispatchEmissionsPM2_5[(g, t, f) in GEN_TP_FUELS], and are the nitrogen
     oxides, sulfur dioxide, methane, ammonia, and particulate matter (2.5µm 
     diameter or smaller) emissions produced by dispatching a fuel-based project 
     in units of metric tonnes per hour. These are derived using DispatchGenByFuel. 
@@ -161,7 +161,7 @@ def define_components(mod):
 
     AnnualEmissionsNOx[p in PERIODS], AnnualEmissionsSO2[p in PERIODS],
     AnnualEmissionsCH4[p in PERIODS], AnnualEmissionsNH3[p in PERIODS],
-    and AnnualEmissionsPM25[p in PERIODS] are the system's annual nitrogen oxides,
+    and AnnualEmissionsPM2_5[p in PERIODS] are the system's annual nitrogen oxides,
     sulfur dioxide, methane, ammonia, and particulate matter (2.5µm 
     diameter or smaller) emissions in metric tonnes per year, respectively.
 
@@ -412,6 +412,7 @@ def define_components(mod):
         mod.GEN_TP_FUELS,
         rule=CapturedEmissions_rule)
 
+    # DispatchEmissionsX are in units of g of pollutant X/h: [MW] * [g/MWh] = [g/h]
     mod.DispatchEmissionsNOx = Expression(
         mod.GEN_TP_FUELS,
         rule=(lambda m, g, t, f: m.DispatchGenByFuel[g, t, f] * m.f_nox_intensity[f]))
@@ -428,9 +429,13 @@ def define_components(mod):
         mod.GEN_TP_FUELS,
         rule=(lambda m, g, t, f: m.DispatchGenByFuel[g, t, f] * m.f_nh3_intensity[f]))
 
-    mod.DispatchEmissionsPM25 = Expression(
+    mod.DispatchEmissionsPM2_5 = Expression(
         mod.GEN_TP_FUELS,
-        rule=(lambda m, g, t, f: m.DispatchGenByFuel[g, t, f] * m.f_pm25_intensity[f]))
+        rule=(lambda m, g, t, f: m.DispatchGenByFuel[g, t, f] * m.f_pm2_5_intensity[f]))
+    
+    mod.DispatchEmissionsVOC = Expression(
+        mod.GEN_TP_FUELS,
+        rule=(lambda m, g, t, f: m.DispatchGenByFuel[g, t, f] * m.f_voc_intensity[f]))
 
     mod.AnnualEmissions = Expression(mod.PERIODS,
         rule=lambda m, period: sum(
@@ -476,10 +481,11 @@ def define_components(mod):
     # 	doc="The annual savings in dollars from 45Q tax credit, which grants $85/tonne ($2023) of CO2 captured.")
     # mod.Cost_Components_Per_Period.append('AnnualCCS45QTaxCredit')
 
+    # Units: [g/h] * [h] * [tonne/1e6 g] = [tonne]
     mod.AnnualEmissionsNOx = Expression(
         mod.PERIODS,
         rule=lambda m, period: sum(
-            m.DispatchEmissionsNOx[g, t, f] * m.tp_weight_in_year[t]
+            m.DispatchEmissionsNOx[g, t, f] * m.tp_weight_in_year[t] * 1e-6
             for (g, t, f) in m.GEN_TP_FUELS
             if m.tp_period[t] == period),
         doc="The system's annual NOx emissions, in metric tonnes of NOx per year.")
@@ -487,7 +493,7 @@ def define_components(mod):
     mod.AnnualEmissionsSO2 = Expression(
         mod.PERIODS,
         rule=lambda m, period: sum(
-            m.DispatchEmissionsSO2[g, t, f] * m.tp_weight_in_year[t]
+            m.DispatchEmissionsSO2[g, t, f] * m.tp_weight_in_year[t] * 1e-6
             for (g, t, f) in m.GEN_TP_FUELS
             if m.tp_period[t] == period),
         doc="The system's annual SO2 emissions, in metric tonnes of SO2 per year.")
@@ -495,7 +501,7 @@ def define_components(mod):
     mod.AnnualEmissionsCH4 = Expression(
         mod.PERIODS,
         rule=lambda m, period: sum(
-            m.DispatchEmissionsCH4[g, t, f] * m.tp_weight_in_year[t]
+            m.DispatchEmissionsCH4[g, t, f] * m.tp_weight_in_year[t] * 1e-6
             for (g, t, f) in m.GEN_TP_FUELS
             if m.tp_period[t] == period),
         doc="The system's annual CH4 emissions, in metric tonnes of CH4 per year.")
@@ -503,18 +509,26 @@ def define_components(mod):
     mod.AnnualEmissionsNH3 = Expression(
         mod.PERIODS,
         rule=lambda m, period: sum(
-            m.DispatchEmissionsNH3[g, t, f] * m.tp_weight_in_year[t]
+            m.DispatchEmissionsNH3[g, t, f] * m.tp_weight_in_year[t] * 1e-6
             for (g, t, f) in m.GEN_TP_FUELS
             if m.tp_period[t] == period),
         doc="The system's annual NH3 emissions, in metric tonnes of NH3 per year.")
         
-    mod.AnnualEmissionsPM25 = Expression(
+    mod.AnnualEmissionsPM2_5 = Expression(
         mod.PERIODS,
         rule=lambda m, period: sum(
-            m.DispatchEmissionsPM25[g, t, f] * m.tp_weight_in_year[t]
+            m.DispatchEmissionsPM2_5[g, t, f] * m.tp_weight_in_year[t] * 1e-6
             for (g, t, f) in m.GEN_TP_FUELS
             if m.tp_period[t] == period),
         doc="The system's annual PM2.5 emissions, in metric tonnes of PM2.5 per year.")
+    
+    mod.AnnualEmissionsVOC = Expression(
+        mod.PERIODS,
+        rule=lambda m, period: sum(
+            m.DispatchEmissionsVOC[g, t, f] * m.tp_weight_in_year[t] * 1e-6
+            for (g, t, f) in m.GEN_TP_FUELS
+            if m.tp_period[t] == period),
+        doc="The system's annual VOC emissions, in metric tonnes of VOC per year.")
 
     mod.GenVariableOMCostsInTP = Expression(
         mod.TIMEPOINTS,
@@ -523,7 +537,6 @@ def define_components(mod):
             for g in m.GENS_IN_PERIOD[m.tp_period[t]]),
         doc="Summarize costs for the objective function")
     mod.Cost_Components_Per_TP.append('GenVariableOMCostsInTP')
-
 
 def post_solve(instance, outdir):
     """
@@ -589,6 +602,12 @@ def post_solve(instance, outdir):
                                                        instance.tp_weight_in_year[t]
                                                        for f in instance.FUELS_FOR_GEN[g]
                                                    ) if instance.gen_uses_fuel[g] else 0),
+        "DispatchCapturedEmissions_tCO2_per_typical_yr": c(lambda g, t:
+                                                   sum(
+                                                       instance.CapturedEmissions[g, t, f] *
+                                                       instance.tp_weight_in_year[t]
+                                                       for f in instance.FUELS_FOR_GEN[g]
+                                                   ) if instance.gen_uses_fuel[g] else 0),
         "DispatchEmissions_tNOx_per_typical_yr": c(lambda g, t:
                                                    sum(
                                                        instance.DispatchEmissionsNOx[g, t, f] *
@@ -613,18 +632,19 @@ def post_solve(instance, outdir):
                                                        instance.tp_weight_in_year[t]
                                                        for f in instance.FUELS_FOR_GEN[g]
                                                    ) if instance.gen_uses_fuel[g] else 0),
-        "DispatchEmissions_tPM25_per_typical_yr": c(lambda g, t:
+        "DispatchEmissions_tPM2_5_per_typical_yr": c(lambda g, t:
                                                    sum(
-                                                       instance.DispatchEmissionsPM25[g, t, f] *
+                                                       instance.DispatchEmissionsPM2_5[g, t, f] *
                                                        instance.tp_weight_in_year[t]
                                                        for f in instance.FUELS_FOR_GEN[g]
                                                    ) if instance.gen_uses_fuel[g] else 0),
-        "DispatchCapturedEmissions_tCO2_per_typical_yr": c(lambda g, t:
+        "DispatchEmissions_tVOC_per_typical_yr": c(lambda g, t:
                                                    sum(
-                                                       instance.CapturedEmissions[g, t, f] *
+                                                       instance.DispatchEmissionsVOC[g, t, f] *
                                                        instance.tp_weight_in_year[t]
                                                        for f in instance.FUELS_FOR_GEN[g]
                                                    ) if instance.gen_uses_fuel[g] else 0)
+        
     })
     dispatch_full_df.set_index(["generation_project", "timestamp"], inplace=True)
     write_table(instance, output_file=os.path.join(outdir, "dispatch.csv"), df=dispatch_full_df)
@@ -633,10 +653,11 @@ def post_solve(instance, outdir):
     write_table(instance, output_file=os.path.join(outdir, "dispatch_annual_summary.csv"),
                 df=annual_summary,
                 columns=["Energy_GWh_typical_yr", "VariableOMCost_per_yr",
-                         "DispatchEmissions_tCO2_per_typical_yr", "DispatchEmissions_tNOx_per_typical_yr",
-                         "DispatchEmissions_tSO2_per_typical_yr", "DispatchEmissions_tCH4_per_typical_yr",
-                         "DispatchEmissions_tNH3_per_typical_yr", "DispatchEmissions_tPM25_per_typical_yr", 
-                         "DispatchCapturedEmissions_tCO2_per_typical_yr"])
+                         "DispatchEmissions_tCO2_per_typical_yr", "DispatchCapturedEmissions_tCO2_per_typical_yr",
+                         "DispatchEmissions_tNOx_per_typical_yr", "DispatchEmissions_tSO2_per_typical_yr", 
+                         "DispatchEmissions_tCH4_per_typical_yr", "DispatchEmissions_tNH3_per_typical_yr", 
+                         "DispatchEmissions_tPM2_5_per_typical_yr", "DispatchEmissions_tVOC_per_typical_yr"
+                         ])
 
     zonal_annual_summary = dispatch_full_df.groupby(
         ['gen_tech', "gen_load_zone", "gen_energy_source", "period"]
@@ -646,10 +667,10 @@ def post_solve(instance, outdir):
         output_file=os.path.join(outdir, "dispatch_zonal_annual_summary.csv"),
         df=zonal_annual_summary,
         columns=["Energy_GWh_typical_yr", "VariableOMCost_per_yr",
-                 "DispatchEmissions_tCO2_per_typical_yr", "DispatchEmissions_tNOx_per_typical_yr",
-                 "DispatchEmissions_tSO2_per_typical_yr", "DispatchEmissions_tCH4_per_typical_yr",
-                 "DispatchEmissions_tNH3_per_typical_yr", "DispatchEmissions_tPM25_per_typical_yr",
-                 "DispatchCapturedEmissions_tCO2_per_typical_yr"]
+                 "DispatchEmissions_tCO2_per_typical_yr", "DispatchCapturedEmissions_tCO2_per_typical_yr",
+                 "DispatchEmissions_tNOx_per_typical_yr", "DispatchEmissions_tSO2_per_typical_yr", 
+                 "DispatchEmissions_tCH4_per_typical_yr", "DispatchEmissions_tNH3_per_typical_yr", 
+                 "DispatchEmissions_tPM2_5_per_typical_yr", "DispatchEmissions_tVOC_per_typical_yr"]
     )
     
     write_table(

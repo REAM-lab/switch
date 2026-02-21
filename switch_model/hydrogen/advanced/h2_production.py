@@ -71,7 +71,7 @@ INPUT FILE FORMAT
     
     h2_emissions_factors.csv:
     This input file imports prod_tech emissions factor data. To skip optional 
-    parameters such as kg_ch4_per_kg_h2, put a dot . in the relevant cell rather 
+    parameters such as g_ch4_per_kg_h2, put a dot . in the relevant cell rather 
     than leaving them blank. Leaving a cell blank will generate an error
     message like "IndexError: list index out of range". The following
     file is expected in the input directory. It is optional because
@@ -79,9 +79,9 @@ INPUT FILE FORMAT
     per kg of h2 produced
 
     h2_emissions_factors.csv
-        prod_tech, kg_co2_per_kg_h2, 
+        prod_tech, g_co2_per_kg_h2, 
     Optional columns are:
-        kg_ch4_per_kg_h2, kg_n2o_per_kg_h2, kg_so2_per_kg_h2, kg_nox_per_kg_h2, kg_pm10_per_kg_h2
+        g_ch4_per_kg_h2, g_n2o_per_kg_h2, g_so2_per_kg_h2, g_nox_per_kg_h2, g_pm10_per_kg_h2
         
     h2_carbon_policies.csv:
     This input file imports carbon limits by period, including Global Warming Potential (GWP) 
@@ -1050,12 +1050,12 @@ def define_components(m):
 
     # -- LOAD EMISSIONS PARAMETERS AND CO2 POLICY --
     # GREENHOUSE GASES (LHV of H2 = 33.32 kWh/kg)
-    m.kg_co2_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
-		default=0, input_file="h2_emissions_factors.csv", input_column="kg_co2_per_kg_h2")
-    m.kg_ch4_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=Reals,
-		default=0, input_file="h2_emissions_factors.csv", input_column="kg_ch4_per_kg_h2")
-    m.kg_n2o_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
-		default=0, input_file="h2_emissions_factors.csv", input_column="kg_n2o_per_kg_h2")
+    m.g_co2_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
+		default=0, input_file="h2_emissions_factors.csv", input_column="g_co2_per_kg_h2")
+    m.g_ch4_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=Reals,
+		default=0, input_file="h2_emissions_factors.csv", input_column="g_ch4_per_kg_h2")
+    m.g_n2o_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
+		default=0, input_file="h2_emissions_factors.csv", input_column="g_n2o_per_kg_h2")
     
     m.h2_carbon_cap_tco2_per_yr = Param(m.PERIODS, within=NonNegativeReals,
 		default=float('inf'), input_file="h2_carbon_policies.csv", input_column="h2_carbon_cap_tco2_per_yr")
@@ -1067,38 +1067,39 @@ def define_components(m):
 		default=0, input_file="h2_carbon_policies.csv", input_column="h2_gwp")
 	 
 	# CRITERIA AIR POLLUTANTS (LHV of H2 = 33.32 kWh/kg)
-    m.kg_so2_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
-		default=0, input_file="h2_emissions_factors.csv", input_column="kg_so2_per_kg_h2")
-    m.kg_nox_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
-		default=0, input_file="h2_emissions_factors.csv", input_column="kg_nox_per_kg_h2")
-    m.kg_pm10_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
-		default=0, input_file="h2_emissions_factors.csv", input_column="kg_pm10_per_kg_h2")
+    m.g_so2_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
+		default=0, input_file="h2_emissions_factors.csv", input_column="g_so2_per_kg_h2")
+    m.g_nox_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
+		default=0, input_file="h2_emissions_factors.csv", input_column="g_nox_per_kg_h2")
+    m.g_pm10_per_kg_h2 = Param(m.FUEL_BASED_PROD_TECH, within=NonNegativeReals,
+		default=0, input_file="h2_emissions_factors.csv", input_column="g_pm10_per_kg_h2")
 	
 	# -- EMISSIONS EXPRESSIONS PER TP (metric tonnes = kg * 1e-3) [metric tonnes per hour] --
+    # Units: [MMBtu/h] * [kg of H2/MMBtu of fuel] * [g of emission/kg of H2] * [1 tonne/1e6 g]
 	# GREENHOUSE GASES
     def ProdDispatchEmissions_rule_co2(m, h, t, f):
-        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_co2_per_kg_h2[m.prod_tech[h]] * 1e-3)
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.g_co2_per_kg_h2[m.prod_tech[h]] * 1e-6)
     m.ProdDispatchEmissionsCO2 = Expression(m.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_co2)
 	
     def ProdDispatchEmissions_rule_ch4(m, h, t, f):
-        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_ch4_per_kg_h2[m.prod_tech[h]] * 1e-3)
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.g_ch4_per_kg_h2[m.prod_tech[h]] * 1e-6)
     m.ProdDispatchEmissionsCH4 = Expression(m.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_ch4)
 	
     def ProdDispatchEmissions_rule_n2o(m, h, t, f):
-        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_n2o_per_kg_h2[m.prod_tech[h]] * 1e-3)
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.g_n2o_per_kg_h2[m.prod_tech[h]] * 1e-6)
     m.ProdDispatchEmissionsN2O = Expression(m.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_n2o)
 
 	# CRITERIA AIR POLLUTANTS
     def ProdDispatchEmissions_rule_so2(m, h, t, f):
-        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_so2_per_kg_h2[m.prod_tech[h]] * 1e-3)
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.g_so2_per_kg_h2[m.prod_tech[h]] * 1e-6)
     m.ProdDispatchEmissionsSO2 = Expression(m.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_so2)
 	
     def ProdDispatchEmissions_rule_nox(m, h, t, f):
-        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_nox_per_kg_h2[m.prod_tech[h]] * 1e-3)
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.g_nox_per_kg_h2[m.prod_tech[h]] * 1e-6)
     m.ProdDispatchEmissionsNOx = Expression(m.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_nox)
 	
     def ProdDispatchEmissions_rule_pm10(m, h, t, f):
-        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.kg_pm10_per_kg_h2[m.prod_tech[h]] * 1e-3)
+        return (m.ProdFuelUseRate[h, t, f] * (1 / m.mmbtu_fuel_per_kg_h2[h]) * m.g_pm10_per_kg_h2[m.prod_tech[h]] * 1e-6)
     m.ProdDispatchEmissionsPM10 = Expression(m.PROD_TP_FUELS, rule=ProdDispatchEmissions_rule_pm10)
 
 	# -- ANNUAL TOTALS[metric tonnes per year] --
