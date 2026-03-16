@@ -28,7 +28,7 @@ def write_csv_from_query(cursor, fname: str, headers: List[str], query: str):
     cursor.execute(query)
     data = cursor.fetchall()
     write_csv(data, fname, headers, log=False)
-    print(len(data))
+    print(f"(num rows: {len(data)})")
     if not data:
         warnings.warn(f"File {fname} is empty.")
 
@@ -275,7 +275,8 @@ def query_db(config, skip_cf):
         """
         SELECT
             name, reserves_area as balancing_area
-        FROM load_zone;""",
+        FROM load_zone
+        WHERE name != '_ALL_ZONES';""",
     )
 
     # Paty: in this version of switch this tables is named zone_coincident_peak_demand.csv
@@ -508,6 +509,7 @@ def query_db(config, skip_cf):
                 join generation_plant as t using(generation_plant_id)
                 JOIN temp_generation_plant_ids USING(generation_plant_id)
                 WHERE generation_plant_existing_and_planned_scenario_id={params.generation_plant_existing_and_planned_scenario_id}
+                ORDER BY 1, 2
                 ;
                 """,
     )
@@ -645,7 +647,7 @@ def query_db(config, skip_cf):
             JOIN switch.generation_plant USING(generation_plant_id)
             JOIN temp_generation_plant_ids USING(generation_plant_id)
         WHERE hydro_simple_scenario_id={params.hydro_simple_scenario_id}
-        ORDER BY 1;
+        ORDER BY 1, 2;
         """,
     )
 

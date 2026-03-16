@@ -154,4 +154,4 @@ def post_process(config):
 
 
 if __name__ == "__main__":
-    main({})
+    post_process({})

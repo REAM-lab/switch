@@ -21,8 +21,9 @@ def post_process_step(
             if message is None:
                 message = f"Running {func.__name__}"
             print(f"\t{message}...")
-            func(*args, **kwargs)
-
+            result = func(*args, **kwargs)
+            if result is not None:
+                print(f"\t\t{result}")
         return wrapper
 
     return decorator
