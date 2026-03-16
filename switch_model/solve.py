@@ -208,7 +208,7 @@ def main(args=None, return_model=False, return_instance=False, attach_data_porta
                 print(f"Post solve processing completed in {timer.step_time_as_str()}.")
 
         if instance.options.graph:
-            graph_main(args=["--overwrite"])
+            graph_main(args=["--overwrite", "--skip-long"])
 
         total_time = start_to_end_timer.step_time_as_str()
         add_info("Total run time", total_time, section=ResultsInfoSection.GENERAL)
