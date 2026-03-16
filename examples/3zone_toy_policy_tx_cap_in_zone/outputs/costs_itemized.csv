@@ -1,0 +1,11 @@
+PERIOD,Component,Component_type,AnnualCost_NPV,AnnualCost_Real
+2020,TotalGenFixedCosts,annual,2.9305e+07,4.1841e+06
+2020,LocalTDFixedCosts,annual,1.4241e+07,2.0333e+06
+2020,FuelCostsPerPeriod,annual,2.2956e+07,3.2777e+06
+2020,TxFixedCosts,annual,4.4114e+05,62986
+2030,TotalGenFixedCosts,annual,1.6953e+07,3.9429e+06
+2030,LocalTDFixedCosts,annual,1.1068e+07,2.5741e+06
+2030,FuelCostsPerPeriod,annual,1.8285e+07,4.2525e+06
+2030,TxFixedCosts,annual,4.8477e+05,1.1274e+05
+2020,GenVariableOMCostsInTP,timepoint,1.1647e+07,1.663e+06
+2030,GenVariableOMCostsInTP,timepoint,1.4766e+06,3.4343e+05

@@ -1,0 +1,17 @@
+##########
+1. General
+##########
+
+Host name: shasta-db1
+Git Commit: 525fca98c57c037a8c719ec85d577c715b3a61dc
+Git Branch: wecc
+Total run time: 3.61 s
+End date: 2023-09-08
+End time: 23:55:20
+
+##########
+2. Results
+##########
+
+Total Cost: $ 126857943.59
+

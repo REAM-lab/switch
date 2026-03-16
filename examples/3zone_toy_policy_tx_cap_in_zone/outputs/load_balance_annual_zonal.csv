@@ -1,0 +1,7 @@
+load_zone,period,ZoneTotalCentralDispatch,TXPowerNet,WithdrawFromCentralGrid
+Central,2020,82923,-50988,-31935
+Central,2030,1.3625e+05,-93670,-42580
+North,2020,42766,855.72,-43622
+North,2030,50296,5244,-55540
+South,2020,25472,47077,-72548
+South,2030,14279,82915,-97194
