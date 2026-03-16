@@ -67,7 +67,7 @@ setup(
         "planning",
         "optimization",
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.7,<3.11',
     install_requires=[
         "Pyomo>=6.1,<6.4.1",  # 6.1 Has all the bug fixes we need
         "pint",  # needed by Pyomo when we run our tests, but not included
