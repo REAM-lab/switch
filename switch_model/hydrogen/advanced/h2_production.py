@@ -526,12 +526,6 @@ def define_components(m):
                          input_file="h2_production_projects_info.csv",
                          within=Any, input_optional=True)
 
-    m.PRODUCTION_TECHNOLOGIES = Set(
-        dimen=1,
-        ordered=False,
-        initialize=lambda m: {m.prod_tech[h] for h in m.PRODUCTION_PROJECTS}
-    )
-
     m.prod_load_zone = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
                               within=m.LOAD_ZONES)
 
@@ -596,14 +590,6 @@ def define_components(m):
 		within=m.PRODUCTION_PROJECTS,
 		initialize=lambda m: m.PRODUCTION_PROJECTS - m.ONSITE_PRODUCTION_PROJECTS
 	)
-    m.GENS_WITH_ONSITE_ELZ = Set(
-        dimen=1, 
-        within=m.GENERATION_PROJECTS, 
-        initialize=lambda m: (
-            m.prod_onsite_GENERATION_PROJECT[h] 
-            for h in m.ONSITE_PRODUCTION_PROJECTS), 
-        doc="Generators that have onsite electrolyzers." 
-    )
 
     m.prod_uses_fuel = Param(
         m.PRODUCTION_PROJECTS,
@@ -625,32 +611,6 @@ def define_components(m):
 
     m.FUEL_FOR_PROD = Set(m.FUEL_BASED_PROD,
         initialize=lambda m, h: [m.prod_energy_source[h]])
-
-    def PROD_BY_ENERGY_SOURCE_init(m, e):
-        if not hasattr(m, 'PROD_BY_ENERGY_dict'):
-            m.PROD_BY_ENERGY_dict = {_e: [] for _e in m.ENERGY_SOURCES}
-            for h in m.PRODUCTION_PROJECTS:
-                if h in m.FUEL_BASED_PROD:
-                    for f in m.FUEL_FOR_PROD[h]:
-                        m.PROD_BY_ENERGY_dict[f].append(h)
-                else:
-                    m.PROD_BY_ENERGY_dict[m.prod_energy_source[h]].append(h)
-        result = m.PROD_BY_ENERGY_dict.pop(e)
-        if not m.PROD_BY_ENERGY_dict:
-            del m.PROD_BY_ENERGY_dict
-        return result
-    m.PROD_BY_ENERGY_SOURCE = Set(
-        m.ENERGY_SOURCES,
-        initialize=PROD_BY_ENERGY_SOURCE_init
-    )
-    m.PROD_BY_NON_FUEL_ENERGY_SOURCE = Set(
-        m.NON_FUEL_ENERGY_SOURCES,
-        initialize=lambda m, s: m.PROD_BY_ENERGY_SOURCE[s]
-    )
-    m.PROD_BY_FUEL = Set(
-        m.FUELS,
-        initialize=lambda m, f: m.PROD_BY_ENERGY_SOURCE[f]
-    )
 
     # This set is defined by h2_prod_predetermined.csv
     m.PREDETERMINED_PROD_BLD_YRS = Set(
