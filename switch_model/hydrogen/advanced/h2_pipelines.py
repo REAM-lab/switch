@@ -185,8 +185,8 @@ def define_components(mod):
     DispatchH2Pip[z_from, zone_to, tp].
 
     H2PipH2Received[z_from, zone_to, tp] is an expression that describes the
-    H2 sent down a pipeline. This is completely determined by
-    DispatchH2Pip[z_from, zone_to, tp] and trans_efficiency[tx].
+    H2 received at the receiving zone of a pipeline. This is completely determined by
+    DispatchH2Pip[z_from, zone_to, tp] and h2pip_leakage_rate.
 
     PIP_H2_Net[z, tp] is an expression that returns the net H2 from
     H2 pipeline for a load zone. This is the sum of H2PipH2Received by
@@ -340,7 +340,7 @@ def define_components(mod):
     mod.H2PipTotalAnnualLeakage = Expression(
         mod.PERIODS,
         rule=lambda m, p: sum(
-            m.H2PipTotalLeakage_ZoneTP[z, t]
+            m. [z, t]
 			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
             )
     )

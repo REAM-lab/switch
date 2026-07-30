@@ -68,7 +68,7 @@ def define_components(mod):
     
     PERIODS_FOR_H2_STOR[s] is set of periods when a H2 storage project [s] is available to use.
     
-    H2_STORAGE_PERIODS[s, p] is the set of storage project and period tuples (s, p) corresponding 
+    H2_STORAGE_PERIODS is the set of storage project and period tuples (s, p) corresponding 
     to all possible combinations of H2 storage projects and periods which each project is 
     available to use.
     
@@ -106,8 +106,8 @@ def define_components(mod):
     h2stor_life_years[s] is a parameter which specifies the lifetime of the H2 storage project in 
     years.
 
-    h2stor_leakage_rate[s] is the rate (as a percent fraction) in which H2 leaks out
-    of storage per day in storage. A leakage rate of 0.1% per day would be entered as 0.001.
+    h2stor_leakage_rate[s] is the rate (as a percent fraction) in which H2 leaks per day in storage. 
+    A leakage rate of 0.1% per day would be entered as 0.001.
 
     comp_life_years[s] is the financial lifetime for H2 storage compressors. We do not currently
     enforce retirement for compressors. This is only for annualizing costs.

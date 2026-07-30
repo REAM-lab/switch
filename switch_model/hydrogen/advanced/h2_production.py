@@ -401,10 +401,6 @@ def define_components(m):
     PERIODS_FOR_PROD. This is the same data as PROD_TPS,
     but split into separate sets for each project.
 
-    TPS_FOR_PROD_IN_PERIOD[h, period] is the same as
-    TPS_FOR_PROD, but broken down by period. Periods when
-    the project is inactive will yield an empty set.
-
     ProdCapacityInTP[(h, t) in PROD_TPS] is the same as
     ProdCapacity but indexed by timepoint rather than period to allow
     more compact statements.
@@ -433,11 +429,6 @@ def define_components(m):
     prod_variable_om_per_kg[h] is the variable Operations and Maintenance
     costs (O&M) per kg of H2 produced for a given H2 production project. It 
     is originally defined in switch_model.hydrogen.advanced.h2_production_build.
-
-    m.mmbtu_fuel_per_kg_h2[h] is defined for fuel-based H2 production projects. 
-    This describes the amount of fuel in mmbtu needed to produced 1 kg of H2.
-    The default value is 0. It is originally defined in the
-    switch_model.hydrogen.advanced.h2_production_build module.
     
     mwh_per_kg_h2[h] is defined for all H2 production projects. This describes 
     the amount of electricity in MWh needed to produced 1 kg of H2.
@@ -526,12 +517,6 @@ def define_components(m):
                          input_file="h2_production_projects_info.csv",
                          within=Any, input_optional=True)
 
-    m.PRODUCTION_TECHNOLOGIES = Set(
-        dimen=1,
-        ordered=False,
-        initialize=lambda m: {m.prod_tech[h] for h in m.PRODUCTION_PROJECTS}
-    )
-
     m.prod_load_zone = Param(m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
                               within=m.LOAD_ZONES)
 
@@ -576,10 +561,6 @@ def define_components(m):
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
         default=0, within=PercentFraction)
 
-    m.prod_ccs_equipped = Param(
-        m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
-        input_optional=True, within=Boolean)
-
     m.prod_is_onsite = Param(
         m.PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
         input_optional=True, within=Boolean
@@ -592,10 +573,6 @@ def define_components(m):
         m.ONSITE_PRODUCTION_PROJECTS, input_file="h2_production_projects_info.csv",
         within=m.GENERATION_PROJECTS
     )
-    m.GRID_CONNECTED_PRODUCTION_PROJECTS = Set(
-		within=m.PRODUCTION_PROJECTS,
-		initialize=lambda m: m.PRODUCTION_PROJECTS - m.ONSITE_PRODUCTION_PROJECTS
-	)
     m.GENS_WITH_ONSITE_ELZ = Set(
         dimen=1, 
         within=m.GENERATION_PROJECTS, 
@@ -604,6 +581,10 @@ def define_components(m):
             for h in m.ONSITE_PRODUCTION_PROJECTS), 
         doc="Generators that have onsite electrolyzers." 
     )
+    m.GRID_CONNECTED_PRODUCTION_PROJECTS = Set(
+		within=m.PRODUCTION_PROJECTS,
+		initialize=lambda m: m.PRODUCTION_PROJECTS - m.ONSITE_PRODUCTION_PROJECTS
+	)
 
     m.prod_uses_fuel = Param(
         m.PRODUCTION_PROJECTS,
@@ -625,32 +606,6 @@ def define_components(m):
 
     m.FUEL_FOR_PROD = Set(m.FUEL_BASED_PROD,
         initialize=lambda m, h: [m.prod_energy_source[h]])
-
-    def PROD_BY_ENERGY_SOURCE_init(m, e):
-        if not hasattr(m, 'PROD_BY_ENERGY_dict'):
-            m.PROD_BY_ENERGY_dict = {_e: [] for _e in m.ENERGY_SOURCES}
-            for h in m.PRODUCTION_PROJECTS:
-                if h in m.FUEL_BASED_PROD:
-                    for f in m.FUEL_FOR_PROD[h]:
-                        m.PROD_BY_ENERGY_dict[f].append(h)
-                else:
-                    m.PROD_BY_ENERGY_dict[m.prod_energy_source[h]].append(h)
-        result = m.PROD_BY_ENERGY_dict.pop(e)
-        if not m.PROD_BY_ENERGY_dict:
-            del m.PROD_BY_ENERGY_dict
-        return result
-    m.PROD_BY_ENERGY_SOURCE = Set(
-        m.ENERGY_SOURCES,
-        initialize=PROD_BY_ENERGY_SOURCE_init
-    )
-    m.PROD_BY_NON_FUEL_ENERGY_SOURCE = Set(
-        m.NON_FUEL_ENERGY_SOURCES,
-        initialize=lambda m, s: m.PROD_BY_ENERGY_SOURCE[s]
-    )
-    m.PROD_BY_FUEL = Set(
-        m.FUELS,
-        initialize=lambda m, f: m.PROD_BY_ENERGY_SOURCE[f]
-    )
 
     # This set is defined by h2_prod_predetermined.csv
     m.PREDETERMINED_PROD_BLD_YRS = Set(
@@ -868,23 +823,6 @@ def define_components(m):
         )
     )
 
-    def init(m, prod, period):
-        try:
-            d = m._TPS_FOR_PROD_IN_PERIOD_dict
-        except AttributeError:
-            d = m._TPS_FOR_PROD_IN_PERIOD_dict = dict()
-            for _prod in m.PRODUCTION_PROJECTS:
-                for t in m.TPS_FOR_PROD[_prod]:
-                    d.setdefault((_prod, m.tp_period[t]), set()).add(t)
-        result = d.pop((prod, period), set())
-        if not d:  # all gone, delete the attribute
-            del m._TPS_FOR_PROD_IN_PERIOD_dict
-        return result
-    m.TPS_FOR_PROD_IN_PERIOD = Set(
-        m.PRODUCTION_PROJECTS, m.PERIODS,
-        ordered=False,
-        within=m.TIMEPOINTS, initialize=init)
-
     m.PROD_TPS = Set(
         dimen=2,
         initialize=lambda m: (
@@ -916,12 +854,6 @@ def define_components(m):
             (h, t, f)
                 for (h, t) in m.FUEL_BASED_PROD_TPS
                     for f in m.FUEL_FOR_PROD[h]))
-    m.PROD_TP_PROD_TECH = Set(
-        dimen=3,
-        initialize=lambda m: (
-            (h, tp, tech)
-                for (h, tp) in m.FUEL_BASED_PROD_TPS
-                    for tech in [m.prod_tech[h]]))
 
     m.ProdCapacityInTP = Expression(
         m.PROD_TPS,
@@ -1202,7 +1134,7 @@ def define_components(m):
 
     m.ZONE_DAILY_HGTS = Set(dimen=2,
         initialize=lambda m: m.LOAD_ZONES * m.DAILY_HGTS,
-        doc="The cross product of load zones and H2 daily timepoints, used for indexing.")
+        doc="The cross product of load zones and H2 daily timeseries, used for indexing.")
 
     m.zone_daily_demand_mwh_h2 = Param(
         m.ZONE_DAILY_HGTS,
