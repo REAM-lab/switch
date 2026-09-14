@@ -340,7 +340,7 @@ def define_components(mod):
     mod.H2PipTotalAnnualLeakage = Expression(
         mod.PERIODS,
         rule=lambda m, p: sum(
-            m. [z, t]
+            m.H2PipTotalLeakage_ZoneTP[z, t]
 			for z in m.LOAD_ZONES for t in m.TPS_IN_PERIOD[p]
             )
     )
